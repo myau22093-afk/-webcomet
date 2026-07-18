@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-07-18T10:53:06.661Z",
+  "projectPath": "C:\\Users\\??????????????????????????\\Desktop\\temushka\\webcomet",
+  "context": {
+    "labels": [
+      "Supabase",
+      "Next.js 16",
+      "auth-middleware"
+    ],
+    "provider": "Supabase",
+    "rateLimitLib": false,
+    "hasMiddleware": true,
+    "authMiddleware": true,
+    "middlewareFile": "middleware.ts",
+    "matchers": [
+      "/dashboard/:path*",
+      "/pricing/:path*",
+      "/payment/:path*",
+      "/api/upload",
+      "/api/upload/:path*"
+    ]
+  },
+  "score": 100,
+  "totalPenalty": 0,
+  "issueCount": 0,
+  "issues": []
+}
