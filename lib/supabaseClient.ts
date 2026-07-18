@@ -8,8 +8,15 @@ function getSupabaseConfig() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
   if (!url || !key) {
+    // Во время Docker build переменных может не быть — не роняем сборку
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      return {
+        url: "https://placeholder.supabase.co",
+        key: "placeholder",
+      };
+    }
     throw new Error(
-      "Supabase не настроен: заполните NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в .env.local"
+      "Supabase не настроен: заполните NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   }
 
