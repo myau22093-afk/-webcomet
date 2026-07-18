@@ -21,5 +21,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 EXPOSE 8080
-CMD ["sh", "-c", "set -e; if [ -f ./server.js ]; then echo Starting server.js on ${PORT:-8080}; exec node server.js; fi; if [ -f ./webcomet/server.js ]; then echo Starting webcomet/server.js on ${PORT:-8080}; cd webcomet; cp -r ../.next . 2>/dev/null || true; exec node server.js; fi; echo server.js not found; ls -la; ls -la webcomet 2>/dev/null || true; exit 1"]
+CMD ["/app/start.sh"]
