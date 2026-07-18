@@ -22,4 +22,4 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 EXPOSE 8080
-CMD ["sh", "-c", "if [ -f ./server.js ]; then node server.js; elif [ -f ./webcomet/server.js ]; then cd webcomet && node server.js; else echo 'server.js not found' && ls -la && exit 1; fi"]
+CMD ["sh", "-c", "set -e; if [ -f ./server.js ]; then echo Starting server.js on ${PORT:-8080}; exec node server.js; fi; if [ -f ./webcomet/server.js ]; then echo Starting webcomet/server.js on ${PORT:-8080}; cd webcomet; cp -r ../.next . 2>/dev/null || true; exec node server.js; fi; echo server.js not found; ls -la; ls -la webcomet 2>/dev/null || true; exit 1"]
