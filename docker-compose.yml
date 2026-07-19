@@ -12,25 +12,8 @@ services:
       PORT: "8080"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
-    expose:
-      - "8080"
+    ports:
+      - "80:8080"
     restart: unless-stopped
     mem_limit: 1536m
     cpus: 1.5
-
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - webcomet
-    restart: unless-stopped
-
-volumes:
-  caddy_data:
-  caddy_config:
