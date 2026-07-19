@@ -1,0 +1,4 @@
+webcomet.ru, www.webcomet.ru {
+	encode gzip
+	reverse_proxy webcomet:8080
+}

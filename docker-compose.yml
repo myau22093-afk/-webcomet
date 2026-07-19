@@ -1,10 +1,36 @@
 services:
   webcomet:
-    build: .
-    ports:
-      - "8080:8080"
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://webcomet.ru}
+    env_file:
+      - .env
     environment:
       PORT: "8080"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
+    expose:
+      - "8080"
     restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 1.5
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - webcomet
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
