@@ -1,23 +1,27 @@
-# Scale compose: Caddy LB + 3 Next instances
-# Usage: docker compose -f docker-compose.scale.yml up -d --build
+# Scale for ~3k concurrent online (Cloudflare + 3 app instances)
+# Needs VPS with at least 8 GB RAM / 4 vCPU (better 12 GB).
 #
-# Needs ~8–12 GB RAM total. For current 2 GB VPS keep docker-compose.yml.
+# Switch from single-container:
+#   docker compose down
+#   docker compose -f docker-compose.scale.yml up -d --build
+#
+# Back to single:
+#   docker compose -f docker-compose.scale.yml down
+#   docker compose up -d
 
 services:
   caddy:
     image: caddy:2-alpine
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./Caddyfile.scale:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - webcomet1
       - webcomet2
       - webcomet3
     restart: unless-stopped
+    mem_limit: 128m
 
   webcomet1: &webcomet
     build:
@@ -39,8 +43,8 @@ services:
     volumes:
       - webcomet_uploads:/app/public/uploads
     restart: unless-stopped
-    mem_limit: 2560m
-    cpus: 1.5
+    mem_limit: 2300m
+    cpus: 1.25
 
   webcomet2:
     <<: *webcomet
@@ -49,6 +53,4 @@ services:
     <<: *webcomet
 
 volumes:
-  caddy_data:
-  caddy_config:
   webcomet_uploads:

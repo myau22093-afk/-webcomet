@@ -31,12 +31,26 @@ Users → Cloudflare CDN (/_next/static cached)
 
 ## How to run scaled stack on one stronger host
 
+1. In Reg.ru Cloud: change tariff to **≥ 8 GB RAM / 4 vCPU** (лучше **12 GB**), wait until active.
+2. SSH:
+
 ```bash
 cd /opt/webcomet
+bash scripts/scale-up-3k.sh
+```
+
+Or manually:
+
+```bash
+cd /opt/webcomet
+git pull origin main
+docker compose down
 docker compose -f docker-compose.scale.yml up -d --build
 ```
 
 See [`docker-compose.scale.yml`](docker-compose.scale.yml) + [`Caddyfile.scale`](Caddyfile.scale).
+
+Origin stays on **HTTP :80** (HTTPS via Cloudflare).
 
 Env (add to `.env`):
 
