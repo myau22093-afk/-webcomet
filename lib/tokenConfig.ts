@@ -1,23 +1,24 @@
+/** Списание токенов за запрос (калибровка под маржу >=50% при ~1 ₽/токен) */
 export const TOKEN_COSTS: Record<string, { cost: number }> = {
-  "claude-fable-5": { cost: 63 },
-  "claude-sonnet-5": { cost: 27 },
-  "gpt-5.6-sol": { cost: 40 },
-  "gpt-5.6-terra": { cost: 20 },
-  "gpt-5.6-luna": { cost: 9 },
-  "gpt-5.6-luna-chat": { cost: 9 },
-  "claude-sonnet-4-6": { cost: 25 },
-  "gemini-3.1-flash-image": { cost: 30 },
-  "gemini-3-pro-image": { cost: 45 },
-  "gpt-image-2": { cost: 24 },
-  "gemini-3.1-flash-lite": { cost: 3 },
+  "claude-fable-5": { cost: 80 },
+  "claude-sonnet-5": { cost: 35 },
+  "gpt-5.6-sol": { cost: 55 },
+  "gpt-5.6-terra": { cost: 28 },
+  "gpt-5.6-luna": { cost: 14 },
+  "gpt-5.6-luna-chat": { cost: 12 },
+  "claude-sonnet-4-6": { cost: 30 },
+  "gemini-3.1-flash-image": { cost: 35 },
+  "gemini-3-pro-image": { cost: 55 },
+  "gpt-image-2": { cost: 30 },
+  "gemini-3.1-flash-lite": { cost: 4 },
   "deepseek-chat": { cost: 1 },
 };
 
 export const TOKEN_PACKAGES = [
-  { id: "basic", tokens: 500, price: 250, label: "Basic" },
-  { id: "pro", tokens: 2000, price: 900, label: "Pro" },
-  { id: "business", tokens: 5000, price: 2000, label: "Business" },
-  { id: "enterprise", tokens: 20000, price: 7000, label: "Enterprise" },
+  { id: "basic", tokens: 500, price: 500, label: "Basic" },
+  { id: "pro", tokens: 2000, price: 1800, label: "Pro" },
+  { id: "business", tokens: 5000, price: 4000, label: "Business" },
+  { id: "enterprise", tokens: 20000, price: 14000, label: "Enterprise" },
 ] as const;
 
 export type TokenPackageId = (typeof TOKEN_PACKAGES)[number]["id"];

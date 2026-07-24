@@ -52,8 +52,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 1, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
         className="glass-card w-full max-w-md p-8"
       >
         <BrandLogo size="sm" className="mb-6" />

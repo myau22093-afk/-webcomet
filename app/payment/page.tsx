@@ -50,8 +50,9 @@ function PaymentContent() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 1, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
       className="glass-card w-full max-w-lg p-8 text-center"
     >
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-wc-purple/40 to-wc-blue/30 text-violet-200 shadow-[0_0_30px_rgba(108,59,244,0.35)]">

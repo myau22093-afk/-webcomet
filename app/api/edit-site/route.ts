@@ -17,6 +17,7 @@ import { promptraChatCompletion } from "@/lib/promptra";
 import { requireAuth } from "@/lib/requireUser";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { getTokenCost } from "@/lib/tokenConfig";
+import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -90,18 +91,24 @@ ${js}`;
 
     let content: string;
     try {
-      content = await promptraChatCompletion({
-        model,
-        messages: [
-          { role: "system", content: EDIT_SYSTEM },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.4,
-        max_tokens: 10000,
-        stream: true,
-        retries: 2,
-      });
+      content = await withAiSlot(() =>
+        promptraChatCompletion({
+          model,
+          messages: [
+            { role: "system", content: EDIT_SYSTEM },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.4,
+          max_tokens: 10000,
+          stream: true,
+          retries: 2,
+        })
+      );
     } catch (error) {
+      const queued = aiQueueErrorResponse(error);
+      if (queued) {
+        return NextResponse.json(queued.body, { status: queued.status });
+      }
       console.error("edit-site model error:", error);
       return NextResponse.json(
         {

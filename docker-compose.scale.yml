@@ -1,0 +1,51 @@
+# Scale compose: Caddy LB + 3 Next instances
+# Usage: docker compose -f docker-compose.scale.yml up -d --build
+#
+# Needs ~8–12 GB RAM total. For current 2 GB VPS keep docker-compose.yml.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.scale:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - webcomet1
+      - webcomet2
+      - webcomet3
+    restart: unless-stopped
+
+  webcomet1: &webcomet
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://webcomet.ru}
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: production
+      AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-6}
+      AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
+    expose:
+      - "8080"
+    restart: unless-stopped
+    mem_limit: 2560m
+    cpus: 1.5
+
+  webcomet2:
+    <<: *webcomet
+
+  webcomet3:
+    <<: *webcomet
+
+volumes:
+  caddy_data:
+  caddy_config:

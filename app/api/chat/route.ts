@@ -19,6 +19,7 @@ import { chatWithProviders, getModelConfig } from "@/lib/providers";
 import { requireAuth } from "@/lib/requireUser";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { getTokenCost } from "@/lib/tokenConfig";
+import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
 
 const CHAT_SYSTEM = `Ты — полезный ассистент WebComet. Отвечай кратко и по делу на русском языке.
 Помогай с идеями сайтов, текстами, дизайном и промптами для генерации.`;
@@ -106,16 +107,18 @@ export async function POST(request: Request) {
     }
 
     try {
-      const completion = await chatWithProviders({
-        config: modelConfig,
-        messages,
-        temperature: 0.6,
-        max_tokens:
-          modelConfig.id === "deepseek-chat" ||
-          modelConfig.id === "gemini-3.1-flash-lite"
-            ? 2048
-            : 1500,
-      });
+      const completion = await withAiSlot(() =>
+        chatWithProviders({
+          config: modelConfig,
+          messages,
+          temperature: 0.6,
+          max_tokens:
+            modelConfig.id === "deepseek-chat" ||
+            modelConfig.id === "gemini-3.1-flash-lite"
+              ? 2048
+              : 1500,
+        })
+      );
       responseText = completion.content;
       provider = completion.provider;
       providerLabel = completion.providerLabel;
@@ -123,21 +126,33 @@ export async function POST(request: Request) {
         reason = `${reason} · fallback → ${completion.providerLabel}`;
       }
     } catch (primaryError) {
+      const queued = aiQueueErrorResponse(primaryError);
+      if (queued) {
+        return NextResponse.json(queued.body, { status: queued.status });
+      }
       console.error("chat primary model error:", primaryError);
       try {
         const fallback = getModelById("deepseek-chat")!;
         modelConfig = fallback;
         reason = "fallback → DeepSeek";
-        const completion = await chatWithProviders({
-          config: fallback,
-          messages,
-          temperature: 0.6,
-          max_tokens: 1024,
-        });
+        const completion = await withAiSlot(() =>
+          chatWithProviders({
+            config: fallback,
+            messages,
+            temperature: 0.6,
+            max_tokens: 1024,
+          })
+        );
         responseText = completion.content;
         provider = completion.provider;
         providerLabel = completion.providerLabel;
       } catch (fallbackError) {
+        const queuedFallback = aiQueueErrorResponse(fallbackError);
+        if (queuedFallback) {
+          return NextResponse.json(queuedFallback.body, {
+            status: queuedFallback.status,
+          });
+        }
         console.error("chat fallback error:", fallbackError);
         return NextResponse.json(
           {

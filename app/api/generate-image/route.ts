@@ -20,6 +20,7 @@ import {
 } from "@/lib/models";
 import { getModelConfig, imageWithProviders } from "@/lib/providers";
 import { getTokenCost } from "@/lib/tokenConfig";
+import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
 
 export const runtime = "nodejs";
 
@@ -97,11 +98,17 @@ export async function POST(request: Request) {
 
     let result;
     try {
-      result = await imageWithProviders({
-        config: modelConfig,
-        prompt,
-      });
+      result = await withAiSlot(() =>
+        imageWithProviders({
+          config: modelConfig,
+          prompt,
+        })
+      );
     } catch (upstreamError) {
+      const queued = aiQueueErrorResponse(upstreamError);
+      if (queued) {
+        return NextResponse.json(queued.body, { status: queued.status });
+      }
       console.error("generate-image upstream:", upstreamError);
       const raw =
         upstreamError instanceof Error

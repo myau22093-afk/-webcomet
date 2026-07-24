@@ -29,6 +29,7 @@ import { buildContactsPromptBlock, type UserContacts } from "@/lib/contacts";
 import { stripLikelyOcrScraps } from "@/lib/ocrSanitize";
 import { requireAuth } from "@/lib/requireUser";
 import { createAdminClient } from "@/lib/supabaseAdmin";
+import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -676,16 +677,18 @@ ${body.existingJs ?? ""}`
 
       let content: string;
       try {
-        const completion = await chatWithProviders({
-          config: modelConfig,
-          messages: [
-            { role: "system", content: systemContent },
-            buildVisionUserMessage(userText, designDataUrl),
-          ],
-          temperature: attempt === 1 ? 0.7 : 0.35,
-          max_tokens: isEdit ? 8000 : 12000,
-          stream: true,
-        });
+        const completion = await withAiSlot(() =>
+          chatWithProviders({
+            config: modelConfig,
+            messages: [
+              { role: "system", content: systemContent },
+              buildVisionUserMessage(userText, designDataUrl),
+            ],
+            temperature: attempt === 1 ? 0.7 : 0.35,
+            max_tokens: isEdit ? 8000 : 12000,
+            stream: true,
+          })
+        );
         content = completion.content;
         usedProvider = completion.provider;
         usedProviderLabel = completion.providerLabel;
@@ -846,6 +849,10 @@ ${body.existingJs ?? ""}`
     });
   } catch (error) {
     console.error("generate-site error:", error);
+    const queued = aiQueueErrorResponse(error);
+    if (queued) {
+      return NextResponse.json(queued.body, { status: queued.status });
+    }
     return NextResponse.json(
       { error: formatBillingError(error) || "Ошибка генерации сайта" },
       { status: 500 }

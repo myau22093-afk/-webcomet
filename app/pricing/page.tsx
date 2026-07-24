@@ -73,8 +73,9 @@ export default function PricingPage() {
         </Link>
 
         <motion.div
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 1, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
           className="mb-10 text-center"
         >
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-wc-purple/25 text-violet-200 shadow-[0_0_30px_rgba(108,59,244,0.35)]">
@@ -102,9 +103,9 @@ export default function PricingPage() {
           {TOKEN_PACKAGES.map((pack, index) => (
             <motion.div
               key={pack.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 1, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.05, duration: 0.35 }}
               className={`glass-card flex flex-col p-6 ${
                 pack.id === "pro" ? "ring-1 ring-violet-500/40" : ""
               }`}

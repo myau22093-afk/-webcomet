@@ -1,0 +1,13 @@
+{
+	email {$CADDY_EMAIL:admin@webcomet.ru}
+}
+
+webcomet.ru, www.webcomet.ru {
+	encode gzip zstd
+	reverse_proxy webcomet1:8080 webcomet2:8080 webcomet3:8080 {
+		lb_policy round_robin
+		health_uri /
+		health_interval 10s
+		fail_duration 30s
+	}
+}

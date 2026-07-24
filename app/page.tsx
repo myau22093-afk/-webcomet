@@ -102,9 +102,9 @@ export default function HomePage() {
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-14">
         <motion.section
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 1, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
+          transition={{ duration: 0.45 }}
           className="mx-auto max-w-3xl text-center"
         >
           <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">

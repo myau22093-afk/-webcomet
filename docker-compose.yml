@@ -12,6 +12,8 @@ services:
       PORT: "8080"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
+      AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-4}
+      AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
     ports:
       - "80:8080"
     restart: unless-stopped
