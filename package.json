@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:cost": "npx --yes tsx scripts/test-cost-optimization.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.11",

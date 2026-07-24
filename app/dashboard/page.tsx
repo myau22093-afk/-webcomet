@@ -71,6 +71,7 @@ import {
   formatTokens,
   getTokenCost,
 } from "@/lib/tokenConfig";
+import { estimateSiteTokenCharge } from "@/lib/costOptimization";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -1204,7 +1205,7 @@ export default function DashboardPage() {
       setHistory((prev) => [item, ...prev.filter((x) => x.id !== item.id)]);
       setActiveId(item.id);
       setMainTab(designImage ? "compare" : "preview");
-      if (!data.cached) await loadStatus(accessToken);
+      await loadStatus(accessToken);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Ошибка генерации");
     } finally {
@@ -1702,9 +1703,15 @@ export default function DashboardPage() {
     }
   }
 
-  const siteTokenCost = getTokenCost(
-    expressMode && !isEditMode ? DEFAULT_SITE_MODEL_ID : siteModelId
-  );
+  const siteChargePreview = estimateSiteTokenCharge({
+    prompt: prompt || (expressMode ? "экспресс лендинг" : ""),
+    customRequirements,
+    isEdit: isEditMode,
+    modelId: siteModelId,
+    forceVision: Boolean(designImage) && !isEditMode,
+    expressMode: expressMode && !isEditMode,
+  });
+  const siteTokenCost = siteChargePreview.tokens;
   const imageTokenCost = getTokenCost(imageModel);
   const chatTokenCost = getTokenCost(chatModelId);
   const activeTokenCost =
@@ -2376,7 +2383,8 @@ export default function DashboardPage() {
                       uploadingDesign ||
                       uploadingLogo ||
                       isListening ||
-                      status.tokenBalance < siteTokenCost
+                      (siteTokenCost > 0 &&
+                        status.tokenBalance < siteTokenCost)
                     }
                     className="wc-btn wc-btn-primary px-4 py-2 text-sm disabled:opacity-50"
                   >
@@ -2517,10 +2525,15 @@ export default function DashboardPage() {
                   </label>
                   {lastCached && (
                     <span className="ml-auto text-[10px] text-zinc-600">
-                      из сохранённых
+                      готово быстро
                     </span>
                   )}
                 </div>
+                {workMode === "site" && siteChargePreview.tokens > 0 ? (
+                  <p className="mb-2 text-[11px] text-zinc-500">
+                    Списание: ≈{siteChargePreview.tokens} ток.
+                  </p>
+                ) : null}
 
                 {/* Три колонки: текст | бренд/секции | референс */}
                 <div className="grid gap-2.5 lg:grid-cols-12 lg:items-stretch">
@@ -2826,7 +2839,8 @@ export default function DashboardPage() {
                       uploadingDesign ||
                       uploadingLogo ||
                       isListening ||
-                      status.tokenBalance < siteTokenCost
+                      (siteTokenCost > 0 &&
+                        status.tokenBalance < siteTokenCost)
                     }
                     className="wc-btn wc-btn-primary px-5 py-2 text-sm disabled:opacity-50"
                   >

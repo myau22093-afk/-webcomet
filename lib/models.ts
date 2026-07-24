@@ -162,7 +162,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
 export const MODELS = {
   siteQuality: "anthropic/claude-sonnet-4.6",
   siteFast: "openai/gpt-5.6-luna",
-  siteEdit: "openai/gpt-5.6-luna",
+  siteEdit: "openai/gpt-5.6-terra",
   chatDefault: "openai/gpt-5.6-luna",
   chatComplex: "openai/gpt-5.6-luna",
 } as const;
@@ -237,9 +237,9 @@ export function selectSiteModel(input: {
 }): { model: string; catalogId: string; reason: string } {
   if (input.isEdit) {
     return {
-      model: MODELS.siteEdit,
-      catalogId: "gpt-5.6-luna",
-      reason: "правка существующего сайта → GPT-5.6 Luna",
+      model: "openai/gpt-5.6-terra",
+      catalogId: "gpt-5.6-terra",
+      reason: "правка существующего сайта → GPT-5.6 Terra",
     };
   }
   if (input.qualityMode === "fast") {
@@ -272,6 +272,19 @@ export function selectChatModel(message: string): {
   catalogId: string;
   reason: string;
 } {
+  const text = message.trim();
+  if (
+    text.length < 120 &&
+    /^(?:привет|здравствуй(?:те)?|хай|hello|hi)|помоги(?:те)?|что\s+такое/iu.test(
+      text
+    )
+  ) {
+    return {
+      model: "deepseek/deepseek-v4-flash",
+      catalogId: "deepseek-chat",
+      reason: "простой вопрос / приветствие → DeepSeek",
+    };
+  }
   if (isComplexChatQuestion(message)) {
     return {
       model: MODELS.chatComplex,
@@ -359,6 +372,14 @@ export function resolveChatModelConfig(input: {
   modelId?: string | null;
   message: string;
 }): { config: ModelConfig; reason: string } {
+  const autoFirst = selectChatModel(input.message);
+  if (autoFirst.catalogId === "deepseek-chat") {
+    const deepseek = getModelById("deepseek-chat");
+    if (deepseek) {
+      return { config: deepseek, reason: autoFirst.reason };
+    }
+  }
+
   if (input.modelId) {
     // alias: site-style luna id → chat luna
     const alias =

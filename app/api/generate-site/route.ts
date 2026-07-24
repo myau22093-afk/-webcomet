@@ -14,14 +14,23 @@ import {
   formatCostUsd,
   modelShortLabel,
   PROVIDER_LABELS,
-  resolveSiteModelConfig,
   type QualityMode,
 } from "@/lib/models";
+import {
+  buildTemplateCustomizePrompt,
+  resolveOptimizedSitePlan,
+} from "@/lib/costOptimization";
+import { logApiUsage } from "@/lib/apiUsageLog";
+import {
+  ensureTemplatesSeeded,
+  findCachedGeneration,
+  saveCachedGeneration,
+} from "@/lib/generationCache";
 import {
   normalizeBrandColors,
   sectionLabels,
 } from "@/lib/brand";
-import { getTokenCost } from "@/lib/tokenConfig";
+import { getTokenCost, CACHE_HIT_TOKEN_COST } from "@/lib/tokenConfig";
 import { resolveSiteStyle } from "@/lib/siteStyles";
 import { chatWithProviders, getModelConfig } from "@/lib/providers";
 import type { ChatMessage } from "@/lib/promptra";
@@ -536,20 +545,173 @@ export async function POST(request: Request) {
       );
     }
 
-    const resolved = resolveSiteModelConfig({
-      modelId: body.modelId,
+    const plan = resolveOptimizedSitePlan({
+      prompt: `${effectivePrompt}\n${customRequirements}`.trim(),
+      customRequirements,
       isEdit,
       qualityMode,
+      modelId: body.modelId,
       forceVision: Boolean(designDataUrl),
       expressMode: expressMode || referenceOnlyMode,
     });
-    const modelConfig = resolved.config;
-    let reason = resolved.reason;
-    const model = modelConfig.modelId;
-    const tokenCost = getTokenCost(modelConfig.id);
 
+    if (plan.chatSuggested) {
+      await logApiUsage({
+        userId: auth.user.id,
+        route: "/api/generate-site",
+        modelId: plan.config.id,
+        modelLabel: modelShortLabel(plan.config.id),
+        tokenCost: 0,
+        costUsd: 0,
+        kind: plan.kind,
+        reason: plan.reason,
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Похоже, это вопрос для чата, а не генерация сайта. Откройте вкладку «Чат» — там для таких запросов используется DeepSeek.",
+          chatSuggested: true,
+          modelId: plan.config.id,
+          modelLabel: modelShortLabel(plan.config.id),
+          modelReason: plan.reason,
+        },
+        { status: 400 }
+      );
+    }
+
+    void ensureTemplatesSeeded();
+
+    const modelConfig = plan.config;
+    let reason = plan.reason;
+    const model = modelConfig.modelId;
+    const generateTokenCost = getTokenCost(modelConfig.id);
+    const activeTemplate = plan.template;
+
+    const promptHash = buildPromptHash({
+      prompt: effectivePrompt,
+      customRequirements,
+      images: hasImages ? images : [],
+      qualityMode,
+      style: siteStyle.id,
+      designImage: designImage || null,
+      brandLogo: brandLogo || null,
+      brandColors,
+      sections,
+      expressMode,
+      isEdit: false,
+      templateId: activeTemplate?.id ?? null,
+      optimizeKind: plan.kind,
+    });
+
+    // Повтор того же запроса → отдаём из кеша, но СПИСЫВАЕМ токены (API = 0 → жирная маржа)
+    if (!isEdit) {
+      const globalCached = await findCachedGeneration(promptHash);
+      const personalCached =
+        globalCached?.html
+          ? null
+          : await findCachedSite(auth.user.id, promptHash);
+      const hit = globalCached?.html
+        ? {
+            html: globalCached.html,
+            css: globalCached.css ?? "",
+            js: globalCached.js ?? "",
+            sourceId: globalCached.id,
+            created_at: globalCached.created_at,
+            modelUsed: globalCached.model_used || modelConfig.id,
+            cacheKind: "global" as const,
+          }
+        : personalCached?.html
+          ? {
+              html: personalCached.html,
+              css: personalCached.css ?? "",
+              js: personalCached.js ?? "",
+              sourceId: personalCached.id,
+              created_at: personalCached.created_at,
+              modelUsed: modelConfig.id,
+              cacheKind: "personal" as const,
+            }
+          : null;
+
+      if (hit) {
+        try {
+          assertHasTokens(profile, CACHE_HIT_TOKEN_COST);
+        } catch (balanceError) {
+          return NextResponse.json(
+            {
+              error:
+                balanceError instanceof Error
+                  ? balanceError.message
+                  : "Недостаточно токенов. Пополните баланс.",
+              token_balance: profile.token_balance,
+              token_cost: CACHE_HIT_TOKEN_COST,
+            },
+            { status: 402 }
+          );
+        }
+
+        const spend = await chargeTokens(admin, profile, CACHE_HIT_TOKEN_COST, {
+          modelId: modelConfig.id,
+          description: `Генерация сайта · ускоренный результат`,
+        });
+        await logApiUsage({
+          userId: auth.user.id,
+          route: "/api/generate-site",
+          modelId: modelConfig.id,
+          modelLabel: modelShortLabel(modelConfig.id),
+          tokenCost: spend.charged,
+          costUsd: 0,
+          cached: true,
+          kind: plan.kind,
+          reason:
+            hit.cacheKind === "global"
+              ? `cache-hit global −${CACHE_HIT_TOKEN_COST}`
+              : `cache-hit personal −${CACHE_HIT_TOKEN_COST}`,
+          promptHash,
+        });
+
+        const savedFromCache =
+          hit.cacheKind === "global"
+            ? await saveSite({
+                userId: auth.user.id,
+                prompt: effectivePrompt,
+                html: hit.html,
+                css: hit.css,
+                js: hit.js,
+                promptHash,
+                version: 1,
+                rootPrompt: effectivePrompt,
+              })
+            : null;
+
+        return NextResponse.json({
+          html: hit.html,
+          css: hit.css,
+          js: hit.js,
+          id: savedFromCache?.id ?? hit.sourceId,
+          created_at: savedFromCache?.created_at ?? hit.created_at,
+          cached: true,
+          style: siteStyle.id,
+          styleLabel: siteStyle.label,
+          model,
+          modelId: modelConfig.id,
+          modelLabel: modelShortLabel(modelConfig.id),
+          modelReason: reason,
+          provider: modelConfig.provider,
+          providerLabel: PROVIDER_LABELS[modelConfig.provider],
+          costUsd: 0,
+          costLabel: formatCostUsd(0),
+          token_cost: spend.charged,
+          token_balance: spend.balance,
+          total_tokens_used: spend.totalUsed,
+          remaining: spend.balance,
+          optimizeKind: plan.kind,
+        });
+      }
+    }
+
+    // Новая генерация — проверяем баланс под выбранную модель
     try {
-      assertHasTokens(profile, tokenCost);
+      assertHasTokens(profile, generateTokenCost);
     } catch (balanceError) {
       return NextResponse.json(
         {
@@ -558,73 +720,34 @@ export async function POST(request: Request) {
               ? balanceError.message
               : "Недостаточно токенов. Пополните баланс.",
           token_balance: profile.token_balance,
-          token_cost: tokenCost,
+          token_cost: generateTokenCost,
         },
         { status: 402 }
       );
     }
 
+    const tokenCost = generateTokenCost;
+
     // Resolve credentials (OpenAI-compatible baseURL + apiKey) + log
     try {
       const wired = getModelConfig(modelConfig.id);
       console.log(
-        `[ai] generate-site using provider=${wired.provider} model=${wired.modelId} catalog=${modelConfig.id} baseURL=${wired.baseURL}`
+        `[ai] generate-site using provider=${wired.provider} model=${wired.modelId} catalog=${modelConfig.id} kind=${plan.kind} baseURL=${wired.baseURL}`
       );
     } catch (credError) {
       console.error(`[ai] generate-site getModelConfig failed:`, credError);
       return NextResponse.json(
         {
-          error:
+          error: `${modelConfig.name} сейчас недоступна. Выберите другую модель в списке.`,
+          modelId: modelConfig.id,
+          modelLabel: modelShortLabel(modelConfig.id),
+          detail:
             credError instanceof Error
               ? credError.message
               : "Провайдер не настроен",
         },
-        { status: 500 }
+        { status: 503 }
       );
-    }
-
-    const promptHash = buildPromptHash({
-      prompt: effectivePrompt,
-      customRequirements,
-      images: hasImages ? images : [],
-      qualityMode,
-      modelId: modelConfig.id,
-      style: siteStyle.id,
-      designImage: designImage || null,
-      brandLogo: brandLogo || null,
-      brandColors,
-      sections,
-      expressMode,
-      isEdit: false,
-    });
-
-    // Кэш только для новых сайтов (не правок)
-    if (!isEdit) {
-      const cached = await findCachedSite(auth.user.id, promptHash);
-      if (cached?.html) {
-        const status = buildStatusPayload(profile);
-        return NextResponse.json({
-          html: cached.html,
-          css: cached.css ?? "",
-          js: cached.js ?? "",
-          id: cached.id,
-          created_at: cached.created_at,
-          cached: true,
-          style: siteStyle.id,
-          styleLabel: siteStyle.label,
-          model,
-          modelId: modelConfig.id,
-          modelLabel: modelShortLabel(modelConfig.id),
-          modelReason: "кэш: тот же промпт уже был",
-          provider: modelConfig.provider,
-          costUsd: 0,
-          costLabel: formatCostUsd(0),
-          token_cost: 0,
-          token_balance: status.token_balance,
-          total_tokens_used: status.total_tokens_used,
-          remaining: status.token_balance,
-        });
-      }
     }
 
     const finalPrompt = isEdit
@@ -639,7 +762,15 @@ ${body.existingCss ?? ""}
 
 Текущий JS:
 ${body.existingJs ?? ""}`
-      : buildUserPrompt({
+      : activeTemplate
+        ? buildTemplateCustomizePrompt({
+            userPrompt: prompt || effectivePrompt,
+            customRequirements,
+            template: activeTemplate,
+            brandColors,
+            brandLogo,
+          })
+        : buildUserPrompt({
           prompt: effectivePrompt,
           userPrompt: prompt,
           customRequirements,
@@ -794,7 +925,9 @@ ${body.existingJs ?? ""}`
 
     const spend = await chargeTokens(admin, profile, tokenCost, {
       modelId: modelConfig.id,
-      description: `Генерация сайта · ${modelConfig.name}`,
+      description: `Генерация сайта · ${modelConfig.name}${
+        plan.kind !== "default" ? ` · ${plan.kind}` : ""
+      }`,
     });
     const status = buildStatusPayload({
       ...profile,
@@ -806,6 +939,36 @@ ${body.existingJs ?? ""}`
       kind: isEdit ? "siteEdit" : undefined,
       multiplier: modelConfig.costMultiplier,
     });
+
+    if (!isEdit) {
+      await saveCachedGeneration({
+        promptHash,
+        html: siteParts.html,
+        css: siteParts.css,
+        js: siteParts.js,
+        modelUsed: modelConfig.id,
+      });
+    }
+
+    await logApiUsage({
+      userId: auth.user.id,
+      route: "/api/generate-site",
+      modelId: modelConfig.id,
+      modelLabel: modelShortLabel(modelConfig.id),
+      provider: usedProviderLabel,
+      tokenCost: spend.charged,
+      costUsd,
+      cached: false,
+      kind: plan.kind,
+      reason,
+      promptHash: isEdit ? null : promptHash,
+      meta: {
+        templateId: activeTemplate?.id ?? null,
+        expressMode,
+        isEdit,
+      },
+    });
+
     const usedImages = hasImages
       ? images.filter((url) =>
           `${siteParts!.html}\n${siteParts!.css}\n${siteParts!.js}`.includes(url)
@@ -846,6 +1009,8 @@ ${body.existingJs ?? ""}`
         ? images.filter((url) => !usedImages.includes(url))
         : [],
       remaining: status.token_balance,
+      optimizeKind: plan.kind,
+      templateId: activeTemplate?.id ?? null,
     });
   } catch (error) {
     console.error("generate-site error:", error);

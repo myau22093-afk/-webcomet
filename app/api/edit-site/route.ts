@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const profile = await getOrCreateBillingProfile(admin, auth.user);
-    const tokenCost = getTokenCost("gpt-5.6-luna");
+    const tokenCost = getTokenCost("gpt-5.6-terra");
 
     try {
       assertHasTokens(profile, tokenCost);

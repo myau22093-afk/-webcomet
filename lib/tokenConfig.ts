@@ -1,36 +1,42 @@
 /**
- * Списание токенов за запрос.
- * Калибровка под плюс даже на самом дешёвом пакете (~0.95 ₽/токен):
- * Fable ≈130 ₽ API → 250 ток.; Luna ≈12 ₽ → 24 ток.
+ * Списание токенов: плюс даже на Enterprise (~1 ₽/токен).
+ * Fable ≈130 ₽ API → 250 ток.; картинки с запасом.
+ * Кеш (API 0 ₽) → CACHE_HIT_TOKEN_COST — жирный плюс, клиенту дешевле полной генерации.
  */
 export const TOKEN_COSTS: Record<string, { cost: number }> = {
   "claude-fable-5": { cost: 250 },
-  "claude-sonnet-5": { cost: 65 },
-  "gpt-5.6-sol": { cost: 100 },
+  "claude-sonnet-5": { cost: 70 },
+  "gpt-5.6-sol": { cost: 110 },
   "gpt-5.6-terra": { cost: 55 },
-  "gpt-5.6-luna": { cost: 24 },
-  "gpt-5.6-luna-chat": { cost: 18 },
-  "claude-sonnet-4-6": { cost: 55 },
-  "gemini-3.1-flash-image": { cost: 55 },
-  "gemini-3-pro-image": { cost: 95 },
-  "gpt-image-2": { cost: 55 },
-  "gemini-3.1-flash-lite": { cost: 6 },
+  "gpt-5.6-luna": { cost: 28 },
+  "gpt-5.6-luna-chat": { cost: 20 },
+  "claude-sonnet-4-6": { cost: 60 },
+  "gemini-3.1-flash-image": { cost: 70 },
+  "gemini-3-pro-image": { cost: 120 },
+  "gpt-image-2": { cost: 70 },
+  "gemini-3.1-flash-lite": { cost: 8 },
   "deepseek-chat": { cost: 2 },
 };
 
-/** Пакеты ≈ 0.95–1.2 ₽ за токен (крупнее пакет — чуть выгоднее клиенту) */
+/**
+ * Повтор того же промпта из кеша. API = 0.
+ * Клиенту выгоднее полной генерации (250), тебе — почти чистая маржа.
+ */
+export const CACHE_HIT_TOKEN_COST = 80;
+
+/** Пол ~1 ₽/токен; крупные пакеты чуть выгоднее клиенту, без демпинга ниже 1 ₽ */
 export const TOKEN_PACKAGES = [
   { id: "basic", tokens: 500, price: 590, label: "Basic" },
   { id: "pro", tokens: 2000, price: 2200, label: "Pro" },
-  { id: "business", tokens: 5000, price: 5200, label: "Business" },
-  { id: "enterprise", tokens: 20000, price: 18900, label: "Enterprise" },
+  { id: "business", tokens: 5000, price: 5500, label: "Business" },
+  { id: "enterprise", tokens: 20000, price: 19900, label: "Enterprise" },
 ] as const;
 
 export type TokenPackageId = (typeof TOKEN_PACKAGES)[number]["id"];
 
 export const FREE_TOKENS = 100;
 
-export const DEFAULT_TOKEN_COST = 24;
+export const DEFAULT_TOKEN_COST = 28;
 
 /** Стоимость модели в токенах (по catalog id) */
 export function getTokenCost(modelId: string | null | undefined): number {

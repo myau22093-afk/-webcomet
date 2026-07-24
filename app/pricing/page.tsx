@@ -84,9 +84,10 @@ export default function PricingPage() {
           <h1 className="font-display text-3xl font-semibold sm:text-4xl">
             Токены WebComet
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
-            Платите только за запросы. После регистрации —{" "}
-            {FREE_TOKENS} бесплатных токенов.
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
+            Платите только за запросы. После регистрации — {FREE_TOKENS}{" "}
+            бесплатных токенов. Стоимость зависит от типа задачи: создание сайта,
+            правка или чат.
             {balance != null && email && (
               <>
                 {" "}
