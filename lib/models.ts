@@ -29,9 +29,9 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
   proxyapi: "ProxyAPI",
 };
 
-/** Каталог моделей UI + API (порядок = порядок в селекте) */
+/** Каталог моделей UI + API (порядок = от дорогих к дешёвым в селекте) */
 export const MODEL_CATALOG: ModelConfig[] = [
-  // —— Сайт ——
+  // —— Сайт (токены: 80 → 14) ——
   {
     id: "claude-fable-5",
     name: "Claude Fable 5",
@@ -40,15 +40,6 @@ export const MODEL_CATALOG: ModelConfig[] = [
     type: "site",
     costMultiplier: 1.4,
     description: "По умолчанию · премиум",
-    fallbackProviders: ["promptra"],
-  },
-  {
-    id: "claude-sonnet-5",
-    name: "Claude Sonnet 5",
-    provider: "proxyapi",
-    modelId: "anthropic/claude-sonnet-5",
-    type: "site",
-    costMultiplier: 1.2,
     fallbackProviders: ["promptra"],
   },
   {
@@ -62,22 +53,13 @@ export const MODEL_CATALOG: ModelConfig[] = [
     fallbackProviders: ["promptra"],
   },
   {
-    id: "gpt-5.6-terra",
-    name: "GPT-5.6 Terra",
+    id: "claude-sonnet-5",
+    name: "Claude Sonnet 5",
     provider: "proxyapi",
-    modelId: "openai/gpt-5.6-terra",
+    modelId: "anthropic/claude-sonnet-5",
     type: "site",
-    costMultiplier: 1.3,
-    fallbackProviders: ["promptra"],
-  },
-  {
-    id: "gpt-5.6-luna",
-    name: "GPT-5.6 Luna",
-    provider: "proxyapi",
-    modelId: "openai/gpt-5.6-luna",
-    type: "site",
-    costMultiplier: 1.1,
-    description: "Быстрее / дешевле среди 5.6",
+    costMultiplier: 1.2,
+    description: "Баланс цена / качество",
     fallbackProviders: ["promptra"],
   },
   {
@@ -90,18 +72,28 @@ export const MODEL_CATALOG: ModelConfig[] = [
     description: "Классика",
     fallbackProviders: ["proxyapi"],
   },
-
-  // —— Картинки ——
   {
-    id: "gemini-3.1-flash-image",
-    name: "Gemini Flash Image",
+    id: "gpt-5.6-terra",
+    name: "GPT-5.6 Terra",
     provider: "proxyapi",
-    modelId: "gemini/gemini-3.1-flash-image",
-    type: "image",
-    costMultiplier: 0.6,
-    description: "По умолчанию",
+    modelId: "openai/gpt-5.6-terra",
+    type: "site",
+    costMultiplier: 1.3,
+    description: "Хорошее качество · средняя цена",
     fallbackProviders: ["promptra"],
   },
+  {
+    id: "gpt-5.6-luna",
+    name: "GPT-5.6 Luna",
+    provider: "proxyapi",
+    modelId: "openai/gpt-5.6-luna",
+    type: "site",
+    costMultiplier: 1.1,
+    description: "Быстрее / дешевле среди 5.6",
+    fallbackProviders: ["promptra"],
+  },
+
+  // —— Картинки (токены: 55 → 30) ——
   {
     id: "gemini-3-pro-image",
     name: "Gemini Pro Image",
@@ -109,6 +101,17 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "gemini/gemini-3-pro-image",
     type: "image",
     costMultiplier: 1.0,
+    description: "Максимальное качество",
+    fallbackProviders: ["promptra"],
+  },
+  {
+    id: "gemini-3.1-flash-image",
+    name: "Gemini Flash Image",
+    provider: "proxyapi",
+    modelId: "gemini/gemini-3.1-flash-image",
+    type: "image",
+    costMultiplier: 0.6,
+    description: "По умолчанию · быстро",
     fallbackProviders: ["promptra"],
   },
   {
@@ -118,10 +121,11 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "openai/gpt-image-2",
     type: "image",
     costMultiplier: 1.0,
+    description: "Стиль OpenAI",
     fallbackProviders: ["promptra"],
   },
 
-  // —— Чат ——
+  // —— Чат (токены: 12 → 1) ——
   {
     id: "gpt-5.6-luna-chat",
     name: "GPT-5.6 Luna",
@@ -129,7 +133,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "openai/gpt-5.6-luna",
     type: "chat",
     costMultiplier: 0.35,
-    description: "По умолчанию",
+    description: "По умолчанию · умный ответ",
     fallbackProviders: ["promptra"],
   },
   {
@@ -139,6 +143,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "gemini/gemini-3.1-flash-lite",
     type: "chat",
     costMultiplier: 0.15,
+    description: "Быстрый и дешёвый",
     fallbackProviders: ["promptra"],
   },
   {
@@ -148,7 +153,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "deepseek/deepseek-v4-flash",
     type: "chat",
     costMultiplier: 0.05,
-    description: "Запасной",
+    description: "Самый дешёвый · запасной",
     fallbackProviders: ["proxyapi"],
   },
 ];
