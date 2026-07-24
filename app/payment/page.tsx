@@ -67,8 +67,8 @@ function PaymentContent() {
         {pack.price.toLocaleString("ru-RU")} ₽
       </p>
       <p className="mt-6 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
-        Оплата через ЮKassa. Если ключи не заданы — сработает тестовая
-        заглушка.
+        Оплата картой через защищённую форму. После оплаты токены появятся на
+        балансе автоматически.
       </p>
       <div className="mt-8 flex flex-col gap-3">
         <button

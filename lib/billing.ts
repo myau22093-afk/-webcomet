@@ -109,11 +109,26 @@ function isMissingColumnError(error: unknown): boolean {
 
 export function formatBillingError(error: unknown): string {
   if (!error) return "Неизвестная ошибка";
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as { message: unknown }).message);
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes("migrate") ||
+    lower.includes("supabase") ||
+    lower.includes("column") ||
+    lower.includes("could not find")
+  ) {
+    return "Временная ошибка сервера. Попробуйте позже или напишите в поддержку.";
   }
-  return String(error);
+  if (lower.includes("yookassa") || lower.includes("юkassa") || lower.includes("stub")) {
+    return "Не удалось создать платёж. Попробуйте ещё раз.";
+  }
+  return raw;
 }
 
 export function normalizeTier(value: unknown): Tier {

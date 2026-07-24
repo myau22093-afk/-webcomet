@@ -33,7 +33,7 @@ export function humanizeUpstreamError(
   }
 
   if (lower.includes("model is not available") || lower.includes("not available")) {
-    return "Эта модель сейчас недоступна у провайдера. Выбери другую модель в списке.";
+    return "Эта модель сейчас недоступна. Выберите другую в списке.";
   }
 
   if (
@@ -42,16 +42,20 @@ export function humanizeUpstreamError(
     lower.includes("оборвал соединение") ||
     lower.includes("fetch failed")
   ) {
-    return "Провайдер не ответил вовремя. Попробуй ещё раз через минуту.";
+    return "Сервис не ответил вовремя. Попробуйте ещё раз через минуту.";
   }
 
   if (lower.includes("rate limit") || lower.includes("too many requests")) {
-    return "Слишком много запросов. Подожди немного и повтори.";
+    return "Слишком много запросов. Подождите немного и повторите.";
   }
 
   if (lower.includes("insufficient") || lower.includes("quota") || lower.includes("billing")) {
-    return "У провайдера закончилась квота/баланс. Проверь кабинет Promptra.";
+    return "Сервис временно недоступен. Попробуйте позже или другую модель.";
   }
 
-  return text.trim() || fallback;
+  // Не отдаём сырой техтекст клиенту
+  if (text.trim()) {
+    return "Не удалось выполнить запрос. Попробуйте ещё раз или смените модель.";
+  }
+  return fallback;
 }

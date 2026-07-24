@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: missing
-            ? "Выполните supabase/migrate-contacts.sql в Supabase (колонки phone / socials / show_contacts)"
+            ? "Не удалось сохранить контакты. Попробуйте позже."
             : formatBillingError(error),
         },
         { status: 500 }

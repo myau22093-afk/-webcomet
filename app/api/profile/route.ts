@@ -94,7 +94,7 @@ export async function PATCH(request: Request) {
         {
           error:
             error.message?.includes("brand_")
-              ? "Выполните supabase/migrate-brand.sql в Supabase (колонки brand_logo / brand_colors)"
+              ? "Не удалось сохранить бренд. Попробуйте позже."
               : formatBillingError(error),
         },
         { status: 500 }

@@ -68,8 +68,7 @@ export async function POST(request: Request) {
         paymentId: stubId,
         confirmationUrl: confirmUrl,
         package: pack,
-        message:
-          "ЮKassa не настроена — тестовая ссылка сразу зачислит токены",
+        message: "Переходим к оплате…",
       });
     }
 
@@ -107,8 +106,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            data.description ||
-            "Не удалось создать платёж ЮKassa. Проверьте ключи.",
+            "Не удалось создать платёж. Попробуйте ещё раз.",
         },
         { status: 502 }
       );
@@ -117,7 +115,7 @@ export async function POST(request: Request) {
     const confirmationUrl = data.confirmation?.confirmation_url;
     if (!confirmationUrl) {
       return NextResponse.json(
-        { error: "ЮKassa не вернула ссылку на оплату" },
+        { error: "Не удалось получить ссылку на оплату" },
         { status: 502 }
       );
     }

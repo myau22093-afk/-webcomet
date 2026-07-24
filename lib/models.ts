@@ -153,7 +153,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "deepseek/deepseek-v4-flash",
     type: "chat",
     costMultiplier: 0.05,
-    description: "Самый дешёвый · запасной",
+    description: "Самый дешёвый",
     fallbackProviders: ["proxyapi"],
   },
 ];

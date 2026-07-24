@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
       !isEditMode
     ) {
       const goSettings = window.confirm(
-        "Контакты ещё не сохранены. Открыть настройки, чтобы заполнить телефон, email и соцсети?\n\n«Отмена» — сгенерировать с заглушками."
+        "Контакты ещё не сохранены. Открыть настройки, чтобы заполнить телефон, email и соцсети?\n\n«Отмена» — сгенерировать с примерными контактами."
       );
       if (goSettings) {
         setWorkMode("settings");
@@ -1345,7 +1345,7 @@ export default function DashboardPage() {
       setLastModelLabel(data.modelLabel ?? imageModel);
       setLastProviderLabel(data.providerLabel ?? data.provider ?? "");
       setLastModelReason(
-        data.usedFallback ? `fallback → ${data.providerLabel}` : ""
+        data.usedFallback ? "" : ""
       );
       setImageHistory((prev) => [
         {
@@ -2457,10 +2457,9 @@ export default function DashboardPage() {
                     />
                     Правка
                   </label>
-                  {(lastModelReason || lastCached) && (
+                  {lastCached && (
                     <span className="ml-auto text-[10px] text-zinc-600">
-                      {lastModelReason}
-                      {lastCached ? " · кэш" : ""}
+                      из сохранённых
                     </span>
                   )}
                 </div>
@@ -2791,8 +2790,7 @@ export default function DashboardPage() {
                       Картинка недоступна
                     </p>
                     <p className="text-xs leading-relaxed text-amber-100/80">
-                      Файл не найден на сервере (часто после переезда или
-                      пересборки Docker). Сгенерируйте изображение заново.
+                      Файл больше недоступен. Сгенерируйте изображение заново.
                     </p>
                   </div>
                   <a
@@ -2810,7 +2808,7 @@ export default function DashboardPage() {
                   <ImageIcon className="h-8 w-8 text-violet-300" />
                   <h2 className="text-xl font-semibold">Генерация изображений</h2>
                   <p className="max-w-md text-sm text-zinc-400">
-                    GPT Image 2, Gemini, FLUX 2 и Qwen через выбранного провайдера
+                    Опишите картинку — выберите модель и нажмите «Сгенерировать»
                   </p>
                 </div>
               )}
@@ -2910,8 +2908,6 @@ export default function DashboardPage() {
               {lastModelLabel && workMode === "chat" && (
                 <p className="mx-auto mb-2 max-w-3xl text-[11px] text-zinc-500">
                   Последний ответ: {lastModelLabel}
-                  {lastProviderLabel ? ` · ${lastProviderLabel}` : ""}
-                  {lastModelReason ? ` · ${lastModelReason}` : ""}
                 </p>
               )}
               <div className="mx-auto flex max-w-3xl flex-col gap-2 rounded-2xl border border-white/10 glass-card p-2 sm:flex-row sm:items-center">
@@ -3056,7 +3052,7 @@ export default function DashboardPage() {
                       Показывать контакты на генерируемых сайтах
                     </span>
                     <span className="mt-0.5 block text-[11px] text-zinc-500">
-                      Если выключено — на сайтах будут примерные заглушки
+                      Если выключено — на сайтах будут примерные контакты
                     </span>
                   </span>
                 </label>
@@ -3136,8 +3132,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <p className="mt-4 text-[11px] text-zinc-600">
-              Без ключей ЮKassa включена тестовая заглушка — токены
-              зачислятся сразу.
+              Оплата картой. Токены появятся на балансе после успешного платежа.
             </p>
           </div>
         </div>
