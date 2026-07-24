@@ -1,47 +1,25 @@
-WebComet — деплой проекта (не лендинг!)
+WebComet - деплой проекта (не лендинг!)
 ========================================
 
-Это архив ПРИЛОЖЕНИЯ WebComet (генератор сайтов на Next.js).
-Это НЕ статический сайт из «Скачать ZIP» в дашборде.
+Этот репозиторий содержит WebComet (генератор сайтов на Next.js).
 
-ВАЖНО про Рег.ру
-----------------
-Обычный виртуальный хостинг (public_html, PHP) НЕ запустит WebComet.
-Нужен VPS / Cloud с Node.js 20+ (у Рег.ру: VPS, Cloud VPS и т.п.).
+Быстрый деплой на уже поднятый VPS (Docker)
+-------------------------------------------
+На сервере (SSH):
 
-Либо проще для теста:
-- Vercel (vercel.com) — бесплатно, заточен под Next.js
-- Railway / Render / Timeweb Apps
+  cd /opt/webcomet
+  bash scripts/deploy-vps.sh
 
-Быстрый старт на VPS
---------------------
-1. Распакуйте архив на сервер (например в /var/www/webcomet).
-2. Установите Node.js 20 LTS.
-3. Скопируйте .env.example → .env.local и заполните ключи
-   (Supabase, Promptra/ProxyAPI, URL сайта).
-4. В Supabase выполните SQL из папки supabase/ (миграции).
-5. Команды:
+или вручную:
 
-   npm install
-   npm run build
-   npm start
+  cd /opt/webcomet
+  git pull origin main
+  docker compose up -d --build
+  curl -I http://127.0.0.1/
 
-   # или через PM2:
-   npm install -g pm2
-   pm2 start npm --name webcomet -- start
-   pm2 save
+После деплоя в Cloudflare — cache rule для /_next/static (см. cloudflare-cache.md).
+Масштаб 3–9к онлайн — см. SCALE.md и docker-compose.scale.yml.
 
-6. В .env.local поставьте:
-   NEXT_PUBLIC_APP_URL=https://ваш-домен.ru
+Цены токенов: lib/tokenConfig.ts (Basic 500₽ / Pro 1800₽ / Business 4000₽ / Enterprise 14000₽).
 
-7. Перед nginx/apache проксируйте порт 3000 на 80/443.
-
-Что НЕ входит в архив (намеренно)
----------------------------------
-- node_modules (ставьте на сервере: npm install)
-- .next (соберётся: npm run build)
-- .env.local (секреты — заполните сами из .env.example)
-
-Файлы загрузок пользователей
-----------------------------
-Папка public/uploads должна быть доступна на запись.
+Важно: NEXT_PUBLIC_* ключи зашиваются при docker build — после правки .env нужен --build.
