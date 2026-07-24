@@ -7,11 +7,12 @@ import {
   getOrCreateBillingProfile,
 } from "@/lib/billing";
 import { saveChatExchange } from "@/lib/history";
+import { humanizeUpstreamError } from "@/lib/apiErrors";
 import {
   estimateCostUsd,
   formatCostUsd,
-  getModelById,
   modelShortLabel,
+  PROVIDER_LABELS,
   resolveChatModelConfig,
   type ProviderId,
 } from "@/lib/models";
@@ -66,11 +67,11 @@ export async function POST(request: Request) {
       modelId: body.modelId,
       message,
     });
-    let modelConfig = selected.config;
-    let reason = selected.reason;
+    const modelConfig = selected.config;
+    const reason = selected.reason;
     let responseText: string;
     let provider: ProviderId = modelConfig.provider;
-    let providerLabel: string = modelConfig.provider;
+    let providerLabel: string = PROVIDER_LABELS[modelConfig.provider];
     const tokenCost = getTokenCost(modelConfig.id);
 
     try {
@@ -97,12 +98,15 @@ export async function POST(request: Request) {
     } catch (credError) {
       return NextResponse.json(
         {
-          error:
+          error: `${modelConfig.name} сейчас недоступна. Выберите другую модель в списке.`,
+          modelId: modelConfig.id,
+          modelLabel: modelShortLabel(modelConfig.id),
+          detail:
             credError instanceof Error
               ? credError.message
               : "Провайдер не настроен",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 
@@ -122,48 +126,21 @@ export async function POST(request: Request) {
       responseText = completion.content;
       provider = completion.provider;
       providerLabel = completion.providerLabel;
-      if (completion.usedFallback) {
-        reason = `${reason} · fallback → ${completion.providerLabel}`;
-      }
     } catch (primaryError) {
       const queued = aiQueueErrorResponse(primaryError);
       if (queued) {
         return NextResponse.json(queued.body, { status: queued.status });
       }
-      console.error("chat primary model error:", primaryError);
-      try {
-        const fallback = getModelById("deepseek-chat")!;
-        modelConfig = fallback;
-        reason = "fallback → DeepSeek";
-        const completion = await withAiSlot(() =>
-          chatWithProviders({
-            config: fallback,
-            messages,
-            temperature: 0.6,
-            max_tokens: 1024,
-          })
-        );
-        responseText = completion.content;
-        provider = completion.provider;
-        providerLabel = completion.providerLabel;
-      } catch (fallbackError) {
-        const queuedFallback = aiQueueErrorResponse(fallbackError);
-        if (queuedFallback) {
-          return NextResponse.json(queuedFallback.body, {
-            status: queuedFallback.status,
-          });
-        }
-        console.error("chat fallback error:", fallbackError);
-        return NextResponse.json(
-          {
-            error:
-              primaryError instanceof Error
-                ? primaryError.message
-                : "Ошибка чата",
-          },
-          { status: 500 }
-        );
-      }
+      console.error("chat model error:", primaryError);
+      return NextResponse.json(
+        {
+          error: `${modelConfig.name} сейчас недоступна. Выберите другую модель в списке.`,
+          modelId: modelConfig.id,
+          modelLabel: modelShortLabel(modelConfig.id),
+          detail: humanizeUpstreamError(primaryError),
+        },
+        { status: 503 }
+      );
     }
 
     const finalCost = getTokenCost(modelConfig.id);

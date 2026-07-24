@@ -2,18 +2,17 @@ export const DEFAULT_BRAND_COLORS = [
   "#6c3bf4",
   "#ffffff",
   "#0b0f19",
-  "#a78bfa",
-  "#22d3ee",
-  "#f472b6",
 ] as const;
 
+export const MAX_BRAND_COLORS = 8;
+
 export const SITE_SECTION_OPTIONS = [
-  { id: "hero", label: "Hero" },
+  { id: "hero", label: "Главный экран" },
   { id: "services", label: "Услуги" },
   { id: "reviews", label: "Отзывы" },
-  { id: "form", label: "Форма" },
+  { id: "form", label: "Форма заявки" },
   { id: "map", label: "Карта" },
-  { id: "footer", label: "Футер" },
+  { id: "footer", label: "Низ сайта" },
 ] as const;
 
 export type SiteSectionId = (typeof SITE_SECTION_OPTIONS)[number]["id"];
@@ -49,16 +48,20 @@ export function normalizeHexColor(value: string, fallback: string): string {
 
 export function normalizeBrandColors(
   input: unknown,
-  length = 6
+  maxLength = MAX_BRAND_COLORS
 ): string[] {
   const defaults = [...DEFAULT_BRAND_COLORS];
-  if (!Array.isArray(input)) return defaults.slice(0, length);
+  if (!Array.isArray(input)) return defaults;
+
   const out: string[] = [];
-  for (let i = 0; i < length; i++) {
-    const raw = typeof input[i] === "string" ? input[i] : "";
-    out.push(normalizeHexColor(raw, defaults[i] ?? defaults[0]));
+  for (const item of input) {
+    if (out.length >= maxLength) break;
+    if (typeof item !== "string") continue;
+    const hex = normalizeHexColor(item, "");
+    if (!hex) continue;
+    out.push(hex);
   }
-  return out;
+  return out.length > 0 ? out : defaults;
 }
 
 export function parseBrandColors(value: unknown): string[] {

@@ -34,6 +34,7 @@ import {
   Wand2,
   X,
   Phone,
+  Plus,
 } from "lucide-react";
 import { getSupabase } from "@/lib/supabaseClient";
 import {
@@ -53,6 +54,7 @@ import {
 import {
   DEFAULT_BRAND_COLORS,
   LOGO_ACCEPT,
+  MAX_BRAND_COLORS,
   PREVIEW_DEVICE_WIDTH,
   SITE_SECTION_OPTIONS,
   defaultSections,
@@ -198,6 +200,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const designInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const addColorInputRef = useRef<HTMLInputElement>(null);
   const generateFormRef = useRef<HTMLFormElement>(null);
   const speechRef = useRef<SpeechRecognitionLike | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -910,6 +913,28 @@ export default function DashboardPage() {
     setBrandColors(next);
     if (!isValidHexColor(value)) return;
     const normalized = normalizeBrandColors(next);
+    setBrandColors(normalized);
+    const accessToken = await getFreshAccessToken();
+    if (!accessToken) return;
+    await persistBrandSettings(accessToken, { colors: normalized });
+  }
+
+  async function addBrandColor(value: string) {
+    if (brandColors.length >= MAX_BRAND_COLORS) return;
+    if (!isValidHexColor(value)) return;
+    const hex = normalizeHexColor(value, value);
+    const normalized = normalizeBrandColors([...brandColors, hex]);
+    setBrandColors(normalized);
+    const accessToken = await getFreshAccessToken();
+    if (!accessToken) return;
+    await persistBrandSettings(accessToken, { colors: normalized });
+  }
+
+  async function removeBrandColor(index: number) {
+    if (brandColors.length <= 1) return;
+    const normalized = normalizeBrandColors(
+      brandColors.filter((_, i) => i !== index)
+    );
     setBrandColors(normalized);
     const accessToken = await getFreshAccessToken();
     if (!accessToken) return;
@@ -2447,6 +2472,39 @@ export default function DashboardPage() {
                     </span>
                     Мои контакты
                   </button>
+                  {!isEditMode && (
+                    <>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept={LOGO_ACCEPT}
+                        className="hidden"
+                        onChange={(e) => handleUploadLogo(e.target.files)}
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingLogo}
+                        onClick={() => logoInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-xs text-zinc-300 disabled:opacity-50"
+                        title="Загрузить логотип"
+                      >
+                        {uploadingLogo ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        )}
+                        Логотип
+                      </button>
+                      {brandLogo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={brandLogo}
+                          alt=""
+                          className="h-6 w-auto rounded border border-white/10 object-contain"
+                        />
+                      ) : null}
+                    </>
+                  )}
                   <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
                     <input
                       type="checkbox"
@@ -2507,58 +2565,87 @@ export default function DashboardPage() {
                   <div className="flex flex-col gap-2 lg:col-span-3">
                     {!isEditMode && (
                       <>
-                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2">
-                          <input
-                            ref={logoInputRef}
-                            type="file"
-                            accept={LOGO_ACCEPT}
-                            className="hidden"
-                            onChange={(e) => handleUploadLogo(e.target.files)}
-                          />
-                          <button
-                            type="button"
-                            disabled={uploadingLogo}
-                            onClick={() => logoInputRef.current?.click()}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1.5 text-xs text-zinc-300"
-                          >
-                            {uploadingLogo ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <ImageIcon className="h-3.5 w-3.5" />
-                            )}
-                            Логотип
-                          </button>
-                          {brandLogo && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={brandLogo}
-                              alt=""
-                              className="h-6 w-auto rounded border border-white/10 object-contain"
-                            />
-                          )}
-                          <div className="flex flex-wrap gap-1">
-                            {brandColors.map((color, index) => (
-                              <input
-                                key={`brand-color-${index}`}
-                                type="color"
-                                value={
-                                  isValidHexColor(color)
-                                    ? normalizeHexColor(color, color)
-                                    : DEFAULT_BRAND_COLORS[index]
-                                }
-                                onChange={(e) =>
-                                  void handleBrandColorChange(
-                                    index,
-                                    e.target.value
-                                  )
-                                }
-                                className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent"
-                                title={color}
-                              />
-                            ))}
+                        <div className="rounded-xl border border-white/10 bg-black/20 px-2.5 py-2">
+                          <p className="mb-1.5 text-[11px] font-medium text-zinc-300">
+                            Цвета сайта
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {brandColors.map((color, index) => {
+                              const safe = isValidHexColor(color)
+                                ? normalizeHexColor(color, color)
+                                : DEFAULT_BRAND_COLORS[
+                                    Math.min(
+                                      index,
+                                      DEFAULT_BRAND_COLORS.length - 1
+                                    )
+                                  ];
+                              return (
+                                <div
+                                  key={`brand-color-${index}`}
+                                  className="group relative"
+                                >
+                                  <label
+                                    className="relative block h-7 w-7 cursor-pointer overflow-hidden rounded-full border border-white/25 shadow-sm ring-offset-1 ring-offset-[#0b0f19] focus-within:ring-2 focus-within:ring-violet-400/50"
+                                    style={{ backgroundColor: safe }}
+                                    title={`${safe} — клик сменить цвет`}
+                                  >
+                                    <input
+                                      type="color"
+                                      value={safe}
+                                      onChange={(e) =>
+                                        void handleBrandColorChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                    />
+                                  </label>
+                                  {brandColors.length > 1 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void removeBrandColor(index)
+                                      }
+                                      className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full bg-zinc-900 text-[9px] text-zinc-300 ring-1 ring-white/20 group-hover:flex"
+                                      title="Убрать цвет"
+                                      aria-label="Убрать цвет"
+                                    >
+                                      ×
+                                    </button>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                            {brandColors.length < MAX_BRAND_COLORS ? (
+                              <>
+                                <input
+                                  ref={addColorInputRef}
+                                  type="color"
+                                  defaultValue="#6c3bf4"
+                                  className="sr-only"
+                                  tabIndex={-1}
+                                  onChange={(e) => {
+                                    void addBrandColor(e.target.value);
+                                    e.target.value = "#6c3bf4";
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    addColorInputRef.current?.click()
+                                  }
+                                  className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-white/30 bg-transparent text-zinc-400 transition hover:border-violet-400/50 hover:text-violet-200"
+                                  title="Добавить цвет"
+                                  aria-label="Добавить цвет"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {SITE_SECTION_OPTIONS.map((section) => {
                             const checked = selectedSections.includes(
                               section.id
@@ -2566,7 +2653,7 @@ export default function DashboardPage() {
                             return (
                               <label
                                 key={section.id}
-                                className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] transition ${
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] transition ${
                                   checked
                                     ? "border-violet-500/40 bg-violet-500/15 text-violet-100"
                                     : "border-white/10 text-zinc-400"

@@ -31,7 +31,7 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
 
 /** Каталог моделей UI + API (порядок = от дорогих к дешёвым в селекте) */
 export const MODEL_CATALOG: ModelConfig[] = [
-  // —— Сайт (токены: 80 → 14) ——
+  // —— Сайт (токены: 250 → 24) ——
   {
     id: "claude-fable-5",
     name: "Claude Fable 5",
@@ -93,7 +93,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     fallbackProviders: ["promptra"],
   },
 
-  // —— Картинки (токены: 55 → 30) ——
+  // —— Картинки (токены: 95 → 55) ——
   {
     id: "gemini-3-pro-image",
     name: "Gemini Pro Image",
@@ -125,7 +125,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     fallbackProviders: ["promptra"],
   },
 
-  // —— Чат (токены: 12 → 1) ——
+  // —— Чат (токены: 18 → 2) ——
   {
     id: "gpt-5.6-luna-chat",
     name: "GPT-5.6 Luna",
@@ -165,7 +165,6 @@ export const MODELS = {
   siteEdit: "openai/gpt-5.6-luna",
   chatDefault: "openai/gpt-5.6-luna",
   chatComplex: "openai/gpt-5.6-luna",
-  chatFallback: "deepseek/deepseek-v4-flash",
 } as const;
 
 export const DEFAULT_SITE_MODEL_ID = "claude-fable-5";
