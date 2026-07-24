@@ -14,14 +14,29 @@ services:
       NODE_ENV: production
       AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-4}
       AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
-    ports:
-      - "80:8080"
+    expose:
+      - "8080"
     volumes:
-      # Сохраняем /uploads между пересборками контейнера
       - webcomet_uploads:/app/public/uploads
     restart: unless-stopped
     mem_limit: 1536m
     cpus: 1.5
 
+  # HTTPS (Let's Encrypt) при сером облаке Cloudflare (DNS only)
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - webcomet
+    restart: unless-stopped
+
 volumes:
   webcomet_uploads:
+  caddy_data:
+  caddy_config:
