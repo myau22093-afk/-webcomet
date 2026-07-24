@@ -2771,9 +2771,30 @@ export default function DashboardPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={generatedImageUrl}
-                    alt="Generated"
+                    alt="Сгенерированное изображение"
                     className="max-h-[70vh] w-auto rounded-2xl border border-white/10 object-contain"
+                    onError={(e) => {
+                      const el = e.currentTarget;
+                      el.style.display = "none";
+                      const fallback = el.nextElementSibling;
+                      if (fallback instanceof HTMLElement) {
+                        fallback.hidden = false;
+                      }
+                    }}
                   />
+                  <div
+                    hidden
+                    className="flex max-w-md flex-col items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-6 py-8 text-center"
+                  >
+                    <ImageIcon className="h-8 w-8 text-amber-200" />
+                    <p className="text-sm font-medium text-amber-100">
+                      Картинка недоступна
+                    </p>
+                    <p className="text-xs leading-relaxed text-amber-100/80">
+                      Файл не найден на сервере (часто после переезда или
+                      пересборки Docker). Сгенерируйте изображение заново.
+                    </p>
+                  </div>
                   <a
                     href={generatedImageUrl}
                     download

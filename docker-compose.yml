@@ -16,6 +16,12 @@ services:
       AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
     ports:
       - "80:8080"
+    volumes:
+      # Сохраняем /uploads между пересборками контейнера
+      - webcomet_uploads:/app/public/uploads
     restart: unless-stopped
     mem_limit: 1536m
     cpus: 1.5
+
+volumes:
+  webcomet_uploads:
