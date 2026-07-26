@@ -10,6 +10,8 @@ import {
   Crown,
   Zap,
   Wand2,
+  Mic,
+  Plus,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
@@ -20,14 +22,17 @@ import {
   buildWizardSitePrompt,
   detectNicheFromTopic,
   emptyWizardBrief,
+  extractCityFromTopic,
   isBriefReady,
   modelIdForTier,
   nextScriptedStep,
   sectionOptions,
+  suggestSeoFocus,
   type WizardBrief,
   type WizardTier,
 } from "@/lib/wizardBrief";
-import type { SiteSectionId } from "@/lib/brand";
+import { getTemplateById } from "@/lib/siteTemplates";
+import { LOGO_ACCEPT, type SiteSectionId } from "@/lib/brand";
 import {
   imagePromptsFromBrief,
   injectSiteImages,
@@ -47,7 +52,7 @@ type ChatBubble =
   | {
       id: string;
       kind: "choice";
-      step: "palette" | "sections" | "tier" | "details";
+      step: "palette" | "sections" | "tier" | "details" | "assets";
       title: string;
     };
 
@@ -219,8 +224,16 @@ export function SiteWizard({
   ]);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [uploadingKind, setUploadingKind] = useState<
+    null | "reference" | "logo" | "tz"
+  >(null);
   const endRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
+  const speechRef = useRef<{ stop: () => void } | null>(null);
+  const refInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const tzInputRef = useRef<HTMLInputElement>(null);
 
   const siteCost = getTokenCost(modelIdForTier(brief.tier ?? "simple"));
   const imageCost = getTokenCost(WIZARD_IMAGE_MODEL_IDS[0]);
@@ -250,7 +263,16 @@ export function SiteWizard({
           previewHtml?: string;
           showPreviewPane?: boolean;
         };
-        if (data.brief) setBrief({ ...emptyWizardBrief(), ...data.brief });
+        if (data.brief) {
+          const merged = { ...emptyWizardBrief(), ...data.brief };
+          if (
+            data.brief.assetsConfirmed === undefined &&
+            (data.brief.tier || data.brief.detailsConfirmed)
+          ) {
+            merged.assetsConfirmed = true;
+          }
+          setBrief(merged);
+        }
         if (Array.isArray(data.bubbles)) setBubbles(data.bubbles);
         if (data.result) setResult(data.result);
         if (data.previewHtml) setPreviewHtml(data.previewHtml);
@@ -286,6 +308,7 @@ export function SiteWizard({
     if (
       step === "palette" ||
       step === "details" ||
+      step === "assets" ||
       step === "sections" ||
       step === "tier"
     ) {
@@ -317,7 +340,7 @@ export function SiteWizard({
   }
 
   function pushChoice(
-    step: "palette" | "sections" | "tier" | "details",
+    step: "palette" | "sections" | "tier" | "details" | "assets",
     title: string,
     delayMs = 500
   ) {
@@ -337,16 +360,13 @@ export function SiteWizard({
     if (step === "palette") {
       pushChoice("palette", "Выбери цветовую палитру", 400);
     } else if (step === "details") {
-      pushChoice("details", "Детали для сайта и SEO", 500);
+      pushChoice("details", "Название и контакты", 500);
+    } else if (step === "assets") {
+      pushChoice("assets", "Референс, логотип, ТЗ — по желанию", 500);
     } else if (step === "sections") {
       pushChoice("sections", "Какие блоки нужны на сайте?", 500);
     } else if (step === "tier") {
       pushChoice("tier", "Какой уровень сайта?", 500);
-    } else if (step === "ready") {
-      pushAssistant(
-        "Бриф готов — жми «Собрать сайт». Превью откроется справа.",
-        true
-      );
     }
   }
 
@@ -367,6 +387,9 @@ export function SiteWizard({
     if (isFirstTopic) {
       nextBrief.topic = message;
       nextBrief.nicheId = detectNicheFromTopic(message);
+      const city = extractCityFromTopic(message);
+      if (city && !nextBrief.city) nextBrief.city = city;
+      nextBrief.seoFocus = suggestSeoFocus(nextBrief);
       setBrief(nextBrief);
       ensureScriptMenus(nextBrief);
       return;
@@ -464,7 +487,14 @@ export function SiteWizard({
       pushAssistant("Укажи название компании или бренда.", true);
       return;
     }
-    const next = { ...brief, detailsConfirmed: true };
+    const seo =
+      brief.seoFocus.trim() ||
+      suggestSeoFocus(brief);
+    const next = {
+      ...brief,
+      seoFocus: seo,
+      detailsConfirmed: true,
+    };
     setBrief(next);
     setBubbles((prev) => [
       ...prev,
@@ -476,13 +506,180 @@ export function SiteWizard({
           `Компания: ${brief.companyName.trim()}`,
           brief.city.trim() ? `Город: ${brief.city.trim()}` : null,
           brief.phone.trim() ? `Тел: ${brief.phone.trim()}` : null,
-          brief.seoFocus.trim() ? `SEO: ${brief.seoFocus.trim()}` : null,
+          seo ? `Запросы: ${seo}` : null,
         ]
           .filter(Boolean)
           .join(" · "),
       },
     ]);
     ensureScriptMenus(next);
+  }
+
+  function confirmAssets() {
+    const next = { ...brief, assetsConfirmed: true };
+    setBrief(next);
+    const bits = [
+      brief.logoUrl ? "логотип" : null,
+      brief.referenceUrls.length
+        ? `референсы (${brief.referenceUrls.length})`
+        : null,
+      brief.tzFileName ? `ТЗ: ${brief.tzFileName}` : null,
+    ].filter(Boolean);
+    setBubbles((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        kind: "text",
+        role: "user",
+        content: bits.length
+          ? `Материалы: ${bits.join(", ")}`
+          : "Без референса и ТЗ — ок",
+      },
+    ]);
+    ensureScriptMenus(next);
+  }
+
+  async function uploadWizardFiles(
+    kind: "reference" | "logo" | "tz",
+    files: FileList | null
+  ) {
+    if (!files?.length) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Войдите в аккаунт");
+      return;
+    }
+    setUploadingKind(kind);
+    setError("");
+    try {
+      if (kind === "tz") {
+        const file = files[0];
+        const isText =
+          file.type.startsWith("text/") ||
+          /\.(txt|md|markdown|csv)$/i.test(file.name);
+        if (isText) {
+          const text = await file.text();
+          setBrief((prev) => ({
+            ...prev,
+            tzText: text.slice(0, 8000),
+            tzFileName: file.name,
+          }));
+          return;
+        }
+      }
+
+      const form = new FormData();
+      form.append("kind", kind === "logo" ? "logo" : "files");
+      Array.from(files).forEach((f) => form.append("files", f));
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки");
+      const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
+      if (kind === "logo") {
+        setBrief((prev) => ({ ...prev, logoUrl: urls[0] ?? null }));
+      } else if (kind === "reference") {
+        setBrief((prev) => ({
+          ...prev,
+          referenceUrls: [...prev.referenceUrls, ...urls].slice(0, 6),
+        }));
+      } else {
+        setBrief((prev) => ({
+          ...prev,
+          tzFileName: files[0]?.name ?? "ТЗ",
+          tzText: prev.tzText || `Файл ТЗ загружен: ${urls[0] ?? ""}`,
+        }));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка загрузки");
+    } finally {
+      setUploadingKind(null);
+    }
+  }
+
+  function toggleVoice() {
+    if (listening) {
+      try {
+        speechRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      setListening(false);
+      return;
+    }
+    const w = window as Window & {
+      SpeechRecognition?: new () => {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+        start: () => void;
+        stop: () => void;
+        onresult: ((ev: {
+          resultIndex: number;
+          results: ArrayLike<{
+            0?: { transcript?: string };
+            isFinal: boolean;
+          }>;
+        }) => void) | null;
+        onerror: ((ev: { error: string }) => void) | null;
+        onend: (() => void) | null;
+      };
+      webkitSpeechRecognition?: new () => {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+        start: () => void;
+        stop: () => void;
+        onresult: ((ev: {
+          resultIndex: number;
+          results: ArrayLike<{
+            0?: { transcript?: string };
+            isFinal: boolean;
+          }>;
+        }) => void) | null;
+        onerror: ((ev: { error: string }) => void) | null;
+        onend: (() => void) | null;
+      };
+    };
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Ctor) {
+      setError("Голос — только в Chrome или Edge");
+      return;
+    }
+    const recognition = new Ctor();
+    recognition.lang = "ru-RU";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    speechRef.current = recognition;
+    setListening(true);
+    let committed = input;
+    recognition.onresult = (event) => {
+      let finalText = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const chunk = event.results[i][0]?.transcript ?? "";
+        if (event.results[i].isFinal) finalText += chunk;
+        else interim += chunk;
+      }
+      if (finalText) {
+        committed = committed.trim()
+          ? `${committed.trim()} ${finalText.trim()}`
+          : finalText.trim();
+        setInput(committed);
+      } else if (interim) {
+        setInput(committed ? `${committed} ${interim}` : interim);
+      }
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    try {
+      recognition.start();
+    } catch {
+      setListening(false);
+    }
   }
 
   function toggleSection(id: SiteSectionId) {
@@ -659,10 +856,10 @@ export function SiteWizard({
     setImagesLoading(true);
     setError("");
     try {
-      const prompts = imagePromptsFromBrief(
-        brief.topic,
-        brief.nicheId ?? detectNicheFromTopic(brief.topic)
-      );
+      const niche =
+        (brief.nicheId ? getTemplateById(brief.nicheId)?.name : null) ??
+        detectNicheFromTopic(brief.topic);
+      const prompts = imagePromptsFromBrief(brief.topic, niche);
       const urls: string[] = [];
       for (const prompt of prompts) {
         const url = await generateOneImage(accessToken, prompt);
@@ -773,14 +970,13 @@ export function SiteWizard({
                   Опиши бизнес одной фразой
                 </h2>
                 <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
-                  Например: мебель в СПб или стоматология. Дальше — цвета,
-                  название, контакты, SEO и уровень сайта.
+                  Например: магазин мебели, стоматология, кафе.
                 </p>
                 <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {[
-                    "мебель в СПб",
+                    "магазин мебели",
                     "стоматология",
-                    "ресторан",
+                    "кафе",
                     "IT-стартап",
                   ].map((hint) => (
                     <button
@@ -861,49 +1057,61 @@ export function SiteWizard({
                         type="button"
                         disabled={Boolean(brief.paletteId)}
                         onClick={() => setShowCustomPicker(true)}
-                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition ${
+                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition duration-300 ${
                           customSelected || showCustomPicker
                             ? "border-violet-400/50 bg-violet-500/15"
                             : "border-dashed border-white/20 bg-black/25 hover:border-white/35"
                         } disabled:opacity-50`}
                       >
                         <span className="flex -space-x-2">
-                          {customColors.map((c) => (
+                          {[0, 1, 2].map((i) => (
                             <span
-                              key={c}
-                              className="h-9 w-9 rounded-full border-2 border-[#0b0f19] shadow-lg"
-                              style={{ background: c }}
-                            />
+                              key={i}
+                              className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-white/30 bg-white/[0.03] text-[15px] text-zinc-400"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </span>
                           ))}
                         </span>
                         <span className="text-[15px] text-zinc-200">Свой</span>
                       </button>
                     </div>
                     {showCustomPicker && !brief.paletteId ? (
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="wc-expand-in mt-4 rounded-2xl border border-white/10 bg-[#0a0b12] p-4">
                         <p className="mb-3 text-[13px] text-zinc-400">
-                          Выбери 3 цвета: акцент, фон, тёмный
+                          Три цвета: акцент, светлый, тёмный
                         </p>
-                        <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-5">
                           {customColors.map((c, i) => (
                             <label
                               key={i}
-                              className="flex items-center gap-2 text-[13px] text-zinc-300"
+                              className="flex flex-col items-center gap-2 text-[12px] text-zinc-400"
                             >
-                              <input
-                                type="color"
-                                value={c}
-                                onChange={(e) => {
-                                  const next = [...customColors] as [
-                                    string,
-                                    string,
-                                    string,
-                                  ];
-                                  next[i] = e.target.value;
-                                  setCustomColors(next);
-                                }}
-                                className="h-10 w-12 cursor-pointer rounded-lg border border-white/10 bg-transparent"
-                              />
+                              <span
+                                className="wc-color-swatch"
+                                style={{ background: c }}
+                              >
+                                <input
+                                  type="color"
+                                  value={c}
+                                  onChange={(e) => {
+                                    const next = [...customColors] as [
+                                      string,
+                                      string,
+                                      string,
+                                    ];
+                                    next[i] = e.target.value;
+                                    setCustomColors(next);
+                                  }}
+                                  aria-label={
+                                    i === 0
+                                      ? "Акцент"
+                                      : i === 1
+                                        ? "Светлый"
+                                        : "Тёмный"
+                                  }
+                                />
+                              </span>
                               {i === 0
                                 ? "Акцент"
                                 : i === 1
@@ -914,7 +1122,7 @@ export function SiteWizard({
                           <button
                             type="button"
                             onClick={confirmCustomPalette}
-                            className="rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/35"
+                            className="rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
                           >
                             Применить
                           </button>
@@ -927,17 +1135,17 @@ export function SiteWizard({
 
               if (b.step === "details") {
                 const locked = brief.detailsConfirmed;
+                const suggested = suggestSeoFocus(brief);
                 return (
                   <div
                     key={b.id}
-                    className="w-full max-w-xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                    className="wc-expand-in w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-5"
                   >
                     <p className="mb-1 text-[15px] font-medium text-zinc-100">
                       {b.title}
                     </p>
                     <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
-                      Название, город, телефон и SEO — чтобы сайт был живым, а
-                      не шаблоном.
+                      Как назвать компанию и куда звонить клиентам.
                     </p>
                     <div className="space-y-3">
                       <input
@@ -960,9 +1168,17 @@ export function SiteWizard({
                             setBrief((prev) => ({
                               ...prev,
                               city: e.target.value,
+                              seoFocus:
+                                prev.seoFocus.trim() &&
+                                prev.seoFocus !== suggestSeoFocus(prev)
+                                  ? prev.seoFocus
+                                  : suggestSeoFocus({
+                                      ...prev,
+                                      city: e.target.value,
+                                    }),
                             }))
                           }
-                          placeholder="Город / регион"
+                          placeholder="Город (если нужен)"
                           className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
                         />
                         <input
@@ -978,26 +1194,140 @@ export function SiteWizard({
                           className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
                         />
                       </div>
-                      <input
-                        value={brief.seoFocus}
-                        disabled={locked}
-                        onChange={(e) =>
-                          setBrief((prev) => ({
-                            ...prev,
-                            seoFocus: e.target.value,
-                          }))
-                        }
-                        placeholder="SEO: ключи и гео, напр. «мебель на заказ СПб»"
-                        className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
-                      />
+                      <div>
+                        <label className="mb-1.5 block text-[12px] text-zinc-500">
+                          Фразы для поиска (подставили сами — можно поправить)
+                        </label>
+                        <input
+                          value={brief.seoFocus || suggested}
+                          disabled={locked}
+                          onChange={(e) =>
+                            setBrief((prev) => ({
+                              ...prev,
+                              seoFocus: e.target.value,
+                            }))
+                          }
+                          placeholder={suggested || "Например: мебель на заказ"}
+                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                        />
+                      </div>
                     </div>
                     {!locked ? (
                       <button
                         type="button"
                         onClick={confirmDetails}
-                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/35"
+                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
                       >
                         Дальше
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              if (b.step === "assets") {
+                const locked = brief.assetsConfirmed;
+                return (
+                  <div
+                    key={b.id}
+                    className="wc-expand-in w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                  >
+                    <p className="mb-1 text-[15px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
+                      Можно пропустить. Если есть — сайт будет ближе к вашему
+                      стилю.
+                    </p>
+                    <div className="space-y-2.5">
+                      <input
+                        ref={refInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          void uploadWizardFiles("reference", e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept={LOGO_ACCEPT}
+                        className="hidden"
+                        onChange={(e) => {
+                          void uploadWizardFiles("logo", e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <input
+                        ref={tzInputRef}
+                        type="file"
+                        accept=".txt,.md,.pdf,.doc,.docx,text/plain"
+                        className="hidden"
+                        onChange={(e) => {
+                          void uploadWizardFiles("tz", e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={locked || uploadingKind === "reference"}
+                        onClick={() => refInputRef.current?.click()}
+                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
+                      >
+                        <span>Референс (картинки сайта)</span>
+                        <span className="text-zinc-500">
+                          {uploadingKind === "reference"
+                            ? "…"
+                            : brief.referenceUrls.length
+                              ? `${brief.referenceUrls.length} файл.`
+                              : "+"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={locked || uploadingKind === "logo"}
+                        onClick={() => logoInputRef.current?.click()}
+                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
+                      >
+                        <span>Логотип</span>
+                        <span className="text-zinc-500">
+                          {uploadingKind === "logo"
+                            ? "…"
+                            : brief.logoUrl
+                              ? "загружен"
+                              : "+"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={locked || uploadingKind === "tz"}
+                        onClick={() => tzInputRef.current?.click()}
+                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
+                      >
+                        <span>Файл ТЗ</span>
+                        <span className="text-zinc-500">
+                          {uploadingKind === "tz"
+                            ? "…"
+                            : brief.tzFileName
+                              ? brief.tzFileName
+                              : "+"}
+                        </span>
+                      </button>
+                    </div>
+                    {!locked ? (
+                      <button
+                        type="button"
+                        onClick={confirmAssets}
+                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
+                      >
+                        {brief.logoUrl ||
+                        brief.referenceUrls.length ||
+                        brief.tzFileName
+                          ? "Дальше"
+                          : "Пропустить"}
                       </button>
                     ) : null}
                   </div>
@@ -1169,6 +1499,16 @@ export function SiteWizard({
               className="wc-input flex-1 py-3 text-[14px]"
               disabled={chatLoading}
             />
+            <button
+              type="button"
+              onClick={toggleVoice}
+              title="Голосовой ввод"
+              className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 ${
+                listening ? "wc-mic-recording" : ""
+              }`}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
             <button
               type="submit"
               disabled={chatLoading || !input.trim()}

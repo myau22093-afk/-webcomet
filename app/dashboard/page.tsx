@@ -20,7 +20,6 @@ import {
   Download,
   Eye,
   FileUp,
-  Globe2,
   History,
   ImageIcon,
   Loader2,
@@ -34,7 +33,6 @@ import {
   ChevronUp,
   Rocket,
   Send,
-  Server,
   Settings,
   Smartphone,
   Sparkles,
@@ -45,6 +43,13 @@ import {
   Phone,
   Plus,
 } from "lucide-react";
+import {
+  IconGear,
+  IconHost,
+  IconPro,
+  IconTariffs,
+  IconWizard,
+} from "@/components/icons/WcIcons";
 import { getSupabase } from "@/lib/supabaseClient";
 import {
   buildPreviewHtml,
@@ -1798,9 +1803,9 @@ export default function DashboardPage() {
             </p>
             {(
               [
-                { id: "wizard" as const, label: "Мастер", icon: Wand2 },
-                { id: "site" as const, label: "Для профи", icon: Globe2 },
-                { id: "settings" as const, label: "Настройки", icon: Settings },
+                { id: "wizard" as const, label: "Мастер", icon: IconWizard },
+                { id: "site" as const, label: "Для профи", icon: IconPro },
+                { id: "settings" as const, label: "Настройки", icon: IconGear },
               ] as const
             ).map((mode) => {
               const Icon = mode.icon;
@@ -1824,11 +1829,11 @@ export default function DashboardPage() {
               );
             })}
             <Link href="/hosting" className="wc-nav-item mt-1">
-              <Server className="h-4 w-4" />
+              <IconHost className="h-4 w-4" />
               Хостинг
             </Link>
             <Link href="/pricing" className="wc-nav-item mt-1">
-              <Sparkles className="h-4 w-4" />
+              <IconTariffs className="h-4 w-4" />
               Тарифы
             </Link>
           </div>
@@ -2035,7 +2040,9 @@ export default function DashboardPage() {
                 <p className="truncate text-sm text-zinc-200">
                   {user?.email ?? "Загрузка..."}
                 </p>
-                <p className="text-[11px] text-zinc-500">{status.tierLabel}</p>
+                {status.tierLabel ? (
+                  <p className="text-[11px] text-zinc-500">{status.tierLabel}</p>
+                ) : null}
               </div>
             </div>
             <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -3262,11 +3269,11 @@ export default function DashboardPage() {
       </div>
 
       {topUpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="glass-card w-full max-w-lg border border-white/10 p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="wc-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="wc-modal-solid wc-expand-in w-full max-w-lg p-6">
+            <div className="mb-5 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold tracking-tight text-white">
                   Пополнить токены
                 </h2>
                 <p className="mt-1 text-sm text-zinc-400">
@@ -3276,7 +3283,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setTopUpOpen(false)}
-                className="rounded-lg p-1.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/5 hover:text-zinc-200"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -3288,22 +3295,25 @@ export default function DashboardPage() {
                   type="button"
                   disabled={Boolean(purchasingId)}
                   onClick={() => void handlePurchasePackage(pack.id)}
-                  className="rounded-xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-violet-500/40 hover:bg-violet-500/10 disabled:opacity-50"
+                  className="rounded-2xl border border-white/10 bg-[#12131c] p-4 text-left transition duration-200 hover:border-violet-400/40 hover:bg-[#161826] disabled:opacity-50"
                 >
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-zinc-100">
                     {pack.label}
                   </p>
-                  <p className="mt-1 text-lg text-violet-200">
-                    {formatTokens(pack.tokens)} ток.
+                  <p className="mt-2 text-xl font-semibold tracking-tight text-white">
+                    {formatTokens(pack.tokens)}
+                    <span className="ml-1 text-sm font-normal text-zinc-500">
+                      ток.
+                    </span>
                   </p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-2 text-sm text-zinc-400">
                     {pack.price.toLocaleString("ru-RU")} ₽
                     {purchasingId === pack.id ? " · открываем…" : ""}
                   </p>
                 </button>
               ))}
             </div>
-            <p className="mt-4 text-[11px] text-zinc-600">
+            <p className="mt-5 text-[12px] leading-relaxed text-zinc-500">
               Оплата картой. Токены появятся на балансе после успешного платежа.
             </p>
           </div>

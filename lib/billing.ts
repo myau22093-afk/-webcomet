@@ -168,7 +168,8 @@ export function buildStatusPayload(profile: ProfileBilling) {
   return {
     email: profile.email,
     tier,
-    tierLabel: tier === "agency" ? "Agency" : tier === "pro" ? "Pro" : "Starter",
+    tierLabel:
+      tier === "agency" ? "Agency" : tier === "pro" ? "Pro" : "",
     tier_expires_at: profile.tier_expires_at,
     token_balance: profile.token_balance ?? 0,
     total_tokens_used: profile.total_tokens_used ?? 0,

@@ -53,6 +53,13 @@ export type WizardBrief = {
   phone: string;
   seoFocus: string;
   detailsConfirmed: boolean;
+  /** Референсы дизайна (URL после upload) */
+  referenceUrls: string[];
+  logoUrl: string | null;
+  /** Текст ТЗ, если загрузили .txt/.md */
+  tzText: string;
+  tzFileName: string | null;
+  assetsConfirmed: boolean;
   paletteId: string | null;
   colors: string[];
   sections: SiteSectionId[];
@@ -65,6 +72,7 @@ export type WizardUiStep =
   | "topic"
   | "palette"
   | "details"
+  | "assets"
   | "sections"
   | "tier"
   | "ready";
@@ -78,6 +86,11 @@ export function emptyWizardBrief(): WizardBrief {
     phone: "",
     seoFocus: "",
     detailsConfirmed: false,
+    referenceUrls: [],
+    logoUrl: null,
+    tzText: "",
+    tzFileName: null,
+    assetsConfirmed: false,
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
@@ -91,6 +104,44 @@ export function detectNicheFromTopic(topic: string): string | null {
   return matchSiteTemplate(topic)?.id ?? null;
 }
 
+/** Вытащить город из фразы темы, если человек написал «в СПб» и т.п. */
+export function extractCityFromTopic(topic: string): string {
+  const t = topic.trim();
+  const aliases: [RegExp, string][] = [
+    [/\b(?:в\s+)?(?:спб|питер|петербург|санкт[-\s]?петербург)\b/i, "Санкт-Петербург"],
+    [/\b(?:в\s+)?(?:мск|москв[аеу])\b/i, "Москва"],
+    [/\b(?:в\s+)?(?:екатеринбург|екб)\b/i, "Екатеринбург"],
+    [/\b(?:в\s+)?новосибирск\w*\b/i, "Новосибирск"],
+    [/\b(?:в\s+)?краснодар\w*\b/i, "Краснодар"],
+    [/\b(?:в\s+)?казан\w*\b/i, "Казань"],
+    [/\b(?:в\s+)?сочи\b/i, "Сочи"],
+    [/\b(?:в\s+)?улан[-\s]?уд[эе]\b/i, "Улан-Удэ"],
+  ];
+  for (const [re, city] of aliases) {
+    if (re.test(t)) return city;
+  }
+  const m = t.match(
+    /(?:в|по)\s+([А-ЯЁ][а-яё]+(?:[-\s][А-ЯЁа-яё]+)?)/
+  );
+  return m?.[1]?.trim() ?? "";
+}
+
+/** Простое предложение SEO/гео без жаргона для пользователя */
+export function suggestSeoFocus(brief: Pick<
+  WizardBrief,
+  "topic" | "companyName" | "city"
+>): string {
+  const topic = brief.topic.trim().replace(/\s+/g, " ");
+  const city = brief.city.trim();
+  const company = brief.companyName.trim();
+  if (!topic) return "";
+  const base = city ? `${topic} ${city}` : topic;
+  if (company && !base.toLowerCase().includes(company.toLowerCase())) {
+    return `${base} — ${company}`;
+  }
+  return base;
+}
+
 export function isBriefReady(brief: WizardBrief): boolean {
   return (
     brief.topic.trim().length >= 3 &&
@@ -98,6 +149,7 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.colors.length >= 2 &&
     brief.detailsConfirmed &&
     brief.companyName.trim().length >= 2 &&
+    brief.assetsConfirmed &&
     brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
     Boolean(brief.tier)
@@ -110,6 +162,7 @@ export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
   if (!brief.detailsConfirmed || brief.companyName.trim().length < 2) {
     return "details";
   }
+  if (!brief.assetsConfirmed) return "assets";
   if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
   if (!brief.tier) return "tier";
   return "ready";
@@ -170,14 +223,24 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
   const customRequirements = [
     brief.notes.trim() || null,
     brief.seoFocus.trim()
-      ? `SEO / GEO: ориентируйся на запросы и регион: ${brief.seoFocus.trim()}. Title, H1 и тексты должны включать гео и ключевые слова естественно.`
+      ? `Поисковые запросы и регион (вплети естественно в title, H1 и тексты): ${brief.seoFocus.trim()}`
+      : null,
+    brief.logoUrl
+      ? `Логотип компании: используй <img src="${brief.logoUrl}" alt="${brief.companyName || "logo"}" /> в шапке.`
+      : null,
+    brief.referenceUrls.length
+      ? `Референсы стиля (ориентируйся на настроение/композицию, не копируй 1в1): ${brief.referenceUrls.join(", ")}`
+      : null,
+    brief.tzText.trim()
+      ? `Техническое задание от клиента:\n${brief.tzText.trim().slice(0, 4000)}`
       : null,
     ...premium,
     "Сделай законченный продающий лендинг на русском.",
     "Кнопки и якорные ссылки должны работать.",
-    "В hero и блоке услуг оставь места под изображения (data-wc-slot или пустые медиа-блоки).",
+    'В hero и карточках услуг добавь явные слоты: пустые <div data-wc-slot="hero"> и <div data-wc-slot="image"> без картинок внутри — туда позже вставятся фото.',
     "Не оставляй огромные пустые зоны: секции плотные, вертикальные отступы умеренные (примерно 64–96px).",
     "Анимации только короткие fade/slide при появлении; без бесконечного «парения» карточек.",
+    "Не выдумывай чужой город: используй только указанный город/гео. Если город не указан — пиши без привязки к городу.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -195,10 +258,11 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
 
 export const WIZARD_CHAT_MODEL_ID = "deepseek-chat";
 export const WIZARD_IMAGE_MODEL_IDS = [
+  "gemini-3-pro-image",
   "gemini-3.1-flash-image",
   "gpt-image-2",
 ] as const;
-export const WIZARD_STORAGE_KEY = "wc-wizard-v2";
+export const WIZARD_STORAGE_KEY = "wc-wizard-v3";
 
 export function nicheOptions() {
   return SITE_TEMPLATES.map((t) => ({ id: t.id, label: t.name }));

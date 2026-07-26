@@ -10,15 +10,15 @@ import { getSupabase } from "@/lib/supabaseClient";
 const features = [
   {
     title: "Скорость",
-    text: "Лендинг за пару минут: промпт, стиль, превью — без дизайнера и верстальщика.",
+    text: "Лендинг за пару минут: идея, стиль, превью — без дизайнера и верстальщика.",
   },
   {
     title: "Качество",
-    text: "Премиальные секции, анимации и типографика уровня топовых студий.",
+    text: "Секции, типографика и анимации на уровне студийных сайтов.",
   },
   {
     title: "Цена",
-    text: "Стартер бесплатно. Платите только когда растёт объём генераций.",
+    text: "Старт бесплатно. Платите токенами только за генерации.",
   },
 ];
 
@@ -48,10 +48,10 @@ export default function HomePage() {
     <div className="wc-landing relative min-h-dvh overflow-hidden text-white">
       <div className="wc-hero-stage" aria-hidden>
         <picture>
-          <source srcSet="/hero-bg.webp?v=3" type="image/webp" />
+          <source srcSet="/hero-bg.webp?v=4" type="image/webp" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/hero-bg.jpg?v=3"
+            src="/hero-bg.jpg?v=4"
             alt=""
             width={1672}
             height={941}
@@ -107,12 +107,10 @@ export default function HomePage() {
           transition={{ duration: 0.45 }}
           className="mx-auto max-w-3xl text-center"
         >
-          <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
-            <span className="wc-gradient-text drop-shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
-              Создай свой сайт за 5 минут
-            </span>
+          <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl">
+            Создай свой сайт за 5 минут
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-zinc-300/90 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-base text-zinc-200 sm:text-lg">
             Опиши идею — WebComet соберёт лендинг, сгенерирует картинки и
             поможет в чате. Код и живое превью сразу.
           </p>
@@ -139,13 +137,13 @@ export default function HomePage() {
           {features.map((item) => (
             <article
               key={item.title}
-              className="glass-card wc-lift border-white/10 bg-black/35 p-5 backdrop-blur-xl sm:p-6"
+              className="rounded-2xl border border-white/12 bg-[#0a0b12]/80 p-5 sm:p-6"
             >
               <span className="wc-feature-streak" aria-hidden />
               <h2 className="font-display text-lg font-semibold tracking-tight sm:text-xl">
                 {item.title}
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
                 {item.text}
               </p>
             </article>
