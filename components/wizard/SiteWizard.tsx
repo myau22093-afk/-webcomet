@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Crown,
   Zap,
+  Wand2,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
@@ -30,6 +31,7 @@ import {
   imagePromptsFromBrief,
   injectSiteImages,
 } from "@/lib/injectSiteImages";
+import { HostingOffer } from "@/components/HostingOffer";
 
 type ChatBubble =
   | {
@@ -400,6 +402,7 @@ export function SiteWizard({
     setError("");
     try {
       const built = buildWizardSitePrompt(brief);
+      const displayTitle = brief.topic.trim();
       const res = await fetch("/api/generate-site", {
         method: "POST",
         headers: {
@@ -407,8 +410,11 @@ export function SiteWizard({
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          prompt: built.prompt,
-          customRequirements: built.customRequirements,
+          // Короткий заголовок в историю; полный бриф — в customRequirements
+          prompt: displayTitle,
+          customRequirements: [built.prompt, built.customRequirements]
+            .filter(Boolean)
+            .join("\n\n"),
           brandColors: built.brandColors,
           sections: built.sections,
           modelId: built.modelId,
@@ -441,7 +447,7 @@ export function SiteWizard({
       );
       onSiteReady({
         id: String(data.id ?? crypto.randomUUID()),
-        prompt: built.prompt,
+        prompt: displayTitle,
         html: site.html,
         css: site.css,
         js: site.js,
@@ -557,236 +563,300 @@ export function SiteWizard({
     ]);
   }
 
+  const isFreshStart = bubbles.length <= 2 && !brief.topic && !showPreviewPane;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div
-        className={`flex min-h-0 flex-col border-white/10 ${
-          showPreviewPane ? "w-full lg:w-[42%] lg:border-r" : "w-full"
+        className={`relative flex min-h-0 flex-col border-white/10 ${
+          showPreviewPane ? "w-full lg:w-[44%] lg:border-r" : "w-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-zinc-100">Мастер сайта</p>
-            <p className="text-[11px] text-zinc-500">
-              {brief.tier === "premium"
-                ? `Премиум · ≈${siteCost} ток.`
-                : brief.tier === "simple"
-                  ? `Простой · ≈${siteCost} ток.`
-                  : "Ответь на пару вопросов — соберём сайт"}
-            </p>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
+          <div className="absolute bottom-24 right-0 h-48 w-48 rounded-full bg-sky-500/8 blur-3xl" />
+        </div>
+
+        <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
+              <Wand2 className="h-4 w-4 text-violet-200" />
+            </span>
+            <div>
+              <p className="text-[15px] font-medium tracking-tight text-zinc-100">
+                Мастер сайта
+              </p>
+              <p className="text-[12px] text-zinc-500">
+                {brief.tier === "premium"
+                  ? `Премиум · ${siteCost} ток.`
+                  : brief.tier === "simple"
+                    ? `Простой · ${siteCost} ток.`
+                    : "Пара вопросов — и сайт готов"}
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={resetWizard}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/5"
+            className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12px] text-zinc-500 transition hover:bg-white/5 hover:text-zinc-300"
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="h-3.5 w-3.5" />
             Сначала
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-          {bubbles.map((b) => {
-            if (b.kind === "text") {
-              return (
-                <div
-                  key={b.id}
-                  className={`max-w-[min(92%,36rem)] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                    b.role === "user"
-                      ? "ml-auto bg-violet-500/25 text-violet-50"
-                      : "bg-white/[0.06] text-zinc-200"
-                  }`}
-                >
-                  {b.role === "assistant" && b.animate ? (
-                    <Typewriter text={b.content} />
-                  ) : (
-                    b.content
-                  )}
-                </div>
-              );
-            }
-
-            if (b.step === "palette") {
-              return (
-                <div
-                  key={b.id}
-                  className="max-w-xl rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-4"
-                >
-                  <p className="mb-3 text-sm font-medium text-zinc-100">
-                    {b.title}
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {WIZARD_PALETTES.map((p) => {
-                      const selected = brief.paletteId === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          disabled={Boolean(brief.paletteId)}
-                          onClick={() => pickPalette(p.id)}
-                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
-                            selected
-                              ? "border-violet-400/50 bg-violet-500/15"
-                              : "border-white/10 bg-black/20 hover:border-white/25"
-                          } disabled:opacity-50`}
-                        >
-                          <span className="flex -space-x-1.5">
-                            {p.colors.map((c) => (
-                              <span
-                                key={c}
-                                className="h-7 w-7 rounded-full border-2 border-[#0b0f19] shadow-md"
-                                style={{ background: c }}
-                              />
-                            ))}
-                          </span>
-                          <span className="text-sm text-zinc-200">
-                            {p.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            }
-
-            if (b.step === "sections") {
-              return (
-                <div
-                  key={b.id}
-                  className="max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-4"
-                >
-                  <p className="mb-3 text-sm font-medium text-zinc-100">
-                    {b.title}
-                  </p>
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {sectionOptions().map((s) => {
-                      const on = brief.sections.includes(
-                        s.id as SiteSectionId
-                      );
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          disabled={brief.sectionsConfirmed}
-                          onClick={() =>
-                            toggleSection(s.id as SiteSectionId)
-                          }
-                          className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                            on
-                              ? "border-violet-400/50 bg-violet-500/20 text-violet-100"
-                              : "border-white/15 text-zinc-400 hover:border-white/30"
-                          } disabled:opacity-50`}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {!brief.sectionsConfirmed ? (
-                    <button
-                      type="button"
-                      onClick={confirmSections}
-                      className="rounded-xl bg-white/10 px-4 py-2 text-xs font-medium text-zinc-100 hover:bg-white/15"
-                    >
-                      Дальше
-                    </button>
-                  ) : null}
-                </div>
-              );
-            }
-
-            return (
-              <div
-                key={b.id}
-                className="max-w-xl space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4"
-              >
-                <p className="mb-1 text-sm font-medium text-zinc-100">
-                  {b.title}
+        <div
+          className={`relative z-[1] flex-1 overflow-y-auto px-5 py-5 ${
+            isFreshStart ? "flex flex-col justify-center" : ""
+          }`}
+        >
+          <div
+            className={`mx-auto w-full space-y-4 ${
+              showPreviewPane ? "max-w-xl" : "max-w-2xl"
+            }`}
+          >
+            {isFreshStart ? (
+              <div className="mb-2 animate-[wcFadeIn_0.5s_ease]">
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-600">
+                  С чего начать
                 </p>
-                <button
-                  type="button"
-                  disabled={Boolean(brief.tier)}
-                  onClick={() => pickTier("simple")}
-                  className="flex w-full items-start gap-3 rounded-xl border border-white/12 bg-black/25 p-3 text-left hover:border-violet-400/40 disabled:opacity-50"
-                >
-                  <span className="mt-0.5 rounded-lg bg-white/10 p-2">
-                    <Zap className="h-4 w-4 text-zinc-200" />
-                  </span>
-                  <span>
-                    <span className="block text-sm text-zinc-100">
-                      Простой · −{getTokenCost("gpt-5.6-sol")} ток.
-                    </span>
-                    <span className="mt-0.5 block text-[11px] leading-relaxed text-zinc-500">
-                      Чистый современный лендинг. Быстрее и дешевле.
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled={Boolean(brief.tier)}
-                  onClick={() => pickTier("premium")}
-                  className="flex w-full items-start gap-3 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-left hover:border-violet-400/50 disabled:opacity-50"
-                >
-                  <span className="mt-0.5 rounded-lg bg-violet-500/20 p-2">
-                    <Crown className="h-4 w-4 text-violet-200" />
-                  </span>
-                  <span>
-                    <span className="block text-sm text-violet-50">
-                      Премиум · −{getTokenCost("claude-fable-5")} ток.
-                    </span>
-                    <span className="mt-0.5 block text-[11px] leading-relaxed text-violet-200/70">
-                      Сильнее дизайн и анимации — заметно выше обычного.
-                    </span>
-                  </span>
-                </button>
+                <h2 className="mt-2 font-display text-2xl tracking-tight text-zinc-50 sm:text-[1.75rem]">
+                  Опиши бизнес одной фразой
+                </h2>
+                <p className="mt-2 max-w-md text-[14px] leading-relaxed text-zinc-500">
+                  Например: мебель в Санкт-Петербурге, стоматология, салон красоты.
+                  Дальше выберешь цвета и уровень сайта.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {[
+                    "мебель в СПб",
+                    "стоматология",
+                    "ресторан",
+                    "IT-стартап",
+                  ].map((hint) => (
+                    <button
+                      key={hint}
+                      type="button"
+                      onClick={() => void sendChat(hint)}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[12px] text-zinc-400 transition hover:border-violet-400/35 hover:bg-violet-500/10 hover:text-zinc-200"
+                    >
+                      {hint}
+                    </button>
+                  ))}
+                </div>
               </div>
-            );
-          })}
-          {chatLoading && (
-            <div className="inline-flex items-center gap-2 text-xs text-zinc-500">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Печатаю…
-            </div>
-          )}
-          <div ref={endRef} />
+            ) : null}
+
+            {bubbles.map((b) => {
+              if (b.kind === "text") {
+                if (isFreshStart && b.role === "assistant") return null;
+                return (
+                  <div
+                    key={b.id}
+                    className={`max-w-[min(94%,34rem)] rounded-2xl px-4 py-3 text-[14px] leading-relaxed shadow-sm animate-[wcFadeIn_0.35s_ease] ${
+                      b.role === "user"
+                        ? "ml-auto bg-gradient-to-br from-violet-500/35 to-violet-600/20 text-violet-50 ring-1 ring-violet-400/20"
+                        : "bg-white/[0.05] text-zinc-200 ring-1 ring-white/[0.06]"
+                    }`}
+                  >
+                    {b.role === "assistant" && b.animate ? (
+                      <Typewriter text={b.content} />
+                    ) : (
+                      b.content
+                    )}
+                  </div>
+                );
+              }
+
+              if (b.step === "palette") {
+                return (
+                  <div
+                    key={b.id}
+                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5"
+                  >
+                    <p className="mb-4 text-[14px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {WIZARD_PALETTES.map((p) => {
+                        const selected = brief.paletteId === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={Boolean(brief.paletteId)}
+                            onClick={() => pickPalette(p.id)}
+                            className={`flex items-center gap-3.5 rounded-2xl border px-3.5 py-3.5 text-left transition ${
+                              selected
+                                ? "border-violet-400/50 bg-violet-500/15"
+                                : "border-white/10 bg-black/25 hover:border-white/25"
+                            } disabled:opacity-50`}
+                          >
+                            <span className="flex -space-x-2">
+                              {p.colors.map((c) => (
+                                <span
+                                  key={c}
+                                  className="h-8 w-8 rounded-full border-2 border-[#0b0f19] shadow-lg"
+                                  style={{ background: c }}
+                                />
+                              ))}
+                            </span>
+                            <span className="text-[14px] text-zinc-200">
+                              {p.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (b.step === "sections") {
+                return (
+                  <div
+                    key={b.id}
+                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                  >
+                    <p className="mb-4 text-[14px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {sectionOptions().map((s) => {
+                        const on = brief.sections.includes(
+                          s.id as SiteSectionId
+                        );
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            disabled={brief.sectionsConfirmed}
+                            onClick={() =>
+                              toggleSection(s.id as SiteSectionId)
+                            }
+                            className={`rounded-full border px-3.5 py-2 text-[13px] transition ${
+                              on
+                                ? "border-violet-400/50 bg-violet-500/20 text-violet-100"
+                                : "border-white/12 text-zinc-400 hover:border-white/30"
+                            } disabled:opacity-50`}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!brief.sectionsConfirmed ? (
+                      <button
+                        type="button"
+                        onClick={confirmSections}
+                        className="rounded-xl bg-white/10 px-4 py-2.5 text-[13px] font-medium text-zinc-100 hover:bg-white/15"
+                      >
+                        Дальше
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={b.id}
+                  className="max-w-xl animate-[wcFadeIn_0.4s_ease] space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                >
+                  <p className="mb-1 text-[14px] font-medium text-zinc-100">
+                    {b.title}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={Boolean(brief.tier)}
+                    onClick={() => pickTier("simple")}
+                    className="flex w-full items-start gap-3.5 rounded-2xl border border-white/12 bg-black/25 p-3.5 text-left transition hover:border-violet-400/40 disabled:opacity-50"
+                  >
+                    <span className="mt-0.5 rounded-xl bg-white/10 p-2.5">
+                      <Zap className="h-4 w-4 text-zinc-200" />
+                    </span>
+                    <span>
+                      <span className="block text-[14px] text-zinc-100">
+                        Простой · −{getTokenCost("gpt-5.6-sol")} ток.
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
+                        Чистый современный лендинг. Быстрее и дешевле.
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(brief.tier)}
+                    onClick={() => pickTier("premium")}
+                    className="flex w-full items-start gap-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5 text-left transition hover:border-violet-400/50 disabled:opacity-50"
+                  >
+                    <span className="mt-0.5 rounded-xl bg-violet-500/20 p-2.5">
+                      <Crown className="h-4 w-4 text-violet-200" />
+                    </span>
+                    <span>
+                      <span className="block text-[14px] text-violet-50">
+                        Премиум · −{getTokenCost("claude-fable-5")} ток.
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
+                        Сильнее дизайн и анимации — заметно выше обычного.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+
+            {chatLoading && (
+              <div className="inline-flex items-center gap-2 text-[13px] text-zinc-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Печатаю…
+              </div>
+            )}
+
+            {result ? <HostingOffer compact className="mt-2" /> : null}
+            <div ref={endRef} />
+          </div>
         </div>
 
         {error ? (
-          <p className="px-4 text-[11px] text-rose-300">{error}</p>
+          <p className="relative z-[1] px-5 pb-1 text-[12px] text-rose-300">
+            {error}
+          </p>
         ) : null}
 
-        <div className="space-y-2 border-t border-white/10 p-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={!ready || building}
-              onClick={() => void buildSite()}
-              className="wc-btn wc-btn-primary px-3 py-2 text-xs disabled:opacity-50"
-            >
-              {building ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              Собрать сайт (−{siteCost})
-            </button>
-            {result ? (
+        <div className="relative z-[1] space-y-3 border-t border-white/[0.06] bg-black/20 px-5 py-4 backdrop-blur-md">
+          {(ready || result) && (
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={imagesLoading}
-                onClick={() => void addImages()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs text-zinc-200 hover:bg-white/5 disabled:opacity-50"
+                disabled={!ready || building}
+                onClick={() => void buildSite()}
+                className="wc-btn wc-btn-primary px-4 py-2.5 text-[13px] disabled:opacity-50"
               >
-                {imagesLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {building ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <ImageIcon className="h-3.5 w-3.5" />
+                  <Sparkles className="h-4 w-4" />
                 )}
-                Добавить картинки (−{imageCost * 3})
+                Собрать сайт (−{siteCost})
               </button>
-            ) : null}
-          </div>
+              {result ? (
+                <button
+                  type="button"
+                  disabled={imagesLoading}
+                  onClick={() => void addImages()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                >
+                  {imagesLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  Картинки (−{imageCost * 3})
+                </button>
+              ) : null}
+            </div>
+          )}
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -797,14 +867,18 @@ export function SiteWizard({
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Напиши тему или уточнение…"
-              className="wc-input flex-1 text-sm"
+              placeholder={
+                brief.topic
+                  ? "Уточнение или правка…"
+                  : "Напиши тему сайта…"
+              }
+              className="wc-input flex-1 py-3 text-[14px]"
               disabled={chatLoading}
             />
             <button
               type="submit"
               disabled={chatLoading || !input.trim()}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 disabled:opacity-40"
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </button>
@@ -813,21 +887,21 @@ export function SiteWizard({
       </div>
 
       {showPreviewPane ? (
-        <div className="flex min-h-[320px] flex-1 flex-col bg-black/20">
-          <div className="border-b border-white/10 px-4 py-2 text-xs text-zinc-500">
+        <div className="flex min-h-[320px] flex-1 flex-col bg-black/25">
+          <div className="border-b border-white/[0.06] px-5 py-3 text-[12px] text-zinc-500">
             Превью
           </div>
-          <div className="min-h-0 flex-1 p-3">
+          <div className="min-h-0 flex-1 p-4">
             {building ? (
               <BuildLoader />
             ) : previewHtml ? (
               <iframe
                 title="wizard-preview"
                 srcDoc={previewHtml}
-                className="h-full min-h-[420px] w-full rounded-xl border border-white/10 bg-white"
+                className="h-full min-h-[420px] w-full rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40"
               />
             ) : (
-              <div className="flex h-full min-h-[420px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-600">
+              <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-[14px] text-zinc-600">
                 Превью появится после сборки
               </div>
             )}

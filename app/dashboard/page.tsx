@@ -6,6 +6,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { CodeBlock } from "@/components/CodeBlock";
 import { WcSelect } from "@/components/WcSelect";
 import { SiteWizard } from "@/components/wizard/SiteWizard";
+import { HostingOffer } from "@/components/HostingOffer";
+import { shortSiteTitle } from "@/lib/siteTitle";
 import {
   Archive,
   Check,
@@ -27,6 +29,7 @@ import {
   ChevronDown,
   ChevronUp,
   Send,
+  Server,
   Settings,
   Smartphone,
   Sparkles,
@@ -246,6 +249,7 @@ export default function DashboardPage() {
   const [codeTab, setCodeTab] = useState<CodeTab>("html");
   const [copied, setCopied] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);
+  const [showHostingNudge, setShowHostingNudge] = useState(false);
   const [exportingHtml, setExportingHtml] = useState(false);
   const [previewSrcDoc, setPreviewSrcDoc] = useState("");
   const [previewFrameKey, setPreviewFrameKey] = useState(0);
@@ -1598,6 +1602,7 @@ export default function DashboardPage() {
       link.download = "webcomet-site.zip";
       link.click();
       URL.revokeObjectURL(url);
+      setShowHostingNudge(true);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Ошибка экспорта ZIP");
     } finally {
@@ -1804,6 +1809,10 @@ export default function DashboardPage() {
                 </button>
               );
             })}
+            <Link href="/hosting" className="wc-nav-item mt-1">
+              <Server className="h-4 w-4" />
+              Хостинг
+            </Link>
             <Link href="/pricing" className="wc-nav-item mt-1">
               <Sparkles className="h-4 w-4" />
               Тарифы
@@ -1846,59 +1855,68 @@ export default function DashboardPage() {
             )}
             {(workMode === "site" || workMode === "wizard") &&
               (siteHistoryGroups.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-zinc-500">Пока нет сайтов</p>
+                <p className="px-3 py-4 text-[13px] text-zinc-500">
+                  Пока нет сайтов
+                </p>
               ) : (
-                siteHistoryGroups.map((group) => (
-                  <div key={group.rootPrompt} className="mb-2">
-                    <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
-                      {group.rootPrompt}
-                    </p>
-                    {group.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`group flex items-start gap-1 rounded-xl ${
-                          activeId === item.id
-                            ? "bg-wc-purple/20 text-white"
-                            : "text-zinc-400 hover:bg-white/5"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveId(item.id);
-                            setMainTab("preview");
-                            if (workMode === "wizard") setWorkMode("site");
-                            void getFreshAccessToken().then((token) => {
-                              if (token) void ensureSiteLoaded(token, item.id);
-                            });
-                          }}
-                          className="min-w-0 flex-1 px-3 py-2.5 text-left text-sm"
+                siteHistoryGroups.map((group) => {
+                  const title = shortSiteTitle(group.rootPrompt);
+                  return (
+                    <div key={group.rootPrompt} className="mb-0.5">
+                      {group.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`group flex items-start gap-1 rounded-xl ${
+                            activeId === item.id
+                              ? "bg-wc-purple/20 text-white"
+                              : "text-zinc-400 hover:bg-white/5"
+                          }`}
                         >
-                          <p className="line-clamp-2">
-                            <span className="mr-1 text-[10px] text-violet-300">
-                              v{item.version}
-                            </span>
-                            {item.prompt}
-                          </p>
-                          <p className="mt-1 text-[10px] text-zinc-600">
-                            {new Date(item.createdAt).toLocaleString("ru-RU")}
-                          </p>
-                        </button>
-                        <button
-                          type="button"
-                          title="Удалить"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void deleteHistoryRecord("sites", item.id);
-                          }}
-                          className="mr-2 mt-2 rounded-lg p-1.5 text-zinc-600 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ))
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveId(item.id);
+                              setMainTab("preview");
+                              if (workMode === "wizard") setWorkMode("site");
+                              void getFreshAccessToken().then((token) => {
+                                if (token) void ensureSiteLoaded(token, item.id);
+                              });
+                            }}
+                            className="min-w-0 flex-1 px-3 py-2.5 text-left"
+                          >
+                            <p className="truncate text-[13px] leading-snug text-zinc-200">
+                              {group.items.length > 1 ? (
+                                <span className="mr-1.5 text-[11px] text-violet-300/90">
+                                  v{item.version}
+                                </span>
+                              ) : null}
+                              {title}
+                            </p>
+                            <p className="mt-1 text-[11px] text-zinc-600">
+                              {new Date(item.createdAt).toLocaleString("ru-RU", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </button>
+                          <button
+                            type="button"
+                            title="Удалить"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void deleteHistoryRecord("sites", item.id);
+                            }}
+                            className="mr-2 mt-2 rounded-lg p-1.5 text-zinc-600 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
               ))}
 
             {workMode === "image" &&
@@ -2216,6 +2234,12 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {showHostingNudge && activeItem ? (
+              <div className="border-b border-white/10 px-4 py-3">
+                <HostingOffer compact />
+              </div>
+            ) : null}
 
             <div className="relative flex min-h-0 flex-1 flex-col">
               {isLoading ? (
