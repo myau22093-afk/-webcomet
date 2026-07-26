@@ -3,7 +3,7 @@ export function sanitizeSiteHtml(html: string): string {
     .replace(/\shref\s*=\s*(["'])https?:\/\/[^"']*\1/gi, ' href="#"')
     .replace(/\shref\s*=\s*(["'])\/\/[^"']*\1/gi, ' href="#"')
     // относительные ссылки иначе уводят iframe на localhost:3000 (наш дашборд)
-    .replace(/\shref\s*=\s*(["'])\/[^"']*\1/gi, ' href="#"')
+    .replace(/\shref\s*=\s*(["'])\/(?!uploads\/)[^"']*\1/gi, ' href="#"')
     .replace(/\shref\s*=\s*(["'])\.\.?\/[^"']*\1/gi, ' href="#"')
     .replace(/\saction\s*=\s*(["'])[^"']*\1/gi, ' action="#"')
     .replace(/\starget\s*=\s*(["'])_blank\1/gi, "")
@@ -35,21 +35,62 @@ ${safe}
 })();`;
 }
 
+/** Origin для /uploads в iframe srcdoc (иначе картинки не грузятся) */
+export function resolvePreviewAssetOrigin(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, "");
+  }
+  const env = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (env) {
+    try {
+      return new URL(env).origin;
+    } catch {
+      return env.replace(/\/$/, "");
+    }
+  }
+  return "";
+}
+
+/** /uploads/... → абсолютные URL, чтобы превью в srcdoc их видело */
+export function absolutizeUploadUrls(content: string, origin: string): string {
+  const base = origin.replace(/\/$/, "");
+  if (!base) return content;
+  return content
+    .replace(
+      /\b(src|href)=(["'])(\/uploads\/[^"']+)\2/gi,
+      (_m, attr, q, path) => `${attr}=${q}${base}${path}${q}`
+    )
+    .replace(
+      /url\(\s*(['"]?)(\/uploads\/[^"')\s]+)\1\s*\)/gi,
+      (_m, q, path) => `url(${q}${base}${path}${q})`
+    );
+}
+
 export function buildPreviewHtml(parts: {
   html: string;
   css?: string;
   js?: string;
+  /** например https://webcomet.ru — для картинок /uploads */
+  assetOrigin?: string;
 }): string {
-  const safeHtml = sanitizeSiteHtml(parts.html || "");
-  const css = escapeScriptContent(parts.css ?? "");
+  const origin = parts.assetOrigin || resolvePreviewAssetOrigin();
+  const safeHtml = absolutizeUploadUrls(
+    sanitizeSiteHtml(parts.html || ""),
+    origin
+  );
+  const css = absolutizeUploadUrls(
+    escapeScriptContent(parts.css ?? ""),
+    origin
+  );
   const js = wrapPreviewJs(parts.js ?? "");
+  const baseHref = origin ? `${origin}/` : "about:srcdoc";
 
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <base href="about:srcdoc" target="_self" />
+  <base href="${baseHref}" target="_self" />
   <style>
     html, body {
       margin: 0;
@@ -59,6 +100,7 @@ export function buildPreviewHtml(parts: {
     }
     a { cursor: pointer; }
     button, [role="button"] { cursor: pointer; }
+    img[data-wc-injected="1"] { max-width: 100%; height: auto; }
     ${css}
   </style>
 </head>

@@ -49,7 +49,7 @@ import {
 } from "@/lib/brand";
 import {
   imagePromptsFromBrief,
-  injectSiteImages,
+  injectSiteImagesDetailed,
 } from "@/lib/injectSiteImages";
 import { PublishModal } from "@/components/PublishModal";
 import { CometPlayground } from "@/components/wizard/CometPlayground";
@@ -1044,7 +1044,11 @@ export function SiteWizard({
         const url = await generateOneImage(accessToken, prompt);
         if (url) urls.push(url);
       }
-      const html = injectSiteImages(result.html, urls);
+      if (!urls.length) {
+        pushAssistant("Картинки не удалось получить — токены за них не должны были списаться повторно.", true);
+        return;
+      }
+      const { html, injected } = injectSiteImagesDetailed(result.html, urls);
       const next = { ...result, html };
       setResult(next);
       setPreviewHtml(
@@ -1059,10 +1063,29 @@ export function SiteWizard({
         createdAt: new Date().toISOString(),
       });
       onBalanceRefresh();
+      // Обновить опубликованный сайт с картинками
+      try {
+        await fetch("/api/publish/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            siteId: next.id,
+            html: next.html,
+            css: next.css,
+            js: next.js,
+            title: brief.topic,
+          }),
+        });
+      } catch {
+        /* нет публикации */
+      }
       pushAssistant(
-        urls.length
-          ? `Добавил ${urls.length} картинки на сайт.`
-          : "Картинки не удалось получить.",
+        injected > 0
+          ? `Добавил ${urls.length} картинки на сайт (вставлено в вёрстку: ${injected}). Смотри превью справа.`
+          : `Сгенерировал ${urls.length} картинки, но не нашёл куда вставить в вёрстку. Напиши «добавь фото в карточки».`,
         true
       );
     } catch (e) {
