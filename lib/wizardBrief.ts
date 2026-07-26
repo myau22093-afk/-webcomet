@@ -53,6 +53,8 @@ export type WizardBrief = {
   phone: string;
   seoFocus: string;
   detailsConfirmed: boolean;
+  /** null = ещё не спросили; true = брать из Настроек */
+  useSettingsContacts: boolean | null;
   /** Референсы дизайна (URL после upload) */
   referenceUrls: string[];
   logoUrl: string | null;
@@ -72,6 +74,7 @@ export type WizardUiStep =
   | "topic"
   | "palette"
   | "details"
+  | "contacts"
   | "assets"
   | "sections"
   | "tier"
@@ -86,6 +89,7 @@ export function emptyWizardBrief(): WizardBrief {
     phone: "",
     seoFocus: "",
     detailsConfirmed: false,
+    useSettingsContacts: null,
     referenceUrls: [],
     logoUrl: null,
     tzText: "",
@@ -203,6 +207,7 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.colors.length >= 2 &&
     brief.detailsConfirmed &&
     brief.companyName.trim().length >= 2 &&
+    brief.useSettingsContacts !== null &&
     brief.assetsConfirmed &&
     brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
@@ -210,11 +215,17 @@ export function isBriefReady(brief: WizardBrief): boolean {
   );
 }
 
-export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
+export function nextScriptedStep(
+  brief: WizardBrief,
+  opts?: { hasProfileContacts?: boolean }
+): WizardUiStep | null {
   if (!brief.topic.trim() || brief.topic.trim().length < 3) return "topic";
   if (!brief.paletteId) return "palette";
   if (!brief.detailsConfirmed || brief.companyName.trim().length < 2) {
     return "details";
+  }
+  if (opts?.hasProfileContacts && brief.useSettingsContacts === null) {
+    return "contacts";
   }
   if (!brief.assetsConfirmed) return "assets";
   if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";

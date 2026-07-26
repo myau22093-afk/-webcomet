@@ -543,8 +543,11 @@ export async function POST(request: Request) {
       socials: profile.socials ?? [],
       show_contacts: profile.show_contacts !== false,
     };
+    // Явный ответ Мастера/Редактора важнее глобального чекбокса в Настройках
     const useContacts =
-      body.useContacts !== false && profileContacts.show_contacts;
+      typeof body.useContacts === "boolean"
+        ? body.useContacts
+        : profileContacts.show_contacts;
 
     let designDataUrl: string | null = null;
 

@@ -2114,6 +2114,11 @@ export default function DashboardPage() {
           <SiteWizard
             getAccessToken={getFreshAccessToken}
             useContacts={useContactsOnGenerate && showContacts}
+            settingsContacts={{
+              phone: contactPhone,
+              email: contactEmail,
+              socials: contactSocials,
+            }}
             onBalanceRefresh={() => {
               void (async () => {
                 const t = await getFreshAccessToken();
@@ -3306,10 +3311,11 @@ export default function DashboardPage() {
               </form>
 
                 <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
-                  При генерации включите «Мои контакты». Email из настроек
-                  используется и для заявок с формы (откроется письмо). Для
-                  хостинга скачивайте ZIP — там готовый index.html, стили,
-                  скрипты и папка assets с картинками.
+                  Эти контакты подставляются в сайты, если в Мастере ответить
+                  «да» на вопрос про данные из настроек (или включить «Мои
+                  контакты» в Редакторе). Email также уходит в формы заявок
+                  (mailto). Готовый сайт: «Опубликовать» на webcomet.ru или ZIP
+                  (index.html, стили, скрипты, assets).
                 </p>
             </div>
           </div>

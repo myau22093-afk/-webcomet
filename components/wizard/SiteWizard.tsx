@@ -69,7 +69,7 @@ type ChatBubble =
   | {
       id: string;
       kind: "choice";
-      step: "palette" | "sections" | "tier" | "details" | "assets";
+      step: "palette" | "sections" | "tier" | "details" | "assets" | "contacts";
       title: string;
     };
 
@@ -80,9 +80,16 @@ type WizardResult = {
   id?: string | null;
 };
 
+type SettingsContacts = {
+  phone: string;
+  email: string;
+  socials: string[];
+};
+
 type Props = {
   getAccessToken: () => Promise<string | null>;
   useContacts: boolean;
+  settingsContacts?: SettingsContacts;
   onBalanceRefresh: () => void;
   onSiteReady: (site: {
     id: string;
@@ -227,6 +234,7 @@ function BuildLoader() {
 export function SiteWizard({
   getAccessToken,
   useContacts,
+  settingsContacts,
   onBalanceRefresh,
   onSiteReady,
 }: Props) {
@@ -272,6 +280,17 @@ export function SiteWizard({
   const tzInputRef = useRef<HTMLInputElement>(null);
 
   resultRef.current = result;
+
+  const profileContacts: SettingsContacts = {
+    phone: settingsContacts?.phone?.trim() || "",
+    email: settingsContacts?.email?.trim() || "",
+    socials: (settingsContacts?.socials || []).map((s) => s.trim()).filter(Boolean),
+  };
+  const hasProfileContacts = Boolean(
+    profileContacts.phone ||
+      profileContacts.email ||
+      profileContacts.socials.length
+  );
 
   const siteCost = getTokenCost(modelIdForTier(brief.tier ?? "simple"));
   const imageCost = getTokenCost(WIZARD_IMAGE_MODEL_IDS[0]);
@@ -335,6 +354,12 @@ export function SiteWizard({
             (data.brief.tier || data.brief.detailsConfirmed)
           ) {
             merged.assetsConfirmed = true;
+          }
+          if (
+            merged.useSettingsContacts == null &&
+            (merged.tier || merged.assetsConfirmed)
+          ) {
+            merged.useSettingsContacts = useContacts;
           }
           setBrief(merged);
         }
@@ -405,7 +430,7 @@ export function SiteWizard({
   }
 
   function pushChoice(
-    step: "palette" | "sections" | "tier" | "details" | "assets",
+    step: "palette" | "sections" | "tier" | "details" | "assets" | "contacts",
     title: string,
     delayMs = 500
   ) {
@@ -421,11 +446,19 @@ export function SiteWizard({
   }
 
   function ensureScriptMenus(next: WizardBrief) {
-    const step = nextScriptedStep(next);
+    const step = nextScriptedStep(next, {
+      hasProfileContacts,
+    });
     if (step === "palette") {
       pushChoice("palette", "Выбери цветовую палитру", 400);
     } else if (step === "details") {
       pushChoice("details", "Название и контакты", 500);
+    } else if (step === "contacts") {
+      pushChoice(
+        "contacts",
+        "Использовать ваши данные из Настроек на этом сайте?",
+        500
+      );
     } else if (step === "assets") {
       pushChoice("assets", "Референс, логотип, ТЗ — по желанию", 500);
     } else if (step === "sections") {
@@ -433,6 +466,30 @@ export function SiteWizard({
     } else if (step === "tier") {
       pushChoice("tier", "Какой уровень сайта?", 500);
     }
+  }
+
+  function chooseSettingsContacts(use: boolean) {
+    const next: WizardBrief = {
+      ...brief,
+      useSettingsContacts: use,
+      phone:
+        use && !brief.phone.trim() && profileContacts.phone
+          ? profileContacts.phone
+          : brief.phone,
+    };
+    setBrief(next);
+    setBubbles((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        kind: "text",
+        role: "user",
+        content: use
+          ? "Да, подставить контакты из Настроек"
+          : "Нет, без данных из Настроек",
+      },
+    ]);
+    ensureScriptMenus(next);
   }
 
   async function applySiteEdit(text: string) {
@@ -670,6 +727,10 @@ export function SiteWizard({
       ...brief,
       seoFocus: seo,
       detailsConfirmed: true,
+      // нет контактов в профиле — шаг пропускаем
+      useSettingsContacts: hasProfileContacts
+        ? brief.useSettingsContacts
+        : false,
     };
     setBrief(next);
     setBubbles((prev) => [
@@ -993,7 +1054,7 @@ export function SiteWizard({
           wizardMode: true,
           templateId: built.templateId,
           expressMode: false,
-          useContacts,
+          useContacts: brief.useSettingsContacts === true,
           qualityMode: "quality",
           images: [],
           hasImages: false,
@@ -1659,6 +1720,62 @@ export function SiteWizard({
                         Дальше
                       </button>
                     ) : null}
+                  </div>
+                );
+              }
+
+              if (b.step === "contacts") {
+                const locked = brief.useSettingsContacts !== null;
+                const bits = [
+                  profileContacts.phone
+                    ? `тел. ${profileContacts.phone}`
+                    : null,
+                  profileContacts.email
+                    ? `email ${profileContacts.email}`
+                    : null,
+                  profileContacts.socials.length
+                    ? `соцсети: ${profileContacts.socials.length}`
+                    : null,
+                ].filter(Boolean);
+                return (
+                  <div
+                    key={b.id}
+                    className="wc-expand-in w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                  >
+                    <p className="mb-1 text-[15px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <p className="mb-3 text-[13px] leading-relaxed text-zinc-500">
+                      В Настройках сохранены:{" "}
+                      <span className="text-zinc-300">
+                        {bits.join(" · ") || "пока пусто"}
+                      </span>
+                      . Подставить на этот сайт?
+                    </p>
+                    {!locked ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => chooseSettingsContacts(true)}
+                          className="rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
+                        >
+                          Да, использовать
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => chooseSettingsContacts(false)}
+                          className="rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-300 transition hover:bg-white/5"
+                        >
+                          Нет, не надо
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-zinc-500">
+                        {brief.useSettingsContacts
+                          ? "Ок — контакты из Настроек пойдут на сайт."
+                          : "Ок — без контактов из Настроек."}
+                      </p>
+                    )}
                   </div>
                 );
               }
