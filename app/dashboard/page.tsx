@@ -1823,17 +1823,17 @@ export default function DashboardPage() {
                     workMode === mode.id ? "wc-nav-item-active" : ""
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5" />
                   {mode.label}
                 </button>
               );
             })}
             <Link href="/hosting" className="wc-nav-item mt-1">
-              <IconHost className="h-4 w-4" />
+              <IconHost className="h-5 w-5" />
               Хостинг
             </Link>
             <Link href="/pricing" className="wc-nav-item mt-1">
-              <IconTariffs className="h-4 w-4" />
+              <IconTariffs className="h-5 w-5" />
               Тарифы
             </Link>
           </div>

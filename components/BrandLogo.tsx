@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { IconCometMark } from "@/components/icons/WcIcons";
 
 type BrandLogoProps = {
   href?: string;
   className?: string;
   size?: "sm" | "md" | "lg";
-  /** Только знак кометы */
+  /** @deprecated знак убран — оставлено для совместимости */
   markOnly?: boolean;
 };
 
@@ -15,12 +14,6 @@ const sizeClass = {
   lg: "text-3xl",
 } as const;
 
-const markSize = {
-  sm: "h-5 w-5",
-  md: "h-6 w-6",
-  lg: "h-8 w-8",
-} as const;
-
 export function BrandLogo({
   href = "/",
   className = "",
@@ -28,14 +21,20 @@ export function BrandLogo({
   markOnly = false,
 }: BrandLogoProps) {
   const inner = (
-    <span className={`wc-brand-logo ${sizeClass[size]} ${className}`.trim()}>
-      <IconCometMark className={`wc-brand-mark ${markSize[size]}`} />
-      {!markOnly ? (
-        <span className="wc-brand-wordmark" aria-label="WebComet">
+    <span
+      className={`wc-brand-logo ${sizeClass[size]} ${className}`.trim()}
+      aria-label="WebComet"
+    >
+      {markOnly ? (
+        <span className="wc-brand-wordmark">
+          <span className="wc-brand-comet">W</span>
+        </span>
+      ) : (
+        <span className="wc-brand-wordmark">
           <span className="wc-brand-web">Web</span>
           <span className="wc-brand-comet">Comet</span>
         </span>
-      ) : null}
+      )}
     </span>
   );
 

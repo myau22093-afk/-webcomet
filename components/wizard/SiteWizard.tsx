@@ -9,11 +9,11 @@ import {
   RotateCcw,
   Crown,
   Zap,
-  Wand2,
   Mic,
   Plus,
   Rocket,
 } from "lucide-react";
+import { IconWizard } from "@/components/icons/WcIcons";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
 import {
@@ -1019,8 +1019,8 @@ export function SiteWizard({
 
         <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
-              <Wand2 className="h-4 w-4 text-violet-200" />
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
+              <IconWizard className="h-5 w-5 text-violet-200" />
             </span>
             <div>
               <p className="text-[15px] font-medium tracking-tight text-zinc-100">

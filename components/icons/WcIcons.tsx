@@ -1,132 +1,104 @@
-/** Минималистичные иконки WebComet — без «игрушечных» lucide-дефолтов */
+/** Иконки WebComet — единый стиль, читаемый размер */
 
 type IconProps = { className?: string };
 
-export function IconCometMark({ className = "h-5 w-5" }: IconProps) {
+/** Мастер: палочка + искры (одинаковая в сайдбаре и в шапке мастера) */
+export function IconWizard({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 24 24"
       fill="none"
       className={className}
       aria-hidden
     >
-      <defs>
-        <linearGradient id="wcCometCore" x1="8" y1="6" x2="26" y2="24">
-          <stop stopColor="#a78bfa" />
-          <stop offset="0.45" stopColor="#38bdf8" />
-          <stop offset="1" stopColor="#818cf8" />
-        </linearGradient>
-        <linearGradient id="wcCometTail" x1="2" y1="28" x2="18" y2="12">
-          <stop stopColor="#38bdf8" stopOpacity="0" />
-          <stop offset="0.35" stopColor="#7dd3fc" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#c4b5fd" stopOpacity="0.9" />
-        </linearGradient>
-      </defs>
       <path
-        d="M4 28C10 22 14 18 18 12"
-        stroke="url(#wcCometTail)"
-        strokeWidth="2.2"
+        d="M4.5 19.5L14.2 9.8"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
       />
       <path
-        d="M7 26C11.5 21.5 14.5 18 17 14"
-        stroke="url(#wcCometTail)"
-        strokeWidth="1.2"
+        d="M12.8 8.4l2.8 2.8"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
+      />
+      <path
+        d="M16.2 4.2l.55 1.7 1.7.55-1.7.55-.55 1.7-.55-1.7-1.7-.55 1.7-.55.55-1.7z"
+        fill="currentColor"
+      />
+      <path
+        d="M20.2 8.6l.35 1.05 1.05.35-1.05.35-.35 1.05-.35-1.05-1.05-.35 1.05-.35.35-1.05z"
+        fill="currentColor"
+        opacity="0.75"
+      />
+      <path
+        d="M19.4 13.2l.28.85.85.28-.85.28-.28.85-.28-.85-.85-.28.85-.28.28-.85z"
+        fill="currentColor"
         opacity="0.55"
       />
-      <circle cx="21.5" cy="10.5" r="5.2" fill="url(#wcCometCore)" />
-      <circle cx="21.5" cy="10.5" r="2.1" fill="#f8fafc" opacity="0.95" />
     </svg>
   );
 }
 
-export function IconWizard({ className = "h-4 w-4" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path
-        d="M5 19L15.5 8.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14.2 7.2l2.6 2.6"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M17.5 4.5l.35 1.15L19 6l-1.15.35L17.5 7.5l-.35-1.15L16 6l1.15-.35L17.5 4.5z"
-        fill="currentColor"
-      />
-      <path
-        d="M20.2 9.2l.22.72.78.22-.78.22-.22.72-.22-.72-.78-.22.78-.22.22-.72z"
-        fill="currentColor"
-        opacity="0.7"
-      />
-    </svg>
-  );
-}
-
-export function IconPro({ className = "h-4 w-4" }: IconProps) {
+export function IconPro({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect
-        x="4.5"
-        y="5.5"
-        width="15"
-        height="13"
-        rx="2.5"
+        x="4"
+        y="5"
+        width="16"
+        height="14"
+        rx="3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
       />
       <path
-        d="M8 12.5h8M8 9.5h5"
+        d="M8 12.5h8M8 9.2h5.5"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinecap="round"
       />
     </svg>
   );
 }
 
-export function IconGear({ className = "h-4 w-4" }: IconProps) {
+export function IconGear({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="2.75" stroke="currentColor" strokeWidth="1.75" />
       <path
-        d="M12 4.5v1.4M12 18.1v1.4M4.5 12h1.4M18.1 12h1.4M6.4 6.4l1 1M16.6 16.6l1 1M17.6 6.4l-1 1M7.4 16.6l-1 1"
+        d="M12 3.75v1.7M12 18.55v1.7M3.75 12h1.7M18.55 12h1.7M6.1 6.1l1.2 1.2M16.7 16.7l1.2 1.2M17.9 6.1l-1.2 1.2M7.3 16.7l-1.2 1.2"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinecap="round"
       />
     </svg>
   );
 }
 
-export function IconHost({ className = "h-4 w-4" }: IconProps) {
+export function IconHost({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
-        d="M5 8.5h14v3.2H5V8.5zM5 13.8h14V17H5v-3.2z"
+        d="M4.5 8h15v3.5h-15V8zM4.5 13.8h15V17.3h-15v-3.5z"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinejoin="round"
       />
-      <circle cx="8" cy="10.1" r="0.7" fill="currentColor" />
-      <circle cx="8" cy="15.4" r="0.7" fill="currentColor" />
+      <circle cx="8" cy="9.75" r="0.85" fill="currentColor" />
+      <circle cx="8" cy="15.55" r="0.85" fill="currentColor" />
     </svg>
   );
 }
 
-export function IconTariffs({ className = "h-4 w-4" }: IconProps) {
+export function IconTariffs({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path
-        d="M12 4.5l1.35 3.9h4.1l-3.3 2.4 1.25 3.9L12 12.5 8.6 14.7l1.25-3.9-3.3-2.4h4.1L12 4.5z"
+        d="M12 3.8l1.55 4.5h4.75l-3.85 2.8 1.45 4.55L12 13.2l-3.9 2.45 1.45-4.55-3.85-2.8h4.75L12 3.8z"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
     </svg>
