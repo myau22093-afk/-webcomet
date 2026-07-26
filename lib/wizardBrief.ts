@@ -48,10 +48,14 @@ export type WizardTier = "simple" | "premium";
 export type WizardBrief = {
   topic: string;
   notes: string;
+  companyName: string;
+  city: string;
+  phone: string;
+  seoFocus: string;
+  detailsConfirmed: boolean;
   paletteId: string | null;
   colors: string[];
   sections: SiteSectionId[];
-  /** Пользователь подтвердил набор блоков («Дальше») */
   sectionsConfirmed: boolean;
   nicheId: string | null;
   tier: WizardTier | null;
@@ -60,6 +64,7 @@ export type WizardBrief = {
 export type WizardUiStep =
   | "topic"
   | "palette"
+  | "details"
   | "sections"
   | "tier"
   | "ready";
@@ -68,17 +73,20 @@ export function emptyWizardBrief(): WizardBrief {
   return {
     topic: "",
     notes: "",
+    companyName: "",
+    city: "",
+    phone: "",
+    seoFocus: "",
+    detailsConfirmed: false,
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
-    /** Дефолтные блоки — без лишнего шага; кастом в «Для профи» */
     sectionsConfirmed: true,
     nicheId: null,
     tier: null,
   };
 }
 
-/** Подставить нишу из текста темы, если узнали */
 export function detectNicheFromTopic(topic: string): string | null {
   return matchSiteTemplate(topic)?.id ?? null;
 }
@@ -88,6 +96,8 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.topic.trim().length >= 3 &&
     Boolean(brief.paletteId) &&
     brief.colors.length >= 2 &&
+    brief.detailsConfirmed &&
+    brief.companyName.trim().length >= 2 &&
     brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
     Boolean(brief.tier)
@@ -97,6 +107,9 @@ export function isBriefReady(brief: WizardBrief): boolean {
 export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
   if (!brief.topic.trim() || brief.topic.trim().length < 3) return "topic";
   if (!brief.paletteId) return "palette";
+  if (!brief.detailsConfirmed || brief.companyName.trim().length < 2) {
+    return "details";
+  }
   if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
   if (!brief.tier) return "tier";
   return "ready";
@@ -128,17 +141,24 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
     brief.tier === "premium"
       ? [
           "PREMIUM: визуально на голову выше обычного лендинга.",
-          "Обязательны плавные анимации появления секций, hover на кнопках/карточках, аккуратная типографика, глубина (градиенты/свет).",
+          "Обязательны плавные анимации появления секций (короткие, 0.3–0.5s), hover на кнопках.",
           "Не делай «шаблонный» плоский сайт — ощущение дорогого студийного продукта.",
+          "НЕ делай плавающие карточки с медленной бесконечной анимацией и кривым наложением поверх контента.",
         ]
       : [
           "SIMPLE: чистый современный лендинг без лишней сложности.",
-          "Лёгкие hover-эффекты допустимы, тяжёлые анимации не обязательны.",
+          "Лёгкие hover-эффекты допустимы, тяжёлые/медленные анимации запрещены.",
+          "Никаких плавающих карточек поверх дашборда с бесконечным float.",
         ];
 
   const prompt = [
     `Создай современный лендинг.`,
     `Тема / бизнес: ${brief.topic.trim()}`,
+    brief.companyName.trim()
+      ? `Название компании / бренда: ${brief.companyName.trim()}`
+      : null,
+    brief.city.trim() ? `Город / гео: ${brief.city.trim()}` : null,
+    brief.phone.trim() ? `Телефон на сайте: ${brief.phone.trim()}` : null,
     niche ? `Ниша: ${niche.name}` : null,
     `Уровень: ${brief.tier === "premium" ? "премиум" : "простой"}`,
     `Секции сайта: ${sectionLabels}`,
@@ -149,12 +169,15 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
 
   const customRequirements = [
     brief.notes.trim() || null,
+    brief.seoFocus.trim()
+      ? `SEO / GEO: ориентируйся на запросы и регион: ${brief.seoFocus.trim()}. Title, H1 и тексты должны включать гео и ключевые слова естественно.`
+      : null,
     ...premium,
     "Сделай законченный продающий лендинг на русском.",
     "Кнопки и якорные ссылки должны работать.",
     "В hero и блоке услуг оставь места под изображения (data-wc-slot или пустые медиа-блоки).",
-    "Не оставляй огромные пустые зоны: секции плотные, вертикальные отступы умеренные (примерно 64–96px), контент не «теряется» в углу экрана.",
-    "Каждая секция должна занимать осмысленную часть экрана: заголовок + текст + визуал/карточки рядом, без полупустых полотен.",
+    "Не оставляй огромные пустые зоны: секции плотные, вертикальные отступы умеренные (примерно 64–96px).",
+    "Анимации только короткие fade/slide при появлении; без бесконечного «парения» карточек.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -175,6 +198,7 @@ export const WIZARD_IMAGE_MODEL_IDS = [
   "gemini-3.1-flash-image",
   "gpt-image-2",
 ] as const;
+export const WIZARD_STORAGE_KEY = "wc-wizard-v2";
 
 export function nicheOptions() {
   return SITE_TEMPLATES.map((t) => ({ id: t.id, label: t.name }));

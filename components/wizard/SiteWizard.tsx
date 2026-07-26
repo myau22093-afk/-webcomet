@@ -16,6 +16,7 @@ import { getTokenCost } from "@/lib/tokenConfig";
 import {
   WIZARD_PALETTES,
   WIZARD_IMAGE_MODEL_IDS,
+  WIZARD_STORAGE_KEY,
   buildWizardSitePrompt,
   detectNicheFromTopic,
   emptyWizardBrief,
@@ -32,6 +33,7 @@ import {
   injectSiteImages,
 } from "@/lib/injectSiteImages";
 import { HostingOffer } from "@/components/HostingOffer";
+import { CometPlayground } from "@/components/wizard/CometPlayground";
 
 type ChatBubble =
   | {
@@ -45,7 +47,7 @@ type ChatBubble =
   | {
       id: string;
       kind: "choice";
-      step: "palette" | "sections" | "tier";
+      step: "palette" | "sections" | "tier" | "details";
       title: string;
     };
 
@@ -121,18 +123,23 @@ function BuildLoader() {
     "Финальная сборка",
   ];
   const [idx, setIdx] = useState(0);
+  const [progress, setProgress] = useState(8);
 
   useEffect(() => {
-    const t = window.setInterval(() => {
-      setIdx((v) => (v < steps.length - 1 ? v + 1 : v));
-    }, 2800);
-    return () => window.clearInterval(t);
+    const stepTimer = window.setInterval(() => {
+      setIdx((v) => (v + 1) % steps.length);
+    }, 3200);
+    const progTimer = window.setInterval(() => {
+      setProgress((p) => Math.min(92, p + 1.2 + Math.random() * 2));
+    }, 800);
+    return () => {
+      window.clearInterval(stepTimer);
+      window.clearInterval(progTimer);
+    };
   }, [steps.length]);
 
-  const progress = ((idx + 1) / steps.length) * 100;
-
   return (
-    <div className="relative flex h-full min-h-[480px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-6">
+    <div className="relative flex h-full min-h-[480px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-6 py-8">
       <div className="relative w-full max-w-md">
         <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-zinc-500">
           Сборка сайта
@@ -141,7 +148,7 @@ function BuildLoader() {
           {steps[idx]}…
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
-          Обычно занимает около минуты. Можно подождать здесь.
+          Обычно около минуты. Пока можно поиграть с кометой.
         </p>
 
         <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -182,6 +189,8 @@ function BuildLoader() {
             );
           })}
         </ul>
+
+        <CometPlayground />
       </div>
     </div>
   );
@@ -194,16 +203,7 @@ export function SiteWizard({
   onSiteReady,
 }: Props) {
   const [brief, setBrief] = useState<WizardBrief>(() => emptyWizardBrief());
-  const [bubbles, setBubbles] = useState<ChatBubble[]>(() => [
-    {
-      id: uid(),
-      kind: "text",
-      role: "assistant",
-      content:
-        "Привет! Напиши тему бизнеса одной фразой — дальше палитра и уровень сайта.",
-      animate: true,
-    },
-  ]);
+  const [bubbles, setBubbles] = useState<ChatBubble[]>([]);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [building, setBuilding] = useState(false);
@@ -212,6 +212,13 @@ export function SiteWizard({
   const [previewHtml, setPreviewHtml] = useState("");
   const [error, setError] = useState("");
   const [showPreviewPane, setShowPreviewPane] = useState(false);
+  const [customColors, setCustomColors] = useState<[string, string, string]>([
+    "#6c3bf4",
+    "#f5f3ff",
+    "#0b0f19",
+  ]);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
 
@@ -222,14 +229,75 @@ export function SiteWizard({
   const briefSummary = useMemo(() => {
     const parts = [
       brief.topic ? `Тема: ${brief.topic}` : null,
+      brief.companyName ? `Компания: ${brief.companyName}` : null,
+      brief.city ? `Город: ${brief.city}` : null,
       brief.paletteId ? `Палитра: ${brief.paletteId}` : null,
-      brief.sections.length ? `Секции: ${brief.sections.join(", ")}` : null,
-      brief.nicheId ? `Ниша: ${brief.nicheId}` : null,
       brief.tier ? `Уровень: ${brief.tier}` : null,
+      brief.seoFocus ? `SEO: ${brief.seoFocus}` : null,
       brief.notes ? `Заметки: ${brief.notes}` : null,
     ];
     return parts.filter(Boolean).join("\n");
   }, [brief]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw) as {
+          brief?: WizardBrief;
+          bubbles?: ChatBubble[];
+          result?: WizardResult | null;
+          previewHtml?: string;
+          showPreviewPane?: boolean;
+        };
+        if (data.brief) setBrief({ ...emptyWizardBrief(), ...data.brief });
+        if (Array.isArray(data.bubbles)) setBubbles(data.bubbles);
+        if (data.result) setResult(data.result);
+        if (data.previewHtml) setPreviewHtml(data.previewHtml);
+        if (data.showPreviewPane) setShowPreviewPane(true);
+      }
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || building) return;
+    try {
+      localStorage.setItem(
+        WIZARD_STORAGE_KEY,
+        JSON.stringify({
+          brief,
+          bubbles,
+          result,
+          previewHtml,
+          showPreviewPane,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [brief, bubbles, result, previewHtml, showPreviewPane, hydrated, building]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const step = nextScriptedStep(brief);
+    if (
+      step === "palette" ||
+      step === "details" ||
+      step === "sections" ||
+      step === "tier"
+    ) {
+      const has = bubbles.some(
+        (b) => b.kind === "choice" && b.step === step
+      );
+      if (!has && brief.topic.trim().length >= 3) {
+        ensureScriptMenus(brief);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restore menus once after hydrate
+  }, [hydrated]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -249,9 +317,9 @@ export function SiteWizard({
   }
 
   function pushChoice(
-    step: "palette" | "sections" | "tier",
+    step: "palette" | "sections" | "tier" | "details",
     title: string,
-    delayMs = 700
+    delayMs = 500
   ) {
     if (menuDelayRef.current) window.clearTimeout(menuDelayRef.current);
     menuDelayRef.current = window.setTimeout(() => {
@@ -267,11 +335,13 @@ export function SiteWizard({
   function ensureScriptMenus(next: WizardBrief) {
     const step = nextScriptedStep(next);
     if (step === "palette") {
-      pushChoice("palette", "Выбери цветовую палитру", 1400);
+      pushChoice("palette", "Выбери цветовую палитру", 400);
+    } else if (step === "details") {
+      pushChoice("details", "Детали для сайта и SEO", 500);
     } else if (step === "sections") {
-      pushChoice("sections", "Какие блоки нужны на сайте?", 1400);
+      pushChoice("sections", "Какие блоки нужны на сайте?", 500);
     } else if (step === "tier") {
-      pushChoice("tier", "Какой уровень сайта?", 1400);
+      pushChoice("tier", "Какой уровень сайта?", 500);
     } else if (step === "ready") {
       pushAssistant(
         "Бриф готов — жми «Собрать сайт». Превью откроется справа.",
@@ -298,8 +368,6 @@ export function SiteWizard({
       nextBrief.topic = message;
       nextBrief.nicheId = detectNicheFromTopic(message);
       setBrief(nextBrief);
-      // Без AI: сразу к палитре — иначе клиент тонет в вопросах
-      pushAssistant(`Тема: «${message}». Выбери палитру.`, true);
       ensureScriptMenus(nextBrief);
       return;
     }
@@ -357,6 +425,7 @@ export function SiteWizard({
     if (!pal || brief.paletteId) return;
     const next = { ...brief, paletteId: id, colors: [...pal.colors] };
     setBrief(next);
+    setShowCustomPicker(false);
     setBubbles((prev) => [
       ...prev,
       {
@@ -366,7 +435,53 @@ export function SiteWizard({
         content: `Палитра: ${pal.label}`,
       },
     ]);
-    pushAssistant(`Отлично, палитра «${pal.label}».`, true);
+    ensureScriptMenus(next);
+  }
+
+  function confirmCustomPalette() {
+    if (brief.paletteId) return;
+    const next = {
+      ...brief,
+      paletteId: "custom",
+      colors: [...customColors],
+    };
+    setBrief(next);
+    setShowCustomPicker(false);
+    setBubbles((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        kind: "text",
+        role: "user",
+        content: "Палитра: Своя",
+      },
+    ]);
+    ensureScriptMenus(next);
+  }
+
+  function confirmDetails() {
+    if (brief.companyName.trim().length < 2) {
+      pushAssistant("Укажи название компании или бренда.", true);
+      return;
+    }
+    const next = { ...brief, detailsConfirmed: true };
+    setBrief(next);
+    setBubbles((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        kind: "text",
+        role: "user",
+        content: [
+          `Компания: ${brief.companyName.trim()}`,
+          brief.city.trim() ? `Город: ${brief.city.trim()}` : null,
+          brief.phone.trim() ? `Тел: ${brief.phone.trim()}` : null,
+          brief.seoFocus.trim() ? `SEO: ${brief.seoFocus.trim()}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      },
+    ]);
     ensureScriptMenus(next);
   }
 
@@ -400,7 +515,6 @@ export function SiteWizard({
         content: `Блоки: ${labels}`,
       },
     ]);
-    pushAssistant("Структуру зафиксировал.", true);
     ensureScriptMenus(next);
   }
 
@@ -416,14 +530,17 @@ export function SiteWizard({
         role: "user",
         content: tier === "premium" ? "Премиум сайт" : "Простой сайт",
       },
+      {
+        id: uid(),
+        kind: "text",
+        role: "assistant",
+        content:
+          tier === "premium"
+            ? "Премиум выбран. Бриф готов — жми «Собрать сайт», превью справа."
+            : "Простой лендинг. Бриф готов — жми «Собрать сайт», превью справа.",
+        animate: true,
+      },
     ]);
-    pushAssistant(
-      tier === "premium"
-        ? "Премиум: сильнее визуал и анимации. Можно собирать."
-        : "Простой: чистый современный лендинг. Можно собирать.",
-      true
-    );
-    ensureScriptMenus(next);
   }
 
   async function buildSite() {
@@ -491,7 +608,7 @@ export function SiteWizard({
       });
       onBalanceRefresh();
       pushAssistant(
-        "Сайт собран. Жми «Опубликовать» в превью (Для профи) или скачай ZIP.",
+        "Сайт собран — превью справа. Можно добавить картинки или открыть в «Для профи».",
         true
       );
     } catch (e) {
@@ -587,16 +704,13 @@ export function SiteWizard({
     setPreviewHtml("");
     setError("");
     setShowPreviewPane(false);
-    setBubbles([
-      {
-        id: uid(),
-        kind: "text",
-        role: "assistant",
-        content:
-          "Начнём заново. Для какого бизнеса или темы делаем сайт?",
-        animate: true,
-      },
-    ]);
+    setShowCustomPicker(false);
+    setBubbles([]);
+    try {
+      localStorage.removeItem(WIZARD_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
   const isFreshStart = bubbles.length <= 2 && !brief.topic && !showPreviewPane;
@@ -659,8 +773,8 @@ export function SiteWizard({
                   Опиши бизнес одной фразой
                 </h2>
                 <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
-                  Например: мебель в СПб или стоматология. Дальше — цвета и
-                  простой / премиум.
+                  Например: мебель в СПб или стоматология. Дальше — цвета,
+                  название, контакты, SEO и уровень сайта.
                 </p>
                 <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {[
@@ -704,6 +818,7 @@ export function SiteWizard({
               }
 
               if (b.step === "palette") {
+                const customSelected = brief.paletteId === "custom";
                 return (
                   <div
                     key={b.id}
@@ -742,7 +857,149 @@ export function SiteWizard({
                           </button>
                         );
                       })}
+                      <button
+                        type="button"
+                        disabled={Boolean(brief.paletteId)}
+                        onClick={() => setShowCustomPicker(true)}
+                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition ${
+                          customSelected || showCustomPicker
+                            ? "border-violet-400/50 bg-violet-500/15"
+                            : "border-dashed border-white/20 bg-black/25 hover:border-white/35"
+                        } disabled:opacity-50`}
+                      >
+                        <span className="flex -space-x-2">
+                          {customColors.map((c) => (
+                            <span
+                              key={c}
+                              className="h-9 w-9 rounded-full border-2 border-[#0b0f19] shadow-lg"
+                              style={{ background: c }}
+                            />
+                          ))}
+                        </span>
+                        <span className="text-[15px] text-zinc-200">Свой</span>
+                      </button>
                     </div>
+                    {showCustomPicker && !brief.paletteId ? (
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                        <p className="mb-3 text-[13px] text-zinc-400">
+                          Выбери 3 цвета: акцент, фон, тёмный
+                        </p>
+                        <div className="flex flex-wrap items-center gap-4">
+                          {customColors.map((c, i) => (
+                            <label
+                              key={i}
+                              className="flex items-center gap-2 text-[13px] text-zinc-300"
+                            >
+                              <input
+                                type="color"
+                                value={c}
+                                onChange={(e) => {
+                                  const next = [...customColors] as [
+                                    string,
+                                    string,
+                                    string,
+                                  ];
+                                  next[i] = e.target.value;
+                                  setCustomColors(next);
+                                }}
+                                className="h-10 w-12 cursor-pointer rounded-lg border border-white/10 bg-transparent"
+                              />
+                              {i === 0
+                                ? "Акцент"
+                                : i === 1
+                                  ? "Светлый"
+                                  : "Тёмный"}
+                            </label>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={confirmCustomPalette}
+                            className="rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/35"
+                          >
+                            Применить
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              if (b.step === "details") {
+                const locked = brief.detailsConfirmed;
+                return (
+                  <div
+                    key={b.id}
+                    className="w-full max-w-xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                  >
+                    <p className="mb-1 text-[15px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
+                      Название, город, телефон и SEO — чтобы сайт был живым, а
+                      не шаблоном.
+                    </p>
+                    <div className="space-y-3">
+                      <input
+                        value={brief.companyName}
+                        disabled={locked}
+                        onChange={(e) =>
+                          setBrief((prev) => ({
+                            ...prev,
+                            companyName: e.target.value,
+                          }))
+                        }
+                        placeholder="Название компании *"
+                        className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                      />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          value={brief.city}
+                          disabled={locked}
+                          onChange={(e) =>
+                            setBrief((prev) => ({
+                              ...prev,
+                              city: e.target.value,
+                            }))
+                          }
+                          placeholder="Город / регион"
+                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                        />
+                        <input
+                          value={brief.phone}
+                          disabled={locked}
+                          onChange={(e) =>
+                            setBrief((prev) => ({
+                              ...prev,
+                              phone: e.target.value,
+                            }))
+                          }
+                          placeholder="Телефон"
+                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                        />
+                      </div>
+                      <input
+                        value={brief.seoFocus}
+                        disabled={locked}
+                        onChange={(e) =>
+                          setBrief((prev) => ({
+                            ...prev,
+                            seoFocus: e.target.value,
+                          }))
+                        }
+                        placeholder="SEO: ключи и гео, напр. «мебель на заказ СПб»"
+                        className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                      />
+                    </div>
+                    {!locked ? (
+                      <button
+                        type="button"
+                        onClick={confirmDetails}
+                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 hover:bg-violet-500/35"
+                      >
+                        Дальше
+                      </button>
+                    ) : null}
                   </div>
                 );
               }
@@ -792,6 +1049,8 @@ export function SiteWizard({
                   </div>
                 );
               }
+
+              if (b.step !== "tier") return null;
 
               return (
                 <div

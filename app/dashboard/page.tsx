@@ -2081,38 +2081,10 @@ export default function DashboardPage() {
           </button>
 
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-xs text-zinc-500">
-            {(contactsPreview.phone || contactsPreview.email) ? (
-              <button
-                type="button"
-                onClick={() => setWorkMode("settings")}
-                title="Открыть настройки контактов"
-                className="hidden max-w-[220px] truncate rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-left text-[11px] text-zinc-300 hover:border-violet-500/40 hover:bg-violet-500/10 sm:block"
-              >
-                <Phone className="mr-1 inline h-3 w-3 text-violet-300" />
-                {contactsPreview.phone || contactsPreview.email}
-                {contactsPreview.phone && contactsPreview.email
-                  ? ` · ${contactsPreview.email}`
-                  : ""}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setWorkMode("settings")}
-                className="hidden rounded-lg border border-dashed border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-500 hover:border-violet-500/40 hover:text-zinc-300 sm:inline-flex"
-              >
-                + Контакты
-              </button>
-            )}
-            <span>
-              Баланс:{" "}
-              <span className="font-medium text-zinc-200">
-                {formatTokens(status.tokenBalance)} токенов
-              </span>
-            </span>
             <button
               type="button"
               onClick={() => setTopUpOpen(true)}
-              className="rounded-lg border border-violet-500/30 bg-violet-500/15 px-2.5 py-1 text-violet-200 hover:bg-violet-500/25"
+              className="rounded-lg border border-violet-500/30 bg-violet-500/15 px-3 py-1.5 text-violet-200 hover:bg-violet-500/25"
             >
               Пополнить
             </button>
@@ -2151,8 +2123,8 @@ export default function DashboardPage() {
                 item,
                 ...prev.filter((x) => x.id !== item.id),
               ]);
+              // Не уводим в «Для профи» — превью остаётся в Мастере
               setActiveId(item.id);
-              setMainTab("preview");
             }}
           />
         )}
