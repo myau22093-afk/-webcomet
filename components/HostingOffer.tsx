@@ -5,6 +5,8 @@ import { ExternalLink, Globe2, Server } from "lucide-react";
 import {
   getHostingPartners,
   HOSTING_ASSIST_PACKAGES,
+  assistPackageHref,
+  regruHomeUrl,
 } from "@/lib/hostingOffers";
 
 type Props = {
@@ -30,8 +32,8 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
               Нужны домен и хостинг?
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-              Оформи через нас — поможем с доменом, хостингом и заливкой сайта.
-              Мы получаем комиссию, для тебя цена как у партнёра.
+              Оформи на Рег.ру по нашей ссылке — комиссия идёт WebComet, для тебя
+              обычные цены партнёра.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
@@ -39,20 +41,17 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-medium text-violet-100 transition hover:bg-violet-500/35"
               >
                 <Server className="h-3.5 w-3.5" />
-                Выбрать пакет
+                Подробнее
               </Link>
-              {partners.slice(0, 2).map((p) => (
-                <a
-                  key={p.id}
-                  href={p.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-xl border border-white/12 px-3 py-2 text-xs text-zinc-300 transition hover:border-white/25 hover:bg-white/5"
-                >
-                  {p.name}
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </a>
-              ))}
+              <a
+                href={regruHomeUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-xl border border-white/12 px-3 py-2 text-xs text-zinc-300 transition hover:border-white/25 hover:bg-white/5"
+              >
+                Открыть Рег.ру
+                <ExternalLink className="h-3 w-3 opacity-60" />
+              </a>
             </div>
           </div>
         </div>
@@ -73,23 +72,36 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
             <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">
               {pack.description}
             </p>
-            <a
-              href={`mailto:support@webcomet.app?subject=${encodeURIComponent(
-                `Заявка: ${pack.title}`
-              )}&body=${encodeURIComponent(
-                `Здравствуйте! Хочу оформить пакет «${pack.title}» через WebComet.`
-              )}`}
-              className="mt-4 inline-flex rounded-xl bg-violet-500/20 px-3 py-2 text-xs font-medium text-violet-100 hover:bg-violet-500/30"
-            >
-              Оставить заявку
-            </a>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href={assistPackageHref(pack.partnerHrefKey)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-xl bg-violet-500/20 px-3 py-2 text-xs font-medium text-violet-100 hover:bg-violet-500/30"
+              >
+                На Рег.ру
+                <ExternalLink className="h-3 w-3 opacity-70" />
+              </a>
+              {pack.id === "turnkey" ? (
+                <a
+                  href={`mailto:support@webcomet.app?subject=${encodeURIComponent(
+                    "Заявка: Под ключ"
+                  )}&body=${encodeURIComponent(
+                    "Здравствуйте! Хочу домен + хостинг + заливку сайта с WebComet."
+                  )}`}
+                  className="inline-flex rounded-xl border border-white/12 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
+                >
+                  Написать нам
+                </a>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
 
       <div>
         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
-          Или сразу у партнёра
+          Быстрые ссылки Рег.ру
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           {partners.map((p) => (

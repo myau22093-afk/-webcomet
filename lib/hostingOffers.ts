@@ -1,6 +1,6 @@
 /**
- * Партнёрские офферы: домен + хостинг через посредников.
- * Подставь свои affiliate-ссылки в NEXT_PUBLIC_AFFILIATE_* — комиссия идёт тебе.
+ * Партнёрка Рег.ру (бонусная программа).
+ * Переопределение: NEXT_PUBLIC_AFFILIATE_REGRU / _DOMAIN / _HOSTING
  */
 export type HostingPartner = {
   id: string;
@@ -10,63 +10,90 @@ export type HostingPartner = {
   badge?: string;
 };
 
+const REGRU_RLINK = "rlink=reflink-32113679";
+
 function envLink(key: string, fallback: string): string {
   if (typeof process === "undefined") return fallback;
   const v = process.env[key]?.trim();
   return v || fallback;
 }
 
+/** Главная Рег.ру с твоим реф-кодом */
+export function regruHomeUrl(): string {
+  return envLink(
+    "NEXT_PUBLIC_AFFILIATE_REGRU",
+    `https://www.reg.ru/?${REGRU_RLINK}`
+  );
+}
+
+export function regruDomainUrl(): string {
+  return envLink(
+    "NEXT_PUBLIC_AFFILIATE_REGRU_DOMAIN",
+    `https://www.reg.ru/domain/new/?${REGRU_RLINK}`
+  );
+}
+
+export function regruHostingUrl(): string {
+  return envLink(
+    "NEXT_PUBLIC_AFFILIATE_REGRU_HOSTING",
+    `https://www.reg.ru/hosting/?${REGRU_RLINK}`
+  );
+}
+
 export function getHostingPartners(): HostingPartner[] {
   return [
     {
+      id: "regru-domain",
+      name: "Домен на Рег.ру",
+      blurb: "Зарегистрировать .ru / .com",
+      href: regruDomainUrl(),
+      badge: "Домен",
+    },
+    {
+      id: "regru-hosting",
+      name: "Хостинг на Рег.ру",
+      blurb: "Заказать хостинг и залить сайт",
+      href: regruHostingUrl(),
+      badge: "Хостинг",
+    },
+    {
       id: "regru",
-      name: "Рег.ру",
-      blurb: "Домен .ru + хостинг — привычный вариант для РФ",
-      href: envLink(
-        "NEXT_PUBLIC_AFFILIATE_REGRU",
-        "https://www.reg.ru/?utm_source=webcomet&utm_medium=affiliate"
-      ),
-      badge: "Популярно",
-    },
-    {
-      id: "beget",
-      name: "Beget",
-      blurb: "Простой хостинг, удобная панель, быстрый старт",
-      href: envLink(
-        "NEXT_PUBLIC_AFFILIATE_BEGET",
-        "https://beget.com/?utm_source=webcomet&utm_medium=affiliate"
-      ),
-    },
-    {
-      id: "timeweb",
-      name: "Timeweb",
-      blurb: "Хостинг и VPS — если сайт вырастет",
-      href: envLink(
-        "NEXT_PUBLIC_AFFILIATE_TIMEWEB",
-        "https://timeweb.com/?utm_source=webcomet&utm_medium=affiliate"
-      ),
+      name: "Рег.ру — всё сразу",
+      blurb: "Главная: домены, хостинг, облако",
+      href: regruHomeUrl(),
     },
   ];
 }
 
-/** Пакеты «под ключ» — ты как посредник (оплата позже через ЮKassa) */
+/** Пакеты «под ключ» — заявка тебе + быстрый переход на Рег.ру */
 export const HOSTING_ASSIST_PACKAGES = [
   {
     id: "domain",
     title: "Домен",
     priceLabel: "от 199 ₽/год",
-    description: "Подберём и зарегистрируем домен (.ru / .com) на тебя.",
+    description: "Подберём и зарегистрируем домен (.ru / .com).",
+    partnerHrefKey: "domain" as const,
   },
   {
     id: "hosting",
     title: "Хостинг",
     priceLabel: "от 149 ₽/мес",
-    description: "Зальём сайт на хостинг, настроим HTTPS и почту.",
+    description: "Хостинг под твой сайт с WebComet.",
+    partnerHrefKey: "hosting" as const,
   },
   {
     id: "turnkey",
     title: "Под ключ",
     priceLabel: "от 1 990 ₽",
-    description: "Домен + хостинг + заливка твоего сайта с WebComet.",
+    description: "Домен + хостинг + заливка — напиши нам, сделаем.",
+    partnerHrefKey: "home" as const,
   },
 ] as const;
+
+export function assistPackageHref(
+  key: (typeof HOSTING_ASSIST_PACKAGES)[number]["partnerHrefKey"]
+): string {
+  if (key === "domain") return regruDomainUrl();
+  if (key === "hosting") return regruHostingUrl();
+  return regruHomeUrl();
+}
