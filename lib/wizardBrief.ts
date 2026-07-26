@@ -71,7 +71,8 @@ export function emptyWizardBrief(): WizardBrief {
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
-    sectionsConfirmed: false,
+    /** Дефолтные блоки — без лишнего шага; кастом в «Для профи» */
+    sectionsConfirmed: true,
     nicheId: null,
     tier: null,
   };

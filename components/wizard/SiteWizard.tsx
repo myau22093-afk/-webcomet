@@ -200,7 +200,7 @@ export function SiteWizard({
       kind: "text",
       role: "assistant",
       content:
-        "Привет! Напиши, для какого бизнеса нужен сайт — например «мебель в Санкт-Петербурге» или «стоматология».",
+        "Привет! Напиши тему бизнеса одной фразой — дальше палитра и уровень сайта.",
       animate: true,
     },
   ]);
@@ -491,7 +491,7 @@ export function SiteWizard({
       });
       onBalanceRefresh();
       pushAssistant(
-        "Сайт собран. Можно добавить картинки кнопкой ниже.",
+        "Сайт собран. Жми «Опубликовать» в превью (Для профи) или скачай ZIP.",
         true
       );
     } catch (e) {
@@ -609,8 +609,7 @@ export function SiteWizard({
         }`}
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
-          <div className="absolute bottom-24 right-0 h-48 w-48 rounded-full bg-sky-500/8 blur-3xl" />
+          <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-violet-600/[0.07] blur-3xl" />
         </div>
 
         <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
@@ -660,8 +659,8 @@ export function SiteWizard({
                   Опиши бизнес одной фразой
                 </h2>
                 <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
-                  Например: мебель в Санкт-Петербурге или стоматология. Дальше —
-                  цвета и уровень сайта.
+                  Например: мебель в СПб или стоматология. Дальше — цвета и
+                  простой / премиум.
                 </p>
                 <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {[
