@@ -4,8 +4,13 @@ import {
   type ModelConfig,
   type QualityMode,
 } from "@/lib/models";
-import { matchSiteTemplate, type SiteTemplate } from "@/lib/siteTemplates";
+import {
+  getTemplateById,
+  matchSiteTemplate,
+  type SiteTemplate,
+} from "@/lib/siteTemplates";
 import { CACHE_HIT_TOKEN_COST, getTokenCost } from "@/lib/tokenConfig";
+import { WIZARD_SITE_MODEL_ID } from "@/lib/wizardBrief";
 
 export type SiteRequestKind =
   | "chat"
@@ -67,8 +72,29 @@ export function resolveOptimizedSitePlan(input: {
   modelId?: string | null;
   forceVision?: boolean;
   expressMode?: boolean;
+  /** Мастер: всегда Sol (+ опциональный шаблон), без Fable */
+  wizardMode?: boolean;
+  templateId?: string | null;
 }): OptimizedSitePlan {
   const combined = `${input.prompt}\n${input.customRequirements ?? ""}`.trim();
+
+  if (input.wizardMode && !input.isEdit) {
+    const sol =
+      getModelById(WIZARD_SITE_MODEL_ID) ?? getModelById("gpt-5.6-sol")!;
+    const template =
+      (input.templateId ? getTemplateById(input.templateId) : null) ??
+      matchSiteTemplate(combined);
+    return {
+      kind: template ? "template" : "create",
+      config: sol,
+      reason: template
+        ? `мастер · шаблон «${template.name}» → ${sol.name}`
+        : `мастер → ${sol.name}`,
+      chatSuggested: false,
+      template,
+    };
+  }
+
   const kind = classifySiteRequest(combined, input.isEdit);
 
   if (kind === "chat") {

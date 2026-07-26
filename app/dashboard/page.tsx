@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
 import { CodeBlock } from "@/components/CodeBlock";
 import { WcSelect } from "@/components/WcSelect";
+import { SiteWizard } from "@/components/wizard/SiteWizard";
 import {
   Archive,
   Check,
@@ -90,7 +91,7 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
-type WorkMode = "site" | "image" | "chat" | "settings";
+type WorkMode = "wizard" | "site" | "image" | "chat" | "settings";
 type CodeTab = "html" | "css" | "js";
 type MainTab = "preview" | "code" | "compare";
 type ImageHistoryItem = {
@@ -210,7 +211,7 @@ export default function DashboardPage() {
     email?: string;
     access_token?: string;
   } | null>(null);
-  const [workMode, setWorkMode] = useState<WorkMode>("site");
+  const [workMode, setWorkMode] = useState<WorkMode>("wizard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [status, setStatus] = useState<UsageStatus>({
     remaining: 100,
@@ -1717,9 +1718,11 @@ export default function DashboardPage() {
   const activeTokenCost =
     workMode === "site"
       ? siteTokenCost
-      : workMode === "image"
-        ? imageTokenCost
-        : chatTokenCost;
+      : workMode === "wizard"
+        ? getTokenCost("gpt-5.6-sol")
+        : workMode === "image"
+          ? imageTokenCost
+          : chatTokenCost;
   const balanceAfterRequest = Math.max(
     0,
     status.tokenBalance - activeTokenCost
@@ -1776,7 +1779,8 @@ export default function DashboardPage() {
             </p>
             {(
               [
-                { id: "site" as const, label: "Сайт", icon: Globe2 },
+                { id: "wizard" as const, label: "Мастер", icon: Wand2 },
+                { id: "site" as const, label: "Для профи", icon: Globe2 },
                 { id: "image" as const, label: "Картинки", icon: ImageIcon },
                 { id: "chat" as const, label: "Чат", icon: MessageSquare },
                 { id: "settings" as const, label: "Настройки", icon: Settings },
@@ -1842,7 +1846,7 @@ export default function DashboardPage() {
                 )}
               </div>
             )}
-            {workMode === "site" &&
+            {(workMode === "site" || workMode === "wizard") &&
               (siteHistoryGroups.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-zinc-500">Пока нет сайтов</p>
               ) : (
@@ -1865,6 +1869,7 @@ export default function DashboardPage() {
                           onClick={() => {
                             setActiveId(item.id);
                             setMainTab("preview");
+                            if (workMode === "wizard") setWorkMode("site");
                             void getFreshAccessToken().then((token) => {
                               if (token) void ensureSiteLoaded(token, item.id);
                             });
@@ -2083,6 +2088,44 @@ export default function DashboardPage() {
             </button>
           </div>
         </header>
+
+        {workMode === "wizard" && (
+          <SiteWizard
+            getAccessToken={getFreshAccessToken}
+            useContacts={useContactsOnGenerate && showContacts}
+            onBalanceRefresh={() => {
+              void (async () => {
+                const t = await getFreshAccessToken();
+                if (t) await loadStatus(t);
+              })();
+            }}
+            onSiteReady={(site) => {
+              const item: GenerationItem = {
+                id: site.id,
+                prompt: site.prompt,
+                rootPrompt: site.prompt,
+                version: 1,
+                customRequirements: "",
+                images: [],
+                html: site.html,
+                css: site.css,
+                js: site.js,
+                previewHtml: buildPreviewHtml({
+                  html: site.html,
+                  css: site.css,
+                  js: site.js,
+                }),
+                createdAt: site.createdAt,
+              };
+              setHistory((prev) => [
+                item,
+                ...prev.filter((x) => x.id !== item.id),
+              ]);
+              setActiveId(item.id);
+              setMainTab("preview");
+            }}
+          />
+        )}
 
         {workMode === "site" && (
           <>
@@ -2400,6 +2443,10 @@ export default function DashboardPage() {
 
               {sitePanelOpen && (
               <div className="border-t border-white/5 px-3 pb-2.5 pt-2 xl:px-4">
+                <p className="mb-2 text-[11px] text-zinc-500">
+                  Режим для профи: ручной промпт и выбор модели (включая Claude
+                  Fable). Для обычной сборки удобнее вкладка «Мастер».
+                </p>
                 {/* Одна строка контролов */}
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <WcSelect

@@ -457,6 +457,8 @@ export async function POST(request: Request) {
       sections?: unknown;
       expressMode?: boolean;
       useContacts?: boolean;
+      wizardMode?: boolean;
+      templateId?: string;
     };
 
     const prompt = body.prompt?.trim() ?? "";
@@ -469,6 +471,9 @@ export async function POST(request: Request) {
       typeof body.hasImages === "boolean" ? body.hasImages : images.length > 0;
     const isEdit = Boolean(body.isEdit);
     const expressMode = Boolean(body.expressMode) && !isEdit;
+    const wizardMode = Boolean(body.wizardMode) && !isEdit;
+    const requestedTemplateId =
+      typeof body.templateId === "string" ? body.templateId.trim() : "";
     const brandLogo =
       typeof body.brandLogo === "string" ? body.brandLogo.trim() : "";
     const brandColors = normalizeBrandColors(body.brandColors);
@@ -553,6 +558,8 @@ export async function POST(request: Request) {
       modelId: body.modelId,
       forceVision: Boolean(designDataUrl),
       expressMode: expressMode || referenceOnlyMode,
+      wizardMode,
+      templateId: requestedTemplateId || null,
     });
 
     if (plan.chatSuggested) {
