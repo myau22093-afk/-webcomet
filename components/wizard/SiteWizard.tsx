@@ -12,6 +12,7 @@ import {
   Wand2,
   Mic,
   Plus,
+  Rocket,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
@@ -38,7 +39,9 @@ import {
   injectSiteImages,
 } from "@/lib/injectSiteImages";
 import { HostingOffer } from "@/components/HostingOffer";
+import { PublishModal } from "@/components/PublishModal";
 import { CometPlayground } from "@/components/wizard/CometPlayground";
+import { PaletteMock } from "@/components/wizard/PaletteMock";
 
 type ChatBubble =
   | {
@@ -228,12 +231,19 @@ export function SiteWizard({
   const [uploadingKind, setUploadingKind] = useState<
     null | "reference" | "logo" | "tz"
   >(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [abA, setAbA] = useState("violet");
+  const [abB, setAbB] = useState("ocean");
   const endRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
+  const resultRef = useRef<WizardResult | null>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const tzInputRef = useRef<HTMLInputElement>(null);
+
+  resultRef.current = result;
 
   const siteCost = getTokenCost(modelIdForTier(brief.tier ?? "simple"));
   const imageCost = getTokenCost(WIZARD_IMAGE_MODEL_IDS[0]);
@@ -370,9 +380,84 @@ export function SiteWizard({
     }
   }
 
+  async function applySiteEdit(text: string) {
+    const message = text.trim();
+    if (!message || !result || editing) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Войдите в аккаунт");
+      return;
+    }
+
+    setError("");
+    setInput("");
+    setBubbles((prev) => [
+      ...prev,
+      { id: uid(), kind: "text", role: "user", content: message },
+    ]);
+    setEditing(true);
+    setShowPreviewPane(true);
+
+    try {
+      const res = await fetch("/api/edit-site", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          html: result.html,
+          css: result.css,
+          js: result.js,
+          editPrompt: message,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Ошибка правки");
+      if (!data.html?.trim()) throw new Error("Пустой ответ модели");
+
+      const next: WizardResult = {
+        html: data.html,
+        css: data.css ?? result.css,
+        js: data.js ?? result.js,
+        id: result.id,
+      };
+      setResult(next);
+      setPreviewHtml(
+        buildPreviewHtml({
+          html: next.html,
+          css: next.css,
+          js: next.js,
+        })
+      );
+      onSiteReady({
+        id: String(next.id ?? crypto.randomUUID()),
+        prompt: brief.topic,
+        html: next.html,
+        css: next.css,
+        js: next.js,
+        createdAt: new Date().toISOString(),
+      });
+      onBalanceRefresh();
+      pushAssistant("Правку применил — смотри превью справа.", true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ошибка правки";
+      setError(msg);
+      pushAssistant(`Не удалось править: ${msg}`, true);
+    } finally {
+      setEditing(false);
+    }
+  }
+
   async function sendChat(text: string) {
     const message = text.trim();
-    if (!message || chatLoading) return;
+    if (!message || chatLoading || editing) return;
+
+    // После сборки — правки сайта (текст или голос), не болтовня
+    if (result) {
+      await applySiteEdit(message);
+      return;
+    }
 
     setError("");
     setBubbles((prev) => [
@@ -674,7 +759,16 @@ export function SiteWizard({
       }
     };
     recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
+    recognition.onend = () => {
+      setListening(false);
+      const finalMsg = committed.trim();
+      if (finalMsg && resultRef.current) {
+        setInput(finalMsg);
+        window.setTimeout(() => {
+          void sendChat(finalMsg);
+        }, 60);
+      }
+    };
     try {
       recognition.start();
     } catch {
@@ -805,7 +899,7 @@ export function SiteWizard({
       });
       onBalanceRefresh();
       pushAssistant(
-        "Сайт собран — превью справа. Можно добавить картинки или открыть в «Для профи».",
+        "Сайт собран. Справа превью — скажи или напиши правку («кнопки зелёные»), добавь картинки или жми «Опубликовать».",
         true
       );
     } catch (e) {
@@ -1015,14 +1109,78 @@ export function SiteWizard({
 
               if (b.step === "palette") {
                 const customSelected = brief.paletteId === "custom";
+                const palA =
+                  WIZARD_PALETTES.find((p) => p.id === abA) ?? WIZARD_PALETTES[0];
+                const palB =
+                  WIZARD_PALETTES.find((p) => p.id === abB) ?? WIZARD_PALETTES[1];
+                const locked = Boolean(brief.paletteId);
                 return (
                   <div
                     key={b.id}
                     className="w-full max-w-3xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 sm:p-6"
                   >
-                    <p className="mb-4 text-[15px] font-medium text-zinc-100">
+                    <p className="mb-1 text-[15px] font-medium text-zinc-100">
                       {b.title}
                     </p>
+                    <p className="mb-4 text-[13px] text-zinc-500">
+                      A/B сравнение — выбери сторону или любую из списка ниже
+                    </p>
+
+                    <div className="mb-5 grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                            Вариант A
+                          </span>
+                          <select
+                            disabled={locked}
+                            value={abA}
+                            onChange={(e) => setAbA(e.target.value)}
+                            className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
+                          >
+                            {WIZARD_PALETTES.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <PaletteMock
+                          colors={palA.colors}
+                          label={palA.label}
+                          disabled={locked}
+                          active={brief.paletteId === palA.id}
+                          onPick={() => pickPalette(palA.id)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                            Вариант B
+                          </span>
+                          <select
+                            disabled={locked}
+                            value={abB}
+                            onChange={(e) => setAbB(e.target.value)}
+                            className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
+                          >
+                            {WIZARD_PALETTES.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <PaletteMock
+                          colors={palB.colors}
+                          label={palB.label}
+                          disabled={locked}
+                          active={brief.paletteId === palB.id}
+                          onPick={() => pickPalette(palB.id)}
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {WIZARD_PALETTES.map((p) => {
                         const selected = brief.paletteId === p.id;
@@ -1030,9 +1188,9 @@ export function SiteWizard({
                           <button
                             key={p.id}
                             type="button"
-                            disabled={Boolean(brief.paletteId)}
+                            disabled={locked}
                             onClick={() => pickPalette(p.id)}
-                            className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition ${
+                            className={`flex items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition ${
                               selected
                                 ? "border-violet-400/50 bg-violet-500/15"
                                 : "border-white/10 bg-black/25 hover:border-white/25"
@@ -1042,12 +1200,12 @@ export function SiteWizard({
                               {p.colors.map((c) => (
                                 <span
                                   key={c}
-                                  className="h-9 w-9 rounded-full border-2 border-[#0b0f19] shadow-lg"
+                                  className="h-8 w-8 rounded-full border-2 border-[#0b0f19] shadow-lg"
                                   style={{ background: c }}
                                 />
                               ))}
                             </span>
-                            <span className="text-[15px] text-zinc-200">
+                            <span className="text-[14px] text-zinc-200">
                               {p.label}
                             </span>
                           </button>
@@ -1055,9 +1213,9 @@ export function SiteWizard({
                       })}
                       <button
                         type="button"
-                        disabled={Boolean(brief.paletteId)}
+                        disabled={locked}
                         onClick={() => setShowCustomPicker(true)}
-                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition duration-300 ${
+                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition duration-300 ${
                           customSelected || showCustomPicker
                             ? "border-violet-400/50 bg-violet-500/15"
                             : "border-dashed border-white/20 bg-black/25 hover:border-white/35"
@@ -1067,13 +1225,13 @@ export function SiteWizard({
                           {[0, 1, 2].map((i) => (
                             <span
                               key={i}
-                              className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-white/30 bg-white/[0.03] text-[15px] text-zinc-400"
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-white/30 bg-white/[0.03] text-zinc-400"
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </span>
                           ))}
                         </span>
-                        <span className="text-[15px] text-zinc-200">Свой</span>
+                        <span className="text-[14px] text-zinc-200">Свой</span>
                       </button>
                     </div>
                     {showCustomPicker && !brief.paletteId ? (
@@ -1286,6 +1444,39 @@ export function SiteWizard({
                               : "+"}
                         </span>
                       </button>
+                      {brief.referenceUrls.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {brief.referenceUrls.map((url) => (
+                            <div
+                              key={url}
+                              className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/40"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt="Референс"
+                                className="h-full w-full object-cover"
+                              />
+                              {!locked ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setBrief((prev) => ({
+                                      ...prev,
+                                      referenceUrls: prev.referenceUrls.filter(
+                                        (u) => u !== url
+                                      ),
+                                    }))
+                                  }
+                                  className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 text-[11px] text-zinc-200"
+                                >
+                                  ×
+                                </button>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         disabled={locked || uploadingKind === "logo"}
@@ -1301,6 +1492,19 @@ export function SiteWizard({
                               : "+"}
                         </span>
                       </button>
+                      {brief.logoUrl ? (
+                        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={brief.logoUrl}
+                            alt="Логотип"
+                            className="h-12 w-12 rounded-lg object-contain bg-white/5"
+                          />
+                          <span className="truncate text-[12px] text-zinc-400">
+                            {brief.logoUrl.split("/").pop()}
+                          </span>
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         disabled={locked || uploadingKind === "tz"}
@@ -1430,12 +1634,12 @@ export function SiteWizard({
               );
             })}
 
-            {chatLoading && (
+            {chatLoading || editing ? (
               <div className="inline-flex items-center gap-2 text-[13px] text-zinc-500">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Печатаю…
+                {editing ? "Правлю сайт…" : "Печатаю…"}
               </div>
-            )}
+            ) : null}
 
             {result ? <HostingOffer compact className="mt-2" /> : null}
             <div ref={endRef} />
@@ -1465,19 +1669,29 @@ export function SiteWizard({
                 Собрать сайт (−{siteCost})
               </button>
               {result ? (
-                <button
-                  type="button"
-                  disabled={imagesLoading}
-                  onClick={() => void addImages()}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
-                >
-                  {imagesLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ImageIcon className="h-4 w-4" />
-                  )}
-                  Картинки (−{imageCost * 3})
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={imagesLoading || editing}
+                    onClick={() => void addImages()}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                  >
+                    {imagesLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                    Картинки (−{imageCost * 3})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-500/15 px-4 py-2.5 text-[13px] text-violet-100 transition hover:bg-violet-500/25"
+                  >
+                    <Rocket className="h-4 w-4" />
+                    Опубликовать
+                  </button>
+                </>
               ) : null}
             </div>
           )}
@@ -1492,12 +1706,14 @@ export function SiteWizard({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={
-                brief.topic
-                  ? "Уточнение или правка…"
-                  : "Напиши тему сайта…"
+                result
+                  ? "Правка голосом или текстом: «кнопки зелёные»…"
+                  : brief.topic
+                    ? "Уточнение…"
+                    : "Напиши тему сайта…"
               }
               className="wc-input flex-1 py-3 text-[14px]"
-              disabled={chatLoading}
+              disabled={chatLoading || editing}
             />
             <button
               type="button"
@@ -1511,7 +1727,7 @@ export function SiteWizard({
             </button>
             <button
               type="submit"
-              disabled={chatLoading || !input.trim()}
+              disabled={chatLoading || editing || !input.trim()}
               className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
@@ -1522,12 +1738,29 @@ export function SiteWizard({
 
       {showPreviewPane ? (
         <div className="flex min-h-[320px] flex-1 flex-col bg-black/25">
-          <div className="border-b border-white/[0.06] px-5 py-3 text-[12px] text-zinc-500">
-            Превью
+          <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3">
+            <span className="text-[12px] text-zinc-500">Превью</span>
+            {result ? (
+              <button
+                type="button"
+                onClick={() => setPublishOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1 text-[12px] text-violet-100 transition hover:bg-violet-500/25"
+              >
+                <Rocket className="h-3.5 w-3.5" />
+                Опубликовать
+              </button>
+            ) : null}
           </div>
           <div className="min-h-0 flex-1 p-4">
-            {building ? (
-              <BuildLoader />
+            {building || editing ? (
+              building ? (
+                <BuildLoader />
+              ) : (
+                <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0a0b10] text-[14px] text-zinc-400">
+                  <Loader2 className="mb-3 h-6 w-6 animate-spin text-violet-300" />
+                  Применяю правку…
+                </div>
+              )
             ) : previewHtml ? (
               <iframe
                 title="wizard-preview"
@@ -1541,6 +1774,21 @@ export function SiteWizard({
             )}
           </div>
         </div>
+      ) : null}
+
+      {result ? (
+        <PublishModal
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+          getAccessToken={getAccessToken}
+          site={{
+            id: result.id,
+            html: result.html,
+            css: result.css,
+            js: result.js,
+            title: brief.companyName.trim() || brief.topic,
+          }}
+        />
       ) : null}
     </div>
   );
