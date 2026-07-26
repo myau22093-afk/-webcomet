@@ -33,23 +33,13 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
 export const MODEL_CATALOG: ModelConfig[] = [
   // —— Сайт (токены: 250 → 24) ——
   {
-    id: "kimi-k2.6",
-    name: "Kimi K2.6",
-    provider: "promptra",
-    modelId: "moonshotai/kimi-k2.6",
-    type: "site",
-    costMultiplier: 1.35,
-    description: "Премиум в Мастере · Kimi",
-    fallbackProviders: ["proxyapi"],
-  },
-  {
     id: "claude-fable-5",
     name: "Claude Fable 5",
     provider: "proxyapi",
     modelId: "anthropic/claude-fable-5",
     type: "site",
     costMultiplier: 1.4,
-    description: "Запасной премиум · Claude",
+    description: "Премиум в Мастере · по умолчанию",
     fallbackProviders: ["promptra"],
   },
   {
@@ -420,7 +410,6 @@ export function buildPromptHash(parts: Record<string, unknown>): string {
 export function modelShortLabel(model: string): string {
   const fromCatalog = getModelById(model) ?? getModelByUpstreamId(model);
   if (fromCatalog) return fromCatalog.name;
-  if (model.includes("kimi")) return "Kimi K2.6";
   if (model.includes("fable")) return "Claude Fable 5";
   if (model.includes("claude-sonnet-5")) return "Claude Sonnet 5";
   if (model.includes("claude")) return "Claude Sonnet 4.6";

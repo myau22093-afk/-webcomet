@@ -1,5 +1,8 @@
 webcomet.ru, www.webcomet.ru, *.webcomet.ru {
 	encode gzip
+	request_body {
+		max_size 25MB
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

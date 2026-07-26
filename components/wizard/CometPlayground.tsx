@@ -6,14 +6,14 @@ type Pos = { x: number; y: number };
 
 function randomPos(prev?: Pos): Pos {
   let x = 10 + Math.random() * 80;
-  let y = 12 + Math.random() * 70;
+  let y = 14 + Math.random() * 66;
   if (prev) {
     for (let i = 0; i < 6; i++) {
       const dx = x - prev.x;
       const dy = y - prev.y;
       if (dx * dx + dy * dy > 400) break;
       x = 10 + Math.random() * 80;
-      y = 12 + Math.random() * 70;
+      y = 14 + Math.random() * 66;
     }
   }
   return { x, y };
@@ -59,7 +59,11 @@ export function CometPlayground({ fill = false }: { fill?: boolean }) {
 
   return (
     <div
-      className={`flex w-full flex-col ${fill ? "min-h-0 flex-1" : "mt-8 max-w-md"}`}
+      className={
+        fill
+          ? "flex h-full min-h-0 w-full flex-col"
+          : "mt-8 flex w-full max-w-md flex-col"
+      }
     >
       <div className="mb-2 flex shrink-0 items-center justify-between text-[13px] text-zinc-500">
         <span>Поймай комету, пока ждёшь</span>
@@ -69,8 +73,8 @@ export function CometPlayground({ fill = false }: { fill?: boolean }) {
         ref={areaRef}
         onMouseMove={onMove}
         onClick={onMiss}
-        className={`relative min-h-[180px] cursor-crosshair overflow-hidden rounded-2xl border border-white/10 bg-[#07080d] ${
-          fill ? "flex-1" : "h-44"
+        className={`relative w-full cursor-crosshair overflow-hidden rounded-2xl border border-white/10 bg-[#07080d] ${
+          fill ? "min-h-[240px] flex-1" : "h-44"
         } ${flash ? "ring-1 ring-violet-400/50" : ""} ${
           missFlash ? "ring-1 ring-rose-400/30" : ""
         }`}

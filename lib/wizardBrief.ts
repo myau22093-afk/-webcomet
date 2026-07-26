@@ -152,17 +152,32 @@ export function suggestSeoPhrases(brief: Pick<
     out.push(t);
   };
 
+  // «магазин клубники» → продукт «клубника», не «заказать магазин клубники»
+  const productMatch = topic.match(
+    /^(?:магазин|сайт|студия|салон|клиника|кафе|ресторан|служба|сервис)\s+(.+)$/i
+  );
+  const product = (productMatch?.[1] || topic)
+    .replace(/^(?:по\s+)?продаже\s+/i, "")
+    .trim();
+
   if (city) {
     add(`${topic} ${city}`);
-    add(`${topic} в ${city}`);
+    add(`${product} ${city}`);
+    add(`${product} с доставкой ${city}`);
   } else {
     add(topic);
+    if (product.toLowerCase() !== topic.toLowerCase()) add(product);
   }
   if (company) {
     add(company);
     if (city) add(`${company} ${city}`);
   }
-  add(`заказать ${topic}${city ? ` ${city}` : ""}`);
+  if (
+    product &&
+    !/^(магазин|сайт|студия|салон|клиника|служба|сервис)\b/i.test(product)
+  ) {
+    add(`заказать ${product}${city ? ` ${city}` : ""}`);
+  }
 
   return out.slice(0, 4);
 }
@@ -208,19 +223,13 @@ export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
 }
 
 export function modelIdForTier(tier: WizardTier | null): string {
-  // Вторая попытка: Премиум → Kimi (с жёстким CSS/без мата в system prompt)
-  return tier === "premium" ? "kimi-k2.6" : "gpt-5.6-sol";
+  return tier === "premium" ? "claude-fable-5" : "gpt-5.6-sol";
 }
 
 /** Премиум в Мастере: полная генерация с нуля (не structure-adapt) */
 export function isWizardPremiumModel(modelId: string | null | undefined): boolean {
   if (!modelId) return false;
-  return (
-    modelId === "kimi-k2.6" ||
-    modelId === "claude-fable-5" ||
-    modelId.includes("kimi") ||
-    modelId.includes("fable")
-  );
+  return modelId === "claude-fable-5" || modelId.includes("fable");
 }
 
 export function buildWizardSitePrompt(brief: WizardBrief): {

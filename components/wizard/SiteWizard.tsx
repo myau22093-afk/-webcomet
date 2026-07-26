@@ -165,8 +165,8 @@ function BuildLoader() {
   }, [steps.length]);
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-5 py-5 sm:px-6 sm:py-6">
-      <div className="shrink-0">
+    <div className="flex h-full min-h-[420px] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10]">
+      <div className="shrink-0 px-5 pt-5 sm:px-6 sm:pt-6">
         <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-zinc-500">
           Сборка сайта
         </p>
@@ -177,14 +177,14 @@ function BuildLoader() {
           Обычно около минуты. Пока можно поиграть с кометой.
         </p>
 
-        <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-violet-400 transition-[width] duration-700 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <ul className="mt-6 space-y-2.5">
+        <ul className="mt-5 space-y-2">
           {steps.map((label, i) => {
             const done = i < idx;
             const current = i === idx;
@@ -217,7 +217,7 @@ function BuildLoader() {
         </ul>
       </div>
 
-      <div className="mt-5 min-h-0 flex-1">
+      <div className="min-h-0 flex-1 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
         <CometPlayground fill />
       </div>
     </div>
@@ -745,60 +745,53 @@ export function SiteWizard({
       }
 
       const fileArr = Array.from(files);
-      const form = new FormData();
-      form.append("kind", kind === "logo" ? "logo" : "files");
-      fileArr.forEach((f) => form.append("files", f, f.name || "file.bin"));
+      // Сразу base64 — multipart через Caddy/Docker часто приходит пустым
+      const encoded = await Promise.all(
+        fileArr.map(
+          (f) =>
+            new Promise<{
+              name: string;
+              type: string;
+              dataBase64: string;
+            }>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = String(reader.result || "");
+                const dataBase64 = result.includes(",")
+                  ? result.split(",")[1] || ""
+                  : result;
+                if (!dataBase64) {
+                  reject(new Error(`Пустой файл: ${f.name}`));
+                  return;
+                }
+                resolve({
+                  name: (f.name || "file.bin").slice(0, 80),
+                  type: f.type || "application/octet-stream",
+                  dataBase64,
+                });
+              };
+              reader.onerror = () =>
+                reject(new Error("Не удалось прочитать файл"));
+              reader.readAsDataURL(f);
+            })
+        )
+      );
 
-      let res = await fetch("/api/upload", {
+      const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: form,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          kind: kind === "logo" ? "logo" : "files",
+          files: encoded,
+        }),
       });
-      let data = await res.json();
-
-      // Фолбэк: multipart иногда до Docker не доходит — шлём base64
-      if (!res.ok && /не переданы/i.test(String(data.error ?? ""))) {
-        const encoded = await Promise.all(
-          fileArr.map(
-            (f) =>
-              new Promise<{
-                name: string;
-                type: string;
-                dataBase64: string;
-              }>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const result = String(reader.result || "");
-                  const dataBase64 = result.includes(",")
-                    ? result.split(",")[1] || ""
-                    : result;
-                  resolve({
-                    name: f.name || "file.bin",
-                    type: f.type || "application/octet-stream",
-                    dataBase64,
-                  });
-                };
-                reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
-                reader.readAsDataURL(f);
-              })
-          )
-        );
-        res = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            kind: kind === "logo" ? "logo" : "files",
-            files: encoded,
-          }),
-        });
-        data = await res.json();
-      }
-
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки");
       const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
+      if (!urls.length) throw new Error("Сервер не вернул URL файла");
       if (kind === "logo") {
         setBrief((prev) => ({ ...prev, logoUrl: urls[0] ?? null }));
       } else if (kind === "reference") {
@@ -1910,7 +1903,7 @@ export function SiteWizard({
                     </span>
                     <span>
                       <span className="block text-[14px] text-violet-50">
-                        Премиум · −{getTokenCost("kimi-k2.6")} ток.
+                        Премиум · −{getTokenCost("claude-fable-5")} ток.
                       </span>
                       <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
                         Сильнее дизайн и анимации — заметно выше обычного.
@@ -2135,11 +2128,11 @@ export function SiteWizard({
           </div>
           <div
             ref={previewStageRef}
-            className="wc-preview-stage min-h-0 flex-1 bg-[#07080d] p-3 sm:p-4"
+            className="wc-preview-stage relative min-h-0 flex-1 bg-[#07080d] p-3 sm:p-4"
           >
             {building || editing ? (
               building ? (
-                <div className="h-full min-h-[420px] w-full">
+                <div className="absolute inset-3 sm:inset-4">
                   <BuildLoader />
                 </div>
               ) : (
