@@ -6,6 +6,7 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://webcomet.ru}
+        NEXT_PUBLIC_PUBLISH_BASE_DOMAIN: ${NEXT_PUBLIC_PUBLISH_BASE_DOMAIN:-webcomet.ru}
     env_file:
       - .env
     environment:
@@ -18,6 +19,7 @@ services:
       - "8080"
     volumes:
       - webcomet_uploads:/app/public/uploads
+      - webcomet_hosted:/app/public/hosted
     restart: unless-stopped
     mem_limit: 1536m
     cpus: 1.5
@@ -38,5 +40,6 @@ services:
 
 volumes:
   webcomet_uploads:
+  webcomet_hosted:
   caddy_data:
   caddy_config:

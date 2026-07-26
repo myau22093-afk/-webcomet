@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Rocket } from "lucide-react";
 import { HostingOffer } from "@/components/HostingOffer";
 
 export default function HostingPage() {
@@ -17,23 +17,42 @@ export default function HostingPage() {
         </Link>
 
         <h1 className="font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
-          Домен и хостинг
+          Вывести сайт в интернет
         </h1>
         <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
-          Один клик — сразу нужная страница на Рег.ру. Потом скачай ZIP сайта и
-          залей в хостинг.
+          Два пути: сразу опубликовать на WebComet или взять свой домен на
+          Рег.ру.
         </p>
 
-        <div className="mt-10">
-          <HostingOffer />
+        <div className="mt-8 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
+          <div className="flex items-start gap-3">
+            <span className="rounded-xl bg-emerald-500/20 p-2.5">
+              <Rocket className="h-5 w-5 text-emerald-200" />
+            </span>
+            <div>
+              <p className="text-[16px] font-medium text-emerald-50">
+                Одним кликом на WebComet
+              </p>
+              <p className="mt-1 text-[14px] leading-relaxed text-emerald-100/70">
+                В дашборде нажми «Опубликовать» у готового сайта — получишь ссылку
+                вида{" "}
+                <span className="text-emerald-200">m-516.webcomet.ru</span> и
+                выберешь срок (от 199 ₽/мес).
+              </p>
+              <Link
+                href="/dashboard"
+                className="mt-4 inline-flex rounded-xl bg-emerald-500/25 px-4 py-2.5 text-[13px] font-medium text-emerald-50 hover:bg-emerald-500/35"
+              >
+                Открыть дашборд
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <p className="mt-8 text-[13px] leading-relaxed text-zinc-600">
-          Свой адрес вида{" "}
-          <span className="text-zinc-400">имя.webcomet.ru</span> (как у Lovable)
-          — отдельно, когда подключим публикацию на наших серверах. Сейчас самый
-          быстрый путь: домен/хостинг на Рег.ру + ZIP.
+        <p className="mb-3 mt-10 text-[12px] font-medium uppercase tracking-wider text-zinc-500">
+          Свой домен на Рег.ру
         </p>
+        <HostingOffer />
       </div>
     </div>
   );

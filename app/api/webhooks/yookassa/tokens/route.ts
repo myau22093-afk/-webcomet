@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { creditTokens, formatBillingError } from "@/lib/billing";
+import { activatePublish } from "@/lib/publish";
+import { getPublishPackage } from "@/lib/publishConfig";
 import { clientIp, webhookRatelimit } from "@/lib/rateLimit";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { getTokenPackage } from "@/lib/tokenConfig";
@@ -14,9 +16,12 @@ type YooWebhook = {
     status?: string;
     amount?: { value?: string };
     metadata?: {
+      product?: string;
       user_id?: string;
       package_id?: string;
       tokens?: string;
+      publish_id?: string;
+      slug?: string;
     };
   };
 };
@@ -33,7 +38,6 @@ export async function POST(request: Request) {
     const verified = verifyWebhookSecret(request, rawBody);
     if (!verified.ok) return verified.error;
 
-    // Extra shared-secret check when Authorization Bearer is present
     const authorization = request.headers.get("authorization");
     const bearer = authorization?.replace(/^Bearer\s+/i, "") ?? "";
     const webhookSecret =
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
     const event = body.event ?? "";
 
     console.log(
-      `[yookassa] webhook event=${event} payment=${paymentId} status=${status}`
+      `[yookassa] webhook event=${event} payment=${paymentId} status=${status} product=${payment?.metadata?.product ?? "tokens"}`
     );
 
     if (!paymentId) {
@@ -67,12 +71,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, skipped: "not succeeded" });
     }
 
-    const userId = payment?.metadata?.user_id ?? "";
-    const packageId = payment?.metadata?.package_id ?? "";
+    const meta = payment?.metadata ?? {};
+    const userId = meta.user_id ?? "";
+    const packageId = meta.package_id ?? "";
+    const amount = Number(payment?.amount?.value ?? 0);
+    const admin = createAdminClient();
+
+    if (meta.product === "publish") {
+      if (!userId || !packageId || !meta.publish_id) {
+        return NextResponse.json(
+          { error: "Нет user_id/package_id/publish_id" },
+          { status: 400 }
+        );
+      }
+      const pack = getPublishPackage(packageId);
+      if (!pack) {
+        return NextResponse.json(
+          { error: "Unknown publish package" },
+          { status: 400 }
+        );
+      }
+      const row = await activatePublish(admin, {
+        publishId: meta.publish_id,
+        userId,
+        packageId: pack.id,
+        paymentId,
+        amount: amount || pack.price,
+      });
+      return NextResponse.json({
+        ok: true,
+        product: "publish",
+        slug: row.slug,
+        expires_at: row.expires_at,
+      });
+    }
+
     const pack = getTokenPackage(packageId);
-    const tokensFromMeta = Number(payment?.metadata?.tokens ?? 0);
+    const tokensFromMeta = Number(meta.tokens ?? 0);
     const tokens = pack?.tokens ?? tokensFromMeta;
-    const amount = Number(payment?.amount?.value ?? pack?.price ?? 0);
 
     if (!userId || !tokens) {
       console.error("[yookassa] missing user_id or tokens in metadata", payment);
@@ -81,8 +117,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const admin = createAdminClient();
 
     const { data: existing } = await admin
       .from("transactions")
@@ -95,7 +129,7 @@ export async function POST(request: Request) {
     }
 
     const balance = await creditTokens(admin, userId, tokens, {
-      amount,
+      amount: amount || pack?.price || 0,
       type: "purchase",
       description: `Покупка пакета ${packageId || "tokens"} через ЮKassa`,
       yookassaPaymentId: paymentId,

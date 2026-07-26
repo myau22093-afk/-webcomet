@@ -7,6 +7,10 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { WcSelect } from "@/components/WcSelect";
 import { SiteWizard } from "@/components/wizard/SiteWizard";
 import { HostingOffer } from "@/components/HostingOffer";
+import {
+  PublishModal,
+  PublishSuccessBanner,
+} from "@/components/PublishModal";
 import { shortSiteTitle } from "@/lib/siteTitle";
 import {
   Archive,
@@ -28,6 +32,7 @@ import {
   Monitor,
   ChevronDown,
   ChevronUp,
+  Rocket,
   Send,
   Server,
   Settings,
@@ -250,6 +255,8 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);
   const [showHostingNudge, setShowHostingNudge] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishLiveSlug, setPublishLiveSlug] = useState<string | null>(null);
   const [exportingHtml, setExportingHtml] = useState(false);
   const [previewSrcDoc, setPreviewSrcDoc] = useState("");
   const [previewFrameKey, setPreviewFrameKey] = useState(0);
@@ -1736,6 +1743,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tokens = params.get("tokens");
+    const publish = params.get("publish");
     if (tokens === "credited" || tokens === "success" || tokens === "already") {
       void (async () => {
         const t = await getFreshAccessToken();
@@ -1749,6 +1757,12 @@ export default function DashboardPage() {
             : "Токены успешно зачислены"
         );
       }
+      window.history.replaceState({}, "", "/dashboard");
+    }
+    if (publish === "live" || publish === "success") {
+      const slug = params.get("slug");
+      if (slug) setPublishLiveSlug(slug);
+      setWorkMode("site");
       window.history.replaceState({}, "", "/dashboard");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2231,9 +2245,25 @@ export default function DashboardPage() {
                     )}
                     {exportingZip ? "Собираем ZIP…" : "Скачать ZIP"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-100"
+                    title="Опубликовать на поддомене webcomet.ru"
+                  >
+                    <Rocket className="h-4 w-4" />
+                    Опубликовать
+                  </button>
                 </div>
               )}
             </div>
+
+            {publishLiveSlug ? (
+              <PublishSuccessBanner
+                slug={publishLiveSlug}
+                onClose={() => setPublishLiveSlug(null)}
+              />
+            ) : null}
 
             {showHostingNudge && activeItem ? (
               <div className="border-b border-white/10 px-4 py-3">
@@ -3307,6 +3337,21 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {publishOpen && activeItem ? (
+        <PublishModal
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+          getAccessToken={getFreshAccessToken}
+          site={{
+            id: activeItem.id,
+            html: activeItem.html,
+            css: activeItem.css,
+            js: activeItem.js,
+            title: shortSiteTitle(activeItem.prompt),
+          }}
+        />
+      ) : null}
     </div>
   );
 }
