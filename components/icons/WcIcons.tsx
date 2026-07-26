@@ -2,7 +2,7 @@
 
 type IconProps = { className?: string };
 
-/** Мастер в сайдбаре */
+/** Мастер в сайдбаре — каркас страницы */
 export function IconWizard({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg
@@ -11,31 +11,29 @@ export function IconWizard({ className = "h-5 w-5" }: IconProps) {
       className={className}
       aria-hidden
     >
-      <path
-        d="M4.5 19.5L14.2 9.8"
+      <rect
+        x="4"
+        y="4"
+        width="16"
+        height="16"
+        rx="2.5"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M4 8.5h16"
+        stroke="currentColor"
+        strokeWidth="1.75"
         strokeLinecap="round"
       />
-      <path
-        d="M12.8 8.4l2.8 2.8"
+      <rect
+        x="7"
+        y="11"
+        width="10"
+        height="6"
+        rx="1.25"
         stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M16.2 4.2l.55 1.7 1.7.55-1.7.55-.55 1.7-.55-1.7-1.7-.55 1.7-.55.55-1.7z"
-        fill="currentColor"
-      />
-      <path
-        d="M20.2 8.6l.35 1.05 1.05.35-1.05.35-.35 1.05-.35-1.05-1.05-.35 1.05-.35.35-1.05z"
-        fill="currentColor"
-        opacity="0.75"
-      />
-      <path
-        d="M19.4 13.2l.28.85.85.28-.85.28-.28.85-.28-.85-.85-.28.85-.28.28-.85z"
-        fill="currentColor"
-        opacity="0.55"
+        strokeWidth="1.6"
       />
     </svg>
   );
