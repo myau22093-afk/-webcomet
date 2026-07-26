@@ -1910,7 +1910,7 @@ export function SiteWizard({
                     </span>
                     <span>
                       <span className="block text-[14px] text-violet-50">
-                        Премиум · −{getTokenCost("claude-fable-5")} ток.
+                        Премиум · −{getTokenCost("kimi-k2.6")} ток.
                       </span>
                       <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
                         Сильнее дизайн и анимации — заметно выше обычного.

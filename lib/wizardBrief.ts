@@ -208,8 +208,8 @@ export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
 }
 
 export function modelIdForTier(tier: WizardTier | null): string {
-  // Премиум: Fable (стабильный дизайн). Kimi остаётся в каталоге Редактора.
-  return tier === "premium" ? "claude-fable-5" : "gpt-5.6-sol";
+  // Вторая попытка: Премиум → Kimi (с жёстким CSS/без мата в system prompt)
+  return tier === "premium" ? "kimi-k2.6" : "gpt-5.6-sol";
 }
 
 /** Премиум в Мастере: полная генерация с нуля (не structure-adapt) */

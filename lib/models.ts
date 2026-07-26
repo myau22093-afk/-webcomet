@@ -39,7 +39,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "moonshotai/kimi-k2.6",
     type: "site",
     costMultiplier: 1.35,
-    description: "Опционально · сильный UI/код (тест)",
+    description: "Премиум в Мастере · Kimi",
     fallbackProviders: ["proxyapi"],
   },
   {
@@ -49,7 +49,7 @@ export const MODEL_CATALOG: ModelConfig[] = [
     modelId: "anthropic/claude-fable-5",
     type: "site",
     costMultiplier: 1.4,
-    description: "Премиум в Мастере · по умолчанию",
+    description: "Запасной премиум · Claude",
     fallbackProviders: ["promptra"],
   },
   {
