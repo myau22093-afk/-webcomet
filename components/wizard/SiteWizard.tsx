@@ -148,12 +148,16 @@ function BuildLoader() {
   const [progress, setProgress] = useState(8);
 
   useEffect(() => {
+    // Только вперёд, без зацикливания пунктов
     const stepTimer = window.setInterval(() => {
-      setIdx((v) => (v + 1) % steps.length);
-    }, 3200);
+      setIdx((v) => Math.min(steps.length - 1, v + 1));
+    }, 4500);
     const progTimer = window.setInterval(() => {
-      setProgress((p) => Math.min(92, p + 1.2 + Math.random() * 2));
-    }, 800);
+      setProgress((p) => {
+        if (p >= 94) return p;
+        return Math.min(94, p + 0.8 + Math.random() * 1.5);
+      });
+    }, 900);
     return () => {
       window.clearInterval(stepTimer);
       window.clearInterval(progTimer);
@@ -161,33 +165,33 @@ function BuildLoader() {
   }, [steps.length]);
 
   return (
-    <div className="relative flex h-full min-h-[480px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-6 py-8">
-      <div className="relative w-full max-w-md">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-5 py-5 sm:px-6 sm:py-6">
+      <div className="shrink-0">
         <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-zinc-500">
           Сборка сайта
         </p>
-        <p className="mt-2 text-xl font-medium tracking-tight text-zinc-50 sm:text-2xl">
+        <p className="mt-2 font-display text-xl tracking-tight text-zinc-50 sm:text-2xl">
           {steps[idx]}…
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
           Обычно около минуты. Пока можно поиграть с кометой.
         </p>
 
-        <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="mt-6 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-violet-400 transition-[width] duration-700 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <ul className="mt-8 space-y-3">
+        <ul className="mt-6 space-y-2.5">
           {steps.map((label, i) => {
             const done = i < idx;
             const current = i === idx;
             return (
               <li
                 key={label}
-                className={`flex items-center gap-3 text-[15px] ${
+                className={`flex items-center gap-3 text-[14px] sm:text-[15px] ${
                   done
                     ? "text-zinc-300"
                     : current
@@ -211,8 +215,10 @@ function BuildLoader() {
             );
           })}
         </ul>
+      </div>
 
-        <CometPlayground />
+      <div className="mt-5 min-h-0 flex-1">
+        <CometPlayground fill />
       </div>
     </div>
   );
@@ -738,18 +744,59 @@ export function SiteWizard({
         }
       }
 
+      const fileArr = Array.from(files);
       const form = new FormData();
       form.append("kind", kind === "logo" ? "logo" : "files");
-      Array.from(files).forEach((f) => {
-        form.append("files", f, f.name);
-        form.append("file", f, f.name);
-      });
-      const res = await fetch("/api/upload", {
+      fileArr.forEach((f) => form.append("files", f, f.name || "file.bin"));
+
+      let res = await fetch("/api/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: form,
       });
-      const data = await res.json();
+      let data = await res.json();
+
+      // Фолбэк: multipart иногда до Docker не доходит — шлём base64
+      if (!res.ok && /не переданы/i.test(String(data.error ?? ""))) {
+        const encoded = await Promise.all(
+          fileArr.map(
+            (f) =>
+              new Promise<{
+                name: string;
+                type: string;
+                dataBase64: string;
+              }>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = String(reader.result || "");
+                  const dataBase64 = result.includes(",")
+                    ? result.split(",")[1] || ""
+                    : result;
+                  resolve({
+                    name: f.name || "file.bin",
+                    type: f.type || "application/octet-stream",
+                    dataBase64,
+                  });
+                };
+                reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+                reader.readAsDataURL(f);
+              })
+          )
+        );
+        res = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            kind: kind === "logo" ? "logo" : "files",
+            files: encoded,
+          }),
+        });
+        data = await res.json();
+      }
+
       if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки");
       const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
       if (kind === "logo") {
@@ -1863,7 +1910,7 @@ export function SiteWizard({
                     </span>
                     <span>
                       <span className="block text-[14px] text-violet-50">
-                        Премиум · −{getTokenCost("kimi-k2.6")} ток.
+                        Премиум · −{getTokenCost("claude-fable-5")} ток.
                       </span>
                       <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
                         Сильнее дизайн и анимации — заметно выше обычного.
@@ -2092,7 +2139,9 @@ export function SiteWizard({
           >
             {building || editing ? (
               building ? (
-                <BuildLoader />
+                <div className="h-full min-h-[420px] w-full">
+                  <BuildLoader />
+                </div>
               ) : (
                 <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0a0b10] text-[14px] text-zinc-400">
                   <Loader2 className="mb-3 h-6 w-6 animate-spin text-violet-300" />

@@ -6,35 +6,62 @@ import { createUserClient } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
+export const dynamic = "force-dynamic";
+
 function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-function collectFiles(formData: FormData): File[] {
-  const raw = [
-    ...formData.getAll("files"),
-    ...formData.getAll("file"),
-    ...formData.getAll("logo"),
-  ];
-  const out: File[] = [];
-  for (const item of raw) {
-    if (typeof item === "string") continue;
-    if (!item || typeof item !== "object") continue;
-    // File / Blob from multipart
-    const blob = item as Blob & { name?: string };
-    if (typeof blob.arrayBuffer !== "function") continue;
-    if (blob.size <= 0) continue;
+type IncomingFile = { name: string; type: string; buffer: Buffer };
+
+async function materializeFormFiles(
+  formData: FormData
+): Promise<IncomingFile[]> {
+  const staged: Array<{ name: string; type: string; blob: Blob }> = [];
+  for (const [key, value] of formData.entries()) {
+    if (key === "kind") continue;
+    if (typeof value === "string") continue;
+    const blob = value as Blob & { name?: string };
+    if (!blob || typeof blob.arrayBuffer !== "function") continue;
     const name =
-      typeof (item as File).name === "string" && (item as File).name
-        ? (item as File).name
-        : "upload.bin";
-    out.push(
-      item instanceof File
-        ? item
-        : new File([blob], name, {
-            type: blob.type || "application/octet-stream",
-          })
-    );
+      typeof (value as File).name === "string" && (value as File).name
+        ? (value as File).name
+        : `upload_${key}.bin`;
+    staged.push({
+      name,
+      type: blob.type || "application/octet-stream",
+      blob,
+    });
+  }
+  const out: IncomingFile[] = [];
+  for (const s of staged) {
+    const buffer = Buffer.from(await s.blob.arrayBuffer());
+    if (buffer.length === 0) continue;
+    out.push({ name: s.name, type: s.type, buffer });
+  }
+  return out;
+}
+
+async function collectFromJson(body: {
+  kind?: string;
+  files?: Array<{ name?: string; type?: string; dataBase64?: string }>;
+  file?: { name?: string; type?: string; dataBase64?: string };
+}): Promise<IncomingFile[]> {
+  const list = [
+    ...(Array.isArray(body.files) ? body.files : []),
+    ...(body.file ? [body.file] : []),
+  ];
+  const out: IncomingFile[] = [];
+  for (const item of list) {
+    const b64 = item.dataBase64?.replace(/^data:[^;]+;base64,/, "").trim();
+    if (!b64) continue;
+    const buffer = Buffer.from(b64, "base64");
+    if (buffer.length === 0) continue;
+    out.push({
+      name: item.name || "upload.bin",
+      type: item.type || "application/octet-stream",
+      buffer,
+    });
   }
   return out;
 }
@@ -59,27 +86,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const kind = String(formData.get("kind") ?? "").toLowerCase();
+    const contentType = request.headers.get("content-type") || "";
+    let kind = "";
+    let files: IncomingFile[] = [];
+
+    if (contentType.includes("application/json")) {
+      const body = (await request.json()) as {
+        kind?: string;
+        files?: Array<{ name?: string; type?: string; dataBase64?: string }>;
+        file?: { name?: string; type?: string; dataBase64?: string };
+      };
+      kind = String(body.kind ?? "").toLowerCase();
+      files = await collectFromJson(body);
+    } else {
+      const formData = await request.formData();
+      kind = String(formData.get("kind") ?? "").toLowerCase();
+      files = await materializeFormFiles(formData);
+    }
+
     const isLogo = kind === "logo";
-    const files = collectFiles(formData);
 
     if (files.length === 0) {
       return NextResponse.json(
-        { error: "Файлы не переданы" },
+        {
+          error:
+            "Файлы не переданы. Попробуй другой формат (PNG/JPG) или другой браузер.",
+        },
         { status: 400 }
       );
     }
 
     if (isLogo) {
       const file = files[0];
-      const err = validateLogoFile(file);
+      const fakeFile = {
+        name: file.name,
+        type: file.type,
+        size: file.buffer.length,
+      } as File;
+      const err = validateLogoFile(fakeFile);
       if (err) {
         return NextResponse.json({ error: err }, { status: 400 });
       }
     } else {
       for (const file of files) {
-        if (file.size > LOGO_MAX_BYTES * 4) {
+        if (file.buffer.length > LOGO_MAX_BYTES * 4) {
           return NextResponse.json(
             { error: `Файл слишком большой: ${file.name}` },
             { status: 400 }
@@ -98,8 +148,7 @@ export async function POST(request: Request) {
       const originalName = sanitizeFileName(file.name || "file");
       const uniqueName = `${Date.now()}_${originalName}`;
       const filePath = path.join(uploadsDir, uniqueName);
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(filePath, buffer);
+      await writeFile(filePath, file.buffer);
       urls.push(`/uploads/${uniqueName}`);
     }
 

@@ -50,6 +50,11 @@ export const maxDuration = 180;
 
 const SYSTEM_PROMPT = `Ты — ведущий веб-дизайнер с 20-летним опытом. Твоя задача — создавать уникальные, дорогие, адаптивные лендинги, которые выглядят как работы топовых мировых студий.
 
+Критично:
+- Язык сайта: русский, деловой и дружелюбный. БЕЗ мата, сленговой пошлости и «юмора ради юмора» в названиях услуг/кнопок.
+- css ОБЯЗАТЕЛЕН и НЕ пустой: современная вёрстка, шрифты через @import, отступы, адаптив. Сайт без нормального CSS — провал.
+- html — только BODY (без doctype/html/head). Внешний вид задаётся полем css.
+
 Требования к дизайну:
 1. Используй современные градиенты, тени, скругления.
 2. Добавляй плавные анимации (hover, появление при скролле).
@@ -914,6 +919,15 @@ ${body.existingJs ?? ""}`
             `generate-site empty html (attempt ${attempt}), raw length=${content.length}`
           );
           siteParts = { ...EMPTY_SITE_FALLBACK };
+        } else if ((siteParts.css ?? "").trim().length < 80) {
+          // Модель отдала «голый» HTML без стилей — пробуем ещё раз
+          console.error(
+            `generate-site weak css (attempt ${attempt}), cssLen=${(siteParts.css ?? "").length}`
+          );
+          if (attempt < maxAttempts) {
+            siteParts = null;
+            continue;
+          }
         }
       } catch (parseError) {
         console.error(`JSON parse error (attempt ${attempt}):`, parseError);

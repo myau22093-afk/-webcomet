@@ -76,16 +76,27 @@ function main() {
   assert(wizardSimple.template == null, "wizard simple no niche template");
   assert(wizardSimple.config.id === "gpt-5.6-sol", `wizard simple model=${wizardSimple.config.id}`);
 
-  // 6) Мастер: премиум → Kimi с нуля
+  // 6) Мастер: премиум → Fable с нуля
   const wizardPremium = resolveOptimizedSitePlan({
     prompt: "Сайт для стоматологии",
     isEdit: false,
     qualityMode: "quality",
     wizardMode: true,
+    modelId: "claude-fable-5",
+  });
+  assert(wizardPremium.config.id === "claude-fable-5", "wizard premium fable");
+  assert(wizardPremium.template == null, "wizard premium no template");
+
+  // 7) Kimi тоже считается премиум-моделью мастера (полный create)
+  const wizardKimi = resolveOptimizedSitePlan({
+    prompt: "Сайт кафе",
+    isEdit: false,
+    qualityMode: "quality",
+    wizardMode: true,
     modelId: "kimi-k2.6",
   });
-  assert(wizardPremium.config.id === "kimi-k2.6", "wizard premium kimi");
-  assert(wizardPremium.template == null, "wizard premium no template");
+  assert(wizardKimi.config.id === "kimi-k2.6", "wizard kimi available");
+  assert(wizardKimi.template == null, "wizard kimi no template");
 
   console.log("\nAll cost-optimization routing tests passed.");
 }
