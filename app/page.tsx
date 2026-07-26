@@ -165,6 +165,9 @@ export default function HomePage() {
             <Link href="/pricing" className="hover:text-white">
               Тарифы
             </Link>
+            <Link href="/requisites" className="hover:text-white">
+              Реквизиты
+            </Link>
             {loggedIn ? (
               <Link href="/dashboard" className="hover:text-white">
                 Дашборд
