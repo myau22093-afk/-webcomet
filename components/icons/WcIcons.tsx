@@ -2,7 +2,7 @@
 
 type IconProps = { className?: string };
 
-/** Мастер: палочка + искры (одинаковая в сайдбаре и в шапке мастера) */
+/** Мастер в сайдбаре */
 export function IconWizard({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg
@@ -66,12 +66,16 @@ export function IconPro({ className = "h-5 w-5" }: IconProps) {
 export function IconGear({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="2.75" stroke="currentColor" strokeWidth="1.75" />
       <path
-        d="M12 3.75v1.7M12 18.55v1.7M3.75 12h1.7M18.55 12h1.7M6.1 6.1l1.2 1.2M16.7 16.7l1.2 1.2M17.9 6.1l-1.2 1.2M7.3 16.7l-1.2 1.2"
+        d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2z"
         stroke="currentColor"
         strokeWidth="1.75"
-        strokeLinecap="round"
+      />
+      <path
+        d="M19.4 13.2v-2.4l-1.7-.3a6.8 6.8 0 0 0-.6-1.4l1-1.4-1.7-1.7-1.4 1a6.8 6.8 0 0 0-1.4-.6L12.4 4.6h-2.4l-.3 1.7a6.8 6.8 0 0 0-1.4.6l-1.4-1-1.7 1.7 1 1.4a6.8 6.8 0 0 0-.6 1.4l-1.7.3v2.4l1.7.3c.1.5.3 1 .6 1.4l-1 1.4 1.7 1.7 1.4-1c.4.3.9.5 1.4.6l.3 1.7h2.4l.3-1.7c.5-.1 1-.3 1.4-.6l1.4 1 1.7-1.7-1-1.4c.3-.4.5-.9.6-1.4l1.7-.3z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
       />
     </svg>
   );

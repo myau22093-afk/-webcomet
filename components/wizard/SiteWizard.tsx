@@ -9,11 +9,11 @@ import {
   RotateCcw,
   Crown,
   Zap,
+  Wand2,
   Mic,
   Plus,
   Rocket,
 } from "lucide-react";
-import { IconWizard } from "@/components/icons/WcIcons";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
 import {
@@ -1020,7 +1020,7 @@ export function SiteWizard({
         <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
-              <IconWizard className="h-5 w-5 text-violet-200" />
+              <Wand2 className="h-5 w-5 text-violet-200" />
             </span>
             <div>
               <p className="text-[15px] font-medium tracking-tight text-zinc-100">
@@ -1038,10 +1038,11 @@ export function SiteWizard({
           <button
             type="button"
             onClick={resetWizard}
+            title="Сбросить мастер и начать новый сайт"
             className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12px] text-zinc-500 transition hover:bg-white/5 hover:text-zinc-300"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Сначала
+            Заново
           </button>
         </div>
 

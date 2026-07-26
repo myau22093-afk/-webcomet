@@ -2087,15 +2087,7 @@ export default function DashboardPage() {
             <span className="hidden sm:inline">{sidebarOpen ? "Скрыть" : "Меню"}</span>
           </button>
 
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-xs text-zinc-500">
-            <button
-              type="button"
-              onClick={() => setTopUpOpen(true)}
-              className="rounded-lg border border-violet-500/30 bg-violet-500/15 px-3 py-1.5 text-violet-200 hover:bg-violet-500/25"
-            >
-              Пополнить
-            </button>
-          </div>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-xs text-zinc-500" />
         </header>
 
         {workMode === "wizard" && (
