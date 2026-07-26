@@ -62,13 +62,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/pricing") ||
     pathname.startsWith("/payment");
-  const isProtectedApi = pathname.startsWith("/api/upload");
+  // /api/upload сам проверяет Bearer — не режем по cookie-сессии
+  const hasBearer = Boolean(
+    request.headers.get("authorization")?.match(/^Bearer\s+\S+/i)
+  );
 
-  if (!session && isProtectedApi) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!session && isProtectedPage) {
+  if (!session && isProtectedPage && !hasBearer) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

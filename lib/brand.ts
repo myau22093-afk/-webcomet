@@ -76,7 +76,7 @@ export function parseBrandColors(value: unknown): string[] {
 }
 
 export const LOGO_ACCEPT =
-  "image/png,image/jpeg,image/jpg,image/svg+xml,.png,.jpg,.jpeg,.svg";
+  "image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp";
 
 export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -88,11 +88,15 @@ export function validateLogoFile(file: File): string | null {
     type === "image/jpeg" ||
     type === "image/jpg" ||
     type === "image/svg+xml" ||
+    type === "image/webp" ||
     name.endsWith(".png") ||
     name.endsWith(".jpg") ||
     name.endsWith(".jpeg") ||
-    name.endsWith(".svg");
-  if (!okType) return "Логотип: только PNG, JPG или SVG";
+    name.endsWith(".svg") ||
+    name.endsWith(".webp");
+  if (!okType) {
+    return "Логотип: PNG, JPG, SVG или WebP (не HEIC с iPhone — сохрани как JPG)";
+  }
   if (file.size > LOGO_MAX_BYTES) return "Логотип не больше 5 MB";
   return null;
 }

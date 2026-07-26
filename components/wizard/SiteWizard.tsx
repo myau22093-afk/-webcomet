@@ -1422,7 +1422,7 @@ export function SiteWizard({
                       <input
                         ref={tzInputRef}
                         type="file"
-                        accept=".txt,.md,.pdf,.doc,.docx,text/plain"
+                        accept=".txt,.md,.pdf,.doc,.docx,text/plain,application/pdf"
                         className="hidden"
                         onChange={(e) => {
                           void uploadWizardFiles("tz", e.target.files);
