@@ -12,6 +12,8 @@ import {
   Wand2,
   Mic,
   Plus,
+  Check,
+  X,
   Rocket,
   Maximize2,
   Monitor,
@@ -32,7 +34,9 @@ import {
   modelIdForTier,
   nextScriptedStep,
   sectionOptions,
-  suggestSeoFocus,
+  suggestSeoPhrases,
+  parseSeoPhrases,
+  joinSeoPhrases,
   type WizardBrief,
   type WizardTier,
 } from "@/lib/wizardBrief";
@@ -245,6 +249,10 @@ export function SiteWizard({
   const [abA, setAbA] = useState("violet");
   const [abB, setAbB] = useState("ocean");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
+  const [seoDraft, setSeoDraft] = useState("");
+  const [seoEditingIdx, setSeoEditingIdx] = useState<number | null>(null);
+  const [seoEditText, setSeoEditText] = useState("");
+  const seoSeededRef = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
   const previewStageRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
@@ -272,6 +280,33 @@ export function SiteWizard({
     ];
     return parts.filter(Boolean).join("\n");
   }, [brief]);
+
+  useEffect(() => {
+    const hasDetails = bubbles.some(
+      (b) => b.kind === "choice" && b.step === "details"
+    );
+    if (!hasDetails || brief.detailsConfirmed || seoSeededRef.current) return;
+    if (parseSeoPhrases(brief.seoFocus).length > 0) {
+      seoSeededRef.current = true;
+      return;
+    }
+    if (!brief.topic.trim()) return;
+    const seeded = suggestSeoPhrases(brief);
+    if (!seeded.length) return;
+    seoSeededRef.current = true;
+    setBrief((prev) =>
+      parseSeoPhrases(prev.seoFocus).length
+        ? prev
+        : { ...prev, seoFocus: joinSeoPhrases(seeded) }
+    );
+  }, [
+    bubbles,
+    brief.detailsConfirmed,
+    brief.seoFocus,
+    brief.topic,
+    brief.city,
+    brief.companyName,
+  ]);
 
   useEffect(() => {
     try {
@@ -463,6 +498,25 @@ export function SiteWizard({
       });
       onBalanceRefresh();
       pushAssistant("Правку применил — смотри превью справа.", true);
+      // Обновить уже опубликованный сайт
+      try {
+        await fetch("/api/publish/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            siteId: next.id,
+            html: next.html,
+            css: next.css,
+            js: next.js,
+            title: brief.topic,
+          }),
+        });
+      } catch {
+        /* нет публикации */
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка правки";
       setError(msg);
@@ -500,7 +554,7 @@ export function SiteWizard({
       nextBrief.nicheId = detectNicheFromTopic(message);
       const city = extractCityFromTopic(message);
       if (city && !nextBrief.city) nextBrief.city = city;
-      nextBrief.seoFocus = suggestSeoFocus(nextBrief);
+      nextBrief.seoFocus = joinSeoPhrases(suggestSeoPhrases(nextBrief));
       setBrief(nextBrief);
       ensureScriptMenus(nextBrief);
       return;
@@ -598,9 +652,11 @@ export function SiteWizard({
       pushAssistant("Укажи название компании или бренда.", true);
       return;
     }
+    const phrases = parseSeoPhrases(brief.seoFocus);
     const seo =
-      brief.seoFocus.trim() ||
-      suggestSeoFocus(brief);
+      phrases.length > 0
+        ? joinSeoPhrases(phrases)
+        : joinSeoPhrases(suggestSeoPhrases(brief));
     const next = {
       ...brief,
       seoFocus: seo,
@@ -681,7 +737,10 @@ export function SiteWizard({
 
       const form = new FormData();
       form.append("kind", kind === "logo" ? "logo" : "files");
-      Array.from(files).forEach((f) => form.append("files", f));
+      Array.from(files).forEach((f) => {
+        form.append("files", f, f.name);
+        form.append("file", f, f.name);
+      });
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -1320,7 +1379,24 @@ export function SiteWizard({
 
               if (b.step === "details") {
                 const locked = brief.detailsConfirmed;
-                const suggested = suggestSeoFocus(brief);
+                const phrases = parseSeoPhrases(brief.seoFocus);
+
+                const commitSeoDraft = () => {
+                  const t = seoDraft.replace(/[—–]/g, "-").trim();
+                  if (!t) return;
+                  setBrief((prev) => {
+                    const list = parseSeoPhrases(prev.seoFocus);
+                    if (list.some((x) => x.toLowerCase() === t.toLowerCase())) {
+                      return prev;
+                    }
+                    return {
+                      ...prev,
+                      seoFocus: joinSeoPhrases([...list, t]),
+                    };
+                  });
+                  setSeoDraft("");
+                };
+
                 return (
                   <div
                     key={b.id}
@@ -1353,14 +1429,6 @@ export function SiteWizard({
                             setBrief((prev) => ({
                               ...prev,
                               city: e.target.value,
-                              seoFocus:
-                                prev.seoFocus.trim() &&
-                                prev.seoFocus !== suggestSeoFocus(prev)
-                                  ? prev.seoFocus
-                                  : suggestSeoFocus({
-                                      ...prev,
-                                      city: e.target.value,
-                                    }),
                             }))
                           }
                           placeholder="Город (если нужен)"
@@ -1381,20 +1449,128 @@ export function SiteWizard({
                       </div>
                       <div>
                         <label className="mb-1.5 block text-[12px] text-zinc-500">
-                          Фразы для поиска (подставили сами — можно поправить)
+                          Фразы для поиска (можно править, добавлять и удалять)
                         </label>
-                        <input
-                          value={brief.seoFocus || suggested}
-                          disabled={locked}
-                          onChange={(e) =>
-                            setBrief((prev) => ({
-                              ...prev,
-                              seoFocus: e.target.value,
-                            }))
-                          }
-                          placeholder={suggested || "Например: мебель на заказ"}
-                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
-                        />
+                        <ul className="space-y-2">
+                          {phrases.map((phrase, idx) => (
+                            <li
+                              key={`${idx}-${phrase.slice(0, 24)}`}
+                              className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-2.5 py-2"
+                            >
+                              <Check
+                                className="h-4 w-4 shrink-0 text-emerald-400"
+                                aria-hidden
+                              />
+                              {seoEditingIdx === idx && !locked ? (
+                                <input
+                                  value={seoEditText}
+                                  autoFocus
+                                  onChange={(e) =>
+                                    setSeoEditText(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      const t = seoEditText
+                                        .replace(/[—–]/g, "-")
+                                        .trim();
+                                      if (!t) return;
+                                      setBrief((prev) => {
+                                        const list = parseSeoPhrases(
+                                          prev.seoFocus
+                                        );
+                                        list[idx] = t;
+                                        return {
+                                          ...prev,
+                                          seoFocus: joinSeoPhrases(list),
+                                        };
+                                      });
+                                      setSeoEditingIdx(null);
+                                    }
+                                    if (e.key === "Escape") {
+                                      setSeoEditingIdx(null);
+                                    }
+                                  }}
+                                  className="wc-input min-w-0 flex-1 py-1.5 text-[13px]"
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={locked}
+                                  onClick={() => {
+                                    if (locked) return;
+                                    setSeoEditingIdx(idx);
+                                    setSeoEditText(phrase);
+                                  }}
+                                  className="min-w-0 flex-1 truncate text-left text-[13px] text-zinc-200 disabled:opacity-60"
+                                  title="Нажми, чтобы редактировать"
+                                >
+                                  {phrase}
+                                </button>
+                              )}
+                              {!locked ? (
+                                <button
+                                  type="button"
+                                  title="Удалить"
+                                  onClick={() =>
+                                    setBrief((prev) => {
+                                      const list = parseSeoPhrases(
+                                        prev.seoFocus
+                                      );
+                                      list.splice(idx, 1);
+                                      return {
+                                        ...prev,
+                                        seoFocus: joinSeoPhrases(list),
+                                      };
+                                    })
+                                  }
+                                  className="rounded-lg p-1 text-zinc-500 transition hover:bg-white/5 hover:text-rose-300"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                        {!locked ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              value={seoDraft}
+                              onChange={(e) => setSeoDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  commitSeoDraft();
+                                }
+                              }}
+                              placeholder="Ещё фраза…"
+                              className="wc-input min-w-0 flex-1 py-2 text-[13px]"
+                            />
+                            <button
+                              type="button"
+                              title="Подтвердить фразу"
+                              onClick={commitSeoDraft}
+                              className="rounded-xl border border-emerald-400/30 bg-emerald-500/15 p-2 text-emerald-200 transition hover:bg-emerald-500/25"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Добавить ещё"
+                              onClick={() => {
+                                if (seoDraft.trim()) commitSeoDraft();
+                                else {
+                                  const el =
+                                    document.activeElement as HTMLElement | null;
+                                  el?.blur?.();
+                                }
+                              }}
+                              className="rounded-xl border border-white/12 bg-white/[0.04] p-2 text-zinc-300 transition hover:border-violet-400/35 hover:bg-violet-500/10"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     {!locked ? (

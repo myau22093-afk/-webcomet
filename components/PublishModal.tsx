@@ -169,14 +169,29 @@ export function PublishSuccessBanner({
           <p className="text-[14px] font-medium text-emerald-100">
             Сайт опубликован
           </p>
-          <p className="mt-1 text-[13px] text-emerald-200/80">
-            <a href={path} target="_blank" rel="noopener noreferrer" className="underline">
+          <p className="mt-1 text-[13px] text-emerald-200/90">
+            Рабочая ссылка:{" "}
+            <a
+              href={path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
               {path}
             </a>
-            <span className="mx-2 text-emerald-200/40">·</span>
-            <a href={sub} target="_blank" rel="noopener noreferrer" className="underline">
+          </p>
+          <p className="mt-1 text-[12px] text-emerald-200/55">
+            Поддомен{" "}
+            <a
+              href={sub}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
               {sub}
-            </a>
+            </a>{" "}
+            откроется, когда в DNS будет wildcard *.webcomet.ru (иначе пользуйся
+            ссылкой выше).
           </p>
         </div>
         <button

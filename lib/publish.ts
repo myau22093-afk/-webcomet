@@ -225,3 +225,75 @@ export function urlsForSlug(slug: string) {
     path: publishPathUrl(slug),
   };
 }
+
+/** Обновить HTML активных публикаций после правок в редакторе */
+export async function syncPublishedSiteContent(
+  admin: SupabaseClient,
+  opts: {
+    userId: string;
+    siteId?: string | null;
+    html: string;
+    css: string;
+    js: string;
+    title?: string;
+    formEmail?: string;
+  }
+): Promise<{ updated: number; slugs: string[] }> {
+  const standalone = await buildPublishHtml({
+    html: opts.html,
+    css: opts.css,
+    js: opts.js,
+    title: opts.title,
+    formEmail: opts.formEmail,
+  });
+
+  let query = admin
+    .from("published_sites")
+    .select("id, slug")
+    .eq("user_id", opts.userId)
+    .eq("status", "active");
+
+  if (opts.siteId) {
+    query = query.eq("site_id", opts.siteId);
+  }
+
+  const { data: rows, error } = await query;
+  if (error) throw error;
+  const list = (rows ?? []) as { id: string; slug: string }[];
+  if (!list.length && opts.siteId) {
+    // fallback: последняя активная публикация пользователя
+    const { data: latest } = await admin
+      .from("published_sites")
+      .select("id, slug")
+      .eq("user_id", opts.userId)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (latest?.length) list.push(...(latest as { id: string; slug: string }[]));
+  }
+
+  const slugs: string[] = [];
+  for (const row of list) {
+    const { error: upErr } = await admin
+      .from("published_sites")
+      .update({
+        html: standalone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id)
+      .eq("user_id", opts.userId);
+    if (upErr) {
+      console.error("sync publish update", row.slug, upErr);
+      continue;
+    }
+    try {
+      await writeHostedIndex(row.slug, standalone);
+    } catch (e) {
+      console.error("sync writeHostedIndex", row.slug, e);
+    }
+    slugs.push(row.slug);
+  }
+
+  return { updated: slugs.length, slugs };
+}
+

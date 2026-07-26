@@ -1289,6 +1289,25 @@ export default function DashboardPage() {
       setLiveEditPrompt("");
       setMainTab("preview");
       await loadStatus(accessToken);
+      // Тихо обновляем опубликованный сайт, если есть
+      try {
+        await fetch("/api/publish/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            siteId: activeItem.id,
+            html: data.html,
+            css: data.css ?? "",
+            js: data.js ?? "",
+            title: activeItem.prompt,
+          }),
+        });
+      } catch {
+        /* нет публикации — ок */
+      }
     } catch (error) {
       alert(error instanceof Error ? error.message : "Ошибка правки");
     } finally {
@@ -1896,10 +1915,13 @@ export default function DashboardPage() {
                             onClick={() => {
                               setActiveId(item.id);
                               setMainTab("preview");
-                              if (workMode === "wizard") setWorkMode("site");
-                              void getFreshAccessToken().then((token) => {
-                                if (token) void ensureSiteLoaded(token, item.id);
-                              });
+                              // Из Мастера не уводим в Редактор — только подсвечиваем в истории
+                              if (workMode !== "wizard") {
+                                void getFreshAccessToken().then((token) => {
+                                  if (token)
+                                    void ensureSiteLoaded(token, item.id);
+                                });
+                              }
                             }}
                             className="min-w-0 flex-1 px-3 py-2.5 text-left"
                           >
@@ -2222,6 +2244,42 @@ export default function DashboardPage() {
                   >
                     <Rocket className="h-4 w-4" />
                     Опубликовать
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void (async () => {
+                        if (!activeItem) return;
+                        const token = await getFreshAccessToken();
+                        if (!token) return;
+                        const res = await fetch("/api/publish/sync", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({
+                            siteId: activeItem.id,
+                            html: activeItem.html,
+                            css: activeItem.css,
+                            js: activeItem.js,
+                            title: activeItem.prompt,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          alert(data.error ?? "Не удалось обновить");
+                          return;
+                        }
+                        alert(
+                          `Опубликованный сайт обновлён (${(data.slugs as string[])?.join(", ") || "ok"}). Обнови страницу по ссылке.`
+                        );
+                      })();
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1.5 text-sm text-zinc-200"
+                    title="Залить текущие правки на уже опубликованную ссылку"
+                  >
+                    Обновить на сайте
                   </button>
                 </div>
               )}

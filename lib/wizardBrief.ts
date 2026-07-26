@@ -126,20 +126,59 @@ export function extractCityFromTopic(topic: string): string {
   return m?.[1]?.trim() ?? "";
 }
 
-/** Простое предложение SEO/гео без жаргона для пользователя */
+/** Простое предложение SEO/гео без жаргона и без «нейросетевого» длинного тире */
 export function suggestSeoFocus(brief: Pick<
   WizardBrief,
   "topic" | "companyName" | "city"
 >): string {
-  const topic = brief.topic.trim().replace(/\s+/g, " ");
-  const city = brief.city.trim();
-  const company = brief.companyName.trim();
-  if (!topic) return "";
-  const base = city ? `${topic} ${city}` : topic;
-  if (company && !base.toLowerCase().includes(company.toLowerCase())) {
-    return `${base} — ${company}`;
+  return suggestSeoPhrases(brief)[0] ?? "";
+}
+
+/** Несколько фраз, как люди реально ищут в Яндексе/Google */
+export function suggestSeoPhrases(brief: Pick<
+  WizardBrief,
+  "topic" | "companyName" | "city"
+>): string[] {
+  const topic = brief.topic.trim().replace(/\s+/g, " ").replace(/[—–]/g, " ");
+  const city = brief.city.trim().replace(/[—–]/g, " ");
+  const company = brief.companyName.trim().replace(/[—–]/g, " ");
+  if (!topic) return [];
+
+  const out: string[] = [];
+  const add = (s: string) => {
+    const t = s.replace(/\s+/g, " ").trim();
+    if (!t) return;
+    if (out.some((x) => x.toLowerCase() === t.toLowerCase())) return;
+    out.push(t);
+  };
+
+  if (city) {
+    add(`${topic} ${city}`);
+    add(`${topic} в ${city}`);
+  } else {
+    add(topic);
   }
-  return base;
+  if (company) {
+    add(company);
+    if (city) add(`${company} ${city}`);
+  }
+  add(`заказать ${topic}${city ? ` ${city}` : ""}`);
+
+  return out.slice(0, 4);
+}
+
+export function parseSeoPhrases(raw: string): string[] {
+  return raw
+    .split(/\n+/)
+    .map((s) => s.replace(/[—–]/g, "-").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+export function joinSeoPhrases(phrases: string[]): string {
+  return phrases
+    .map((s) => s.replace(/[—–]/g, "-").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function isBriefReady(brief: WizardBrief): boolean {
@@ -223,7 +262,7 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
   const customRequirements = [
     brief.notes.trim() || null,
     brief.seoFocus.trim()
-      ? `Поисковые запросы и регион (вплети естественно в title, H1 и тексты): ${brief.seoFocus.trim()}`
+      ? `Поисковые запросы (вплети естественно в title, H1 и тексты; не используй длинное тире; пиши как люди в поиске):\n${parseSeoPhrases(brief.seoFocus).join("\n")}`
       : null,
     brief.logoUrl
       ? `Логотип компании: используй <img src="${brief.logoUrl}" alt="${brief.companyName || "logo"}" /> в шапке.`

@@ -76,7 +76,7 @@ export function parseBrandColors(value: unknown): string[] {
 }
 
 export const LOGO_ACCEPT =
-  "image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp";
+  "image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/pjpeg,.png,.jpg,.jpeg,.svg,.webp,.jfif";
 
 export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -87,11 +87,13 @@ export function validateLogoFile(file: File): string | null {
     type === "image/png" ||
     type === "image/jpeg" ||
     type === "image/jpg" ||
+    type === "image/pjpeg" ||
     type === "image/svg+xml" ||
     type === "image/webp" ||
     name.endsWith(".png") ||
     name.endsWith(".jpg") ||
     name.endsWith(".jpeg") ||
+    name.endsWith(".jfif") ||
     name.endsWith(".svg") ||
     name.endsWith(".webp");
   if (!okType) {

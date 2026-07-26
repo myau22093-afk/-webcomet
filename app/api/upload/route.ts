@@ -10,6 +10,35 @@ function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+function collectFiles(formData: FormData): File[] {
+  const raw = [
+    ...formData.getAll("files"),
+    ...formData.getAll("file"),
+    ...formData.getAll("logo"),
+  ];
+  const out: File[] = [];
+  for (const item of raw) {
+    if (typeof item === "string") continue;
+    if (!item || typeof item !== "object") continue;
+    // File / Blob from multipart
+    const blob = item as Blob & { name?: string };
+    if (typeof blob.arrayBuffer !== "function") continue;
+    if (blob.size <= 0) continue;
+    const name =
+      typeof (item as File).name === "string" && (item as File).name
+        ? (item as File).name
+        : "upload.bin";
+    out.push(
+      item instanceof File
+        ? item
+        : new File([blob], name, {
+            type: blob.type || "application/octet-stream",
+          })
+    );
+  }
+  return out;
+}
+
 export async function POST(request: Request) {
   try {
     const token = request.headers
@@ -33,9 +62,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const kind = String(formData.get("kind") ?? "").toLowerCase();
     const isLogo = kind === "logo";
-    const files = formData.getAll("files").filter((item): item is File => {
-      return typeof item === "object" && item !== null && "arrayBuffer" in item;
-    });
+    const files = collectFiles(formData);
 
     if (files.length === 0) {
       return NextResponse.json(

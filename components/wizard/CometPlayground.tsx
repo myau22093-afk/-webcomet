@@ -2,21 +2,38 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type Pos = { x: number; y: number };
+
+function randomPos(prev?: Pos): Pos {
+  // Почти вся площадь поля (с учётом кнопки ~40px)
+  let x = 8 + Math.random() * 84;
+  let y = 10 + Math.random() * 70;
+  if (prev) {
+    for (let i = 0; i < 6; i++) {
+      const dx = x - prev.x;
+      const dy = y - prev.y;
+      if (dx * dx + dy * dy > 400) break; // минимум ~20% диагонали
+      x = 8 + Math.random() * 84;
+      y = 10 + Math.random() * 70;
+    }
+  }
+  return { x, y };
+}
+
 /** Мини-игра «поймай комету», пока идёт сборка */
 export function CometPlayground() {
   const areaRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
-  const [pos, setPos] = useState({ x: 50, y: 40 });
+  const [pos, setPos] = useState<Pos>(() => randomPos());
   const [cursor, setCursor] = useState({ x: 50, y: 50 });
   const [flash, setFlash] = useState(false);
+  const posRef = useRef(pos);
+  posRef.current = pos;
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setPos({
-        x: 12 + Math.random() * 76,
-        y: 18 + Math.random() * 55,
-      });
-    }, 1400);
+      setPos(randomPos(posRef.current));
+    }, 1100);
     return () => window.clearInterval(id);
   }, []);
 
@@ -32,10 +49,7 @@ export function CometPlayground() {
     setScore((s) => s + 1);
     setFlash(true);
     window.setTimeout(() => setFlash(false), 200);
-    setPos({
-      x: 12 + Math.random() * 76,
-      y: 18 + Math.random() * 55,
-    });
+    setPos(randomPos(posRef.current));
   }
 
   return (
@@ -62,13 +76,13 @@ export function CometPlayground() {
             e.stopPropagation();
             catchComet();
           }}
-          className="absolute flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-sky-400 text-lg shadow-lg shadow-violet-500/30 transition-all duration-500 ease-out hover:scale-110"
+          className="absolute z-10 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-sky-400 text-lg shadow-lg shadow-violet-500/30 transition-[left,top,transform] duration-300 ease-out hover:scale-110"
           style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
           aria-label="Комета"
         >
           ✦
         </button>
-        <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px] text-zinc-600">
+        <p className="pointer-events-none absolute bottom-2 left-0 right-0 z-0 text-center text-[11px] text-zinc-600">
           Кликай по комете · курсор подсвечивает след
         </p>
       </div>
