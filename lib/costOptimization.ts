@@ -9,7 +9,7 @@ import {
   type SiteTemplate,
 } from "@/lib/siteTemplates";
 import { getTokenCost } from "@/lib/tokenConfig";
-import { modelIdForTier } from "@/lib/wizardBrief";
+import { modelIdForTier, isWizardPremiumModel } from "@/lib/wizardBrief";
 
 export type SiteRequestKind =
   | "chat"
@@ -101,8 +101,8 @@ export function resolveOptimizedSitePlan(input: {
       getModelById("gpt-5.6-sol")!;
     const solOrPremium =
       wanted.type === "site" ? wanted : getModelById("gpt-5.6-sol")!;
-    // Премиум (Fable): с нуля. Простой: structure adapt в generate-site (не нишевый HTML).
-    const isPremium = solOrPremium.id === "claude-fable-5";
+    // Премиум (Kimi/Fable): с нуля. Простой: structure adapt в generate-site.
+    const isPremium = isWizardPremiumModel(solOrPremium.id);
     return {
       kind: "create",
       config: solOrPremium,

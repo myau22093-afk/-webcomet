@@ -24,6 +24,7 @@ import {
   buildStructureAdaptPrompt,
   pickStructureLayout,
 } from "@/lib/structureTemplates";
+import { isWizardPremiumModel } from "@/lib/wizardBrief";
 import { logApiUsage } from "@/lib/apiUsageLog";
 import {
   ensureTemplatesSeeded,
@@ -599,10 +600,10 @@ export async function POST(request: Request) {
     const generateTokenCost = getTokenCost(modelConfig.id);
     const activeTemplate = plan.template;
 
-    // Мастер «Простой» (Sol/Terra): layout-скелет → дешёвая адаптация.
-    // «Премиум» (Fable): полный сайт с нуля, без нишевых/structure шаблонов.
+    // Мастер «Простой» (Sol): layout-скелет → дешёвая адаптация.
+    // «Премиум» (Kimi/Fable): полный сайт с нуля, без нишевых/structure шаблонов.
     const isWizardPremium =
-      wizardMode && !isEdit && modelConfig.id === "claude-fable-5";
+      wizardMode && !isEdit && isWizardPremiumModel(modelConfig.id);
     const useStructureAdapt =
       wizardMode && !isEdit && !isWizardPremium;
 

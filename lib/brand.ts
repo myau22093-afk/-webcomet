@@ -26,6 +26,7 @@ export const PREVIEW_DEVICE_WIDTH: Record<PreviewDevice, number | null> = {
 };
 
 export const EXPRESS_SITE_MODEL_IDS = [
+  "kimi-k2.6",
   "claude-fable-5",
   "gpt-5.6-sol",
 ] as const;

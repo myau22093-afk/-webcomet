@@ -208,7 +208,18 @@ export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
 }
 
 export function modelIdForTier(tier: WizardTier | null): string {
-  return tier === "premium" ? "claude-fable-5" : "gpt-5.6-sol";
+  return tier === "premium" ? "kimi-k2.6" : "gpt-5.6-sol";
+}
+
+/** Премиум в Мастере: полная генерация с нуля (не structure-adapt) */
+export function isWizardPremiumModel(modelId: string | null | undefined): boolean {
+  if (!modelId) return false;
+  return (
+    modelId === "kimi-k2.6" ||
+    modelId === "claude-fable-5" ||
+    modelId.includes("kimi") ||
+    modelId.includes("fable")
+  );
 }
 
 export function buildWizardSitePrompt(brief: WizardBrief): {

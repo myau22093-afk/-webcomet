@@ -4,6 +4,7 @@
  * Кеш (API 0 ₽): клиенту списываем как за полную генерацию модели — тебе чистая маржа.
  */
 export const TOKEN_COSTS: Record<string, { cost: number }> = {
+  "kimi-k2.6": { cost: 250 },
   "claude-fable-5": { cost: 250 },
   "claude-sonnet-5": { cost: 70 },
   "gpt-5.6-sol": { cost: 110 },
@@ -45,6 +46,7 @@ export function getTokenCost(modelId: string | null | undefined): number {
   if (direct) return direct.cost;
 
   // aliases
+  if (modelId.includes("kimi")) return TOKEN_COSTS["kimi-k2.6"].cost;
   if (modelId.includes("fable")) return TOKEN_COSTS["claude-fable-5"].cost;
   if (modelId.includes("sonnet-5")) return TOKEN_COSTS["claude-sonnet-5"].cost;
   if (modelId.includes("sonnet")) return TOKEN_COSTS["claude-sonnet-4-6"].cost;
