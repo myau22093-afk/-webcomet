@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:cost": "npx --yes tsx scripts/test-cost-optimization.ts"
+    "test:cost": "npx --yes tsx scripts/test-cost-optimization.ts",
+    "seed:structures": "npx --yes tsx scripts/seed-structure-templates.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.11",

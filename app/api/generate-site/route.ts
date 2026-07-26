@@ -20,6 +20,10 @@ import {
   buildTemplateCustomizePrompt,
   resolveOptimizedSitePlan,
 } from "@/lib/costOptimization";
+import {
+  buildStructureAdaptPrompt,
+  pickStructureLayout,
+} from "@/lib/structureTemplates";
 import { logApiUsage } from "@/lib/apiUsageLog";
 import {
   ensureTemplatesSeeded,
@@ -594,6 +598,25 @@ export async function POST(request: Request) {
     const generateTokenCost = getTokenCost(modelConfig.id);
     const activeTemplate = plan.template;
 
+    // Мастер «Простой» (Sol/Terra): layout-скелет → дешёвая адаптация.
+    // «Премиум» (Fable): полный сайт с нуля, без нишевых/structure шаблонов.
+    const isWizardPremium =
+      wizardMode && !isEdit && modelConfig.id === "claude-fable-5";
+    const useStructureAdapt =
+      wizardMode && !isEdit && !isWizardPremium;
+
+    const structureLayout = useStructureAdapt
+      ? pickStructureLayout(
+          `${effectivePrompt}\n${customRequirements}\n${brandColors.join(",")}`
+        )
+      : null;
+
+    if (structureLayout) {
+      reason = `мастер · структура «${structureLayout.id}» → ${modelConfig.name}`;
+    } else if (isWizardPremium) {
+      reason = `мастер · премиум с нуля → ${modelConfig.name}`;
+    }
+
     const promptHash = buildPromptHash({
       prompt: effectivePrompt,
       customRequirements,
@@ -607,6 +630,7 @@ export async function POST(request: Request) {
       expressMode,
       isEdit: false,
       templateId: activeTemplate?.id ?? null,
+      structureLayoutId: structureLayout?.id ?? null,
       optimizeKind: plan.kind,
     });
 
@@ -713,6 +737,7 @@ export async function POST(request: Request) {
           total_tokens_used: spend.totalUsed,
           remaining: spend.balance,
           optimizeKind: plan.kind,
+          structureLayoutId: structureLayout?.id ?? null,
         });
       }
     }
@@ -770,30 +795,55 @@ ${body.existingCss ?? ""}
 
 Текущий JS:
 ${body.existingJs ?? ""}`
-      : activeTemplate
-        ? buildTemplateCustomizePrompt({
+      : structureLayout
+        ? buildStructureAdaptPrompt({
             userPrompt: prompt || effectivePrompt,
             customRequirements,
-            template: activeTemplate,
+            layout: structureLayout,
             brandColors,
             brandLogo,
           })
-        : buildUserPrompt({
-          prompt: effectivePrompt,
-          userPrompt: prompt,
-          customRequirements,
-          images: hasImages ? images : [],
-          hasImages,
-          styleLabel: siteStyle.label,
-          styleGuide: siteStyle.guide,
-          hasDesignImage: Boolean(designDataUrl),
-          brandColors,
-          brandLogo,
-          sections,
-          expressMode: expressMode || referenceOnlyMode,
-          contacts: profileContacts,
-          useContacts,
-        });
+        : isWizardPremium
+          ? buildUserPrompt({
+              prompt: effectivePrompt,
+              userPrompt: prompt,
+              customRequirements,
+              images: hasImages ? images : [],
+              hasImages,
+              styleLabel: siteStyle.label,
+              styleGuide: siteStyle.guide,
+              hasDesignImage: Boolean(designDataUrl),
+              brandColors,
+              brandLogo,
+              sections,
+              expressMode: expressMode || referenceOnlyMode,
+              contacts: profileContacts,
+              useContacts,
+            })
+          : activeTemplate
+            ? buildTemplateCustomizePrompt({
+                userPrompt: prompt || effectivePrompt,
+                customRequirements,
+                template: activeTemplate,
+                brandColors,
+                brandLogo,
+              })
+            : buildUserPrompt({
+                prompt: effectivePrompt,
+                userPrompt: prompt,
+                customRequirements,
+                images: hasImages ? images : [],
+                hasImages,
+                styleLabel: siteStyle.label,
+                styleGuide: siteStyle.guide,
+                hasDesignImage: Boolean(designDataUrl),
+                brandColors,
+                brandLogo,
+                sections,
+                expressMode: expressMode || referenceOnlyMode,
+                contacts: profileContacts,
+                useContacts,
+              });
 
     const systemContent = isEdit ? EDIT_SYSTEM_PROMPT : SYSTEM_PROMPT;
     let siteParts: { html: string; css: string; js: string } | null = null;
@@ -1019,6 +1069,7 @@ ${body.existingJs ?? ""}`
       remaining: status.token_balance,
       optimizeKind: plan.kind,
       templateId: activeTemplate?.id ?? null,
+      structureLayoutId: structureLayout?.id ?? null,
     });
   } catch (error) {
     console.error("generate-site error:", error);

@@ -13,6 +13,10 @@ import {
   Mic,
   Plus,
   Rocket,
+  Maximize2,
+  Monitor,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
@@ -33,15 +37,20 @@ import {
   type WizardTier,
 } from "@/lib/wizardBrief";
 import { getTemplateById } from "@/lib/siteTemplates";
-import { LOGO_ACCEPT, type SiteSectionId } from "@/lib/brand";
+import {
+  LOGO_ACCEPT,
+  PREVIEW_DEVICE_WIDTH,
+  type PreviewDevice,
+  type SiteSectionId,
+} from "@/lib/brand";
 import {
   imagePromptsFromBrief,
   injectSiteImages,
 } from "@/lib/injectSiteImages";
-import { HostingOffer } from "@/components/HostingOffer";
 import { PublishModal } from "@/components/PublishModal";
 import { CometPlayground } from "@/components/wizard/CometPlayground";
 import { PaletteMock } from "@/components/wizard/PaletteMock";
+import { looksLikeSiteEdit } from "@/lib/costOptimization";
 
 type ChatBubble =
   | {
@@ -235,7 +244,9 @@ export function SiteWizard({
   const [editing, setEditing] = useState(false);
   const [abA, setAbA] = useState("violet");
   const [abB, setAbB] = useState("ocean");
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const endRef = useRef<HTMLDivElement>(null);
+  const previewStageRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
   const resultRef = useRef<WizardResult | null>(null);
@@ -398,6 +409,8 @@ export function SiteWizard({
     setEditing(true);
     setShowPreviewPane(true);
 
+    const beforeKey = `${result.html}\n${result.css}\n${result.js}`;
+
     try {
       const res = await fetch("/api/edit-site", {
         method: "POST",
@@ -422,6 +435,16 @@ export function SiteWizard({
         js: data.js ?? result.js,
         id: result.id,
       };
+      const afterKey = `${next.html}\n${next.css}\n${next.js}`;
+      if (afterKey === beforeKey) {
+        onBalanceRefresh();
+        pushAssistant(
+          "Модель ничего не изменила в коде. Сформулируй правку конкретнее: «сделай кнопки зелёными», «убери блок отзывов».",
+          true
+        );
+        return;
+      }
+
       setResult(next);
       setPreviewHtml(
         buildPreviewHtml({
@@ -453,10 +476,13 @@ export function SiteWizard({
     const message = text.trim();
     if (!message || chatLoading || editing) return;
 
-    // После сборки — правки сайта (текст или голос), не болтовня
+    // После сборки: правка → edit-site; болтовня → чат
     if (result) {
-      await applySiteEdit(message);
-      return;
+      if (looksLikeSiteEdit(message)) {
+        await applySiteEdit(message);
+        return;
+      }
+      // fall through to chat below (with result still set)
     }
 
     setError("");
@@ -469,7 +495,7 @@ export function SiteWizard({
     const isFirstTopic = !brief.topic || brief.topic.length < 3;
     const nextBrief = { ...brief };
 
-    if (isFirstTopic) {
+    if (isFirstTopic && !result) {
       nextBrief.topic = message;
       nextBrief.nicheId = detectNicheFromTopic(message);
       const city = extractCityFromTopic(message);
@@ -1057,17 +1083,17 @@ export function SiteWizard({
             }`}
           >
             {isFreshStart ? (
-              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10">
-                <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] px-1 py-2 sm:py-6">
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
                   С чего начать
                 </p>
-                <h2 className="mt-3 font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
+                <h2 className="mt-4 font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
                   Опиши бизнес одной фразой
                 </h2>
-                <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
+                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-400">
                   Например: магазин мебели, стоматология, кафе.
                 </p>
-                <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
                     "магазин мебели",
                     "стоматология",
@@ -1078,7 +1104,7 @@ export function SiteWizard({
                       key={hint}
                       type="button"
                       onClick={() => void sendChat(hint)}
-                      className="rounded-2xl border border-white/12 bg-black/30 px-3 py-3.5 text-[14px] text-zinc-200 transition hover:border-violet-400/40 hover:bg-violet-500/10"
+                      className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3.5 text-[14px] text-zinc-200 transition hover:border-violet-400/35 hover:bg-violet-500/10"
                     >
                       {hint}
                     </button>
@@ -1642,7 +1668,6 @@ export function SiteWizard({
               </div>
             ) : null}
 
-            {result ? <HostingOffer compact className="mt-2" /> : null}
             <div ref={endRef} />
           </div>
         </div>
@@ -1739,20 +1764,64 @@ export function SiteWizard({
 
       {showPreviewPane ? (
         <div className="flex min-h-[320px] flex-1 flex-col bg-black/25">
-          <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3">
-            <span className="text-[12px] text-zinc-500">Превью</span>
-            {result ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-2.5 sm:px-5">
+            <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-0.5">
+              {(
+                [
+                  { id: "phone" as const, Icon: Smartphone, label: "Телефон" },
+                  { id: "tablet" as const, Icon: Tablet, label: "Планшет" },
+                  { id: "desktop" as const, Icon: Monitor, label: "ПК" },
+                ] as const
+              ).map(({ id, Icon, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  title={label}
+                  onClick={() => setPreviewDevice(id)}
+                  className={`rounded-lg p-2 transition ${
+                    previewDevice === id
+                      ? "bg-violet-500/25 text-violet-100"
+                      : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPublishOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1 text-[12px] text-violet-100 transition hover:bg-violet-500/25"
+                title="Полный экран"
+                onClick={() => {
+                  const el = previewStageRef.current;
+                  if (!el) return;
+                  if (document.fullscreenElement) {
+                    void document.exitFullscreen();
+                  } else {
+                    void el.requestFullscreen?.();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-[12px] text-zinc-300 transition hover:bg-white/5"
               >
-                <Rocket className="h-3.5 w-3.5" />
-                Опубликовать
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">На весь экран</span>
               </button>
-            ) : null}
+              {result ? (
+                <button
+                  type="button"
+                  onClick={() => setPublishOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 text-[12px] text-violet-100 transition hover:bg-violet-500/25"
+                >
+                  <Rocket className="h-3.5 w-3.5" />
+                  Опубликовать
+                </button>
+              ) : null}
+            </div>
           </div>
-          <div className="min-h-0 flex-1 p-4">
+          <div
+            ref={previewStageRef}
+            className="wc-preview-stage min-h-0 flex-1 bg-[#07080d] p-3 sm:p-4"
+          >
             {building || editing ? (
               building ? (
                 <BuildLoader />
@@ -1763,11 +1832,23 @@ export function SiteWizard({
                 </div>
               )
             ) : previewHtml ? (
-              <iframe
-                title="wizard-preview"
-                srcDoc={previewHtml}
-                className="h-full min-h-[420px] w-full rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40"
-              />
+              <div
+                className="wc-preview-shell mx-auto h-full min-h-[420px] overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40"
+                data-device={previewDevice}
+                style={{
+                  width:
+                    PREVIEW_DEVICE_WIDTH[previewDevice] != null
+                      ? `${PREVIEW_DEVICE_WIDTH[previewDevice]}px`
+                      : "100%",
+                  maxWidth: "100%",
+                }}
+              >
+                <iframe
+                  title="wizard-preview"
+                  srcDoc={previewHtml}
+                  className="h-full min-h-[420px] w-full border-0 bg-white"
+                />
+              </div>
             ) : (
               <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-[14px] text-zinc-600">
                 Превью появится после сборки

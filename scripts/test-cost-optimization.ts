@@ -64,6 +64,29 @@ function main() {
   assert(classifySiteRequest("убери футер", false) === "edit", "убери → edit");
   assert(classifySiteRequest("сделай лендинг", false) === "create", "лендинг → create");
 
+  // 5) Мастер: простой → Sol + без нишевого template (structure adapt в route)
+  const wizardSimple = resolveOptimizedSitePlan({
+    prompt: "Сайт для стоматологии в Казани",
+    isEdit: false,
+    qualityMode: "quality",
+    wizardMode: true,
+    modelId: "gpt-5.6-sol",
+  });
+  assert(wizardSimple.kind === "create", "wizard simple kind");
+  assert(wizardSimple.template == null, "wizard simple no niche template");
+  assert(wizardSimple.config.id === "gpt-5.6-sol", `wizard simple model=${wizardSimple.config.id}`);
+
+  // 6) Мастер: премиум → Fable с нуля
+  const wizardPremium = resolveOptimizedSitePlan({
+    prompt: "Сайт для стоматологии",
+    isEdit: false,
+    qualityMode: "quality",
+    wizardMode: true,
+    modelId: "claude-fable-5",
+  });
+  assert(wizardPremium.config.id === "claude-fable-5", "wizard premium fable");
+  assert(wizardPremium.template == null, "wizard premium no template");
+
   console.log("\nAll cost-optimization routing tests passed.");
 }
 

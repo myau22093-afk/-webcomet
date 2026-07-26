@@ -5,7 +5,6 @@ import {
   type QualityMode,
 } from "@/lib/models";
 import {
-  getTemplateById,
   matchSiteTemplate,
   type SiteTemplate,
 } from "@/lib/siteTemplates";
@@ -39,7 +38,24 @@ export type SiteChargePreview = {
 };
 
 const EDIT_RE =
-  /(?:^|[\s,.:;!?«»"'(])(?:изменить|измени|поменять|поменяй|убери|удали|поправь|поправить|отредактируй|сделай\s+(?:все\s+)?(?:кнопк\S*|заголов\S*|фон|текст)\s+\S+|сделай\s+(?:красн\S*|зелён\S*|зелен\S*|син\S*|чёрн\S*|черн\S*|бел\S*|оранжев\S*|фиолетов\S*))/iu;
+  /(?:^|[\s,.:;!?«»"'(])(?:изменить|измени|поменять|поменяй|убери|удали|поправь|поправить|отредактируй|добавь|замени|переименуй|сделай\s+(?:все\s+)?(?:кнопк\S*|заголов\S*|фон|текст|сайт|блок|секци\S*|цвет\S*|шрифт\S*)\s*\S*|сделай\s+(?:красн\S*|зелён\S*|зелен\S*|син\S*|чёрн\S*|черн\S*|бел\S*|оранжев\S*|фиолетов\S*|крупн\S*|мельч\S*)|(?:кнопк\S*|заголов\S*|фон|цвет|шрифт)\s+(?:на\s+)?(?:красн\S*|зелён\S*|зелен\S*|син\S*|чёрн\S*|бел\S*))/iu;
+
+/** Правка сайта (после сборки), а не болтовня в чат */
+export function looksLikeSiteEdit(text: string): boolean {
+  const raw = text.trim();
+  if (!raw || raw.length < 3) return false;
+  if (CHAT_RE.test(raw) && !EDIT_RE.test(raw)) return false;
+  if (EDIT_RE.test(raw)) return true;
+  // короткие «привет» / «ок» / «спасибо» — не правка
+  if (/^(?:привет|здравствуй(?:те)?|хай|hello|hi|ок|окей|спасибо|благодарю|пон|понял|ага|угу)[\s!.]*$/iu.test(raw)) {
+    return false;
+  }
+  // явные маркеры правки
+  if (/(?:кнопк|заголов|цвет|фон|шрифт|секци|блок|убери|добавь|поменя)/iu.test(raw)) {
+    return true;
+  }
+  return false;
+}
 
 const CREATE_RE =
   /создай|сделай\s+сайт|сделать\s+сайт|лендинг|с\s*нуля|новый\s+сайт|сгенерируй(?:те)?\s+сайт|generate\s+(?:a\s+)?(?:site|landing)/iu;
@@ -85,17 +101,16 @@ export function resolveOptimizedSitePlan(input: {
       getModelById("gpt-5.6-sol")!;
     const solOrPremium =
       wanted.type === "site" ? wanted : getModelById("gpt-5.6-sol")!;
-    const template =
-      (input.templateId ? getTemplateById(input.templateId) : null) ??
-      matchSiteTemplate(combined);
+    // Премиум (Fable): с нуля. Простой: structure adapt в generate-site (не нишевый HTML).
+    const isPremium = solOrPremium.id === "claude-fable-5";
     return {
-      kind: template ? "template" : "create",
+      kind: "create",
       config: solOrPremium,
-      reason: template
-        ? `мастер · шаблон «${template.name}» → ${solOrPremium.name}`
-        : `мастер → ${solOrPremium.name}`,
+      reason: isPremium
+        ? `мастер · премиум → ${solOrPremium.name}`
+        : `мастер · структура → ${solOrPremium.name}`,
       chatSuggested: false,
-      template,
+      template: null,
     };
   }
 

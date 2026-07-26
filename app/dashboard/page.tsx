@@ -1804,7 +1804,7 @@ export default function DashboardPage() {
             {(
               [
                 { id: "wizard" as const, label: "Мастер", icon: IconWizard },
-                { id: "site" as const, label: "Для профи", icon: IconPro },
+                { id: "site" as const, label: "Редактор", icon: IconPro },
                 { id: "settings" as const, label: "Настройки", icon: IconGear },
               ] as const
             ).map((mode) => {
@@ -2076,7 +2076,7 @@ export default function DashboardPage() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <header className="flex items-center border-b border-white/10 px-4 py-2.5">
           <button
             type="button"
             onClick={() => setSidebarOpen((v) => !v)}
@@ -2086,8 +2086,6 @@ export default function DashboardPage() {
             <Menu className="h-4 w-4" />
             <span className="hidden sm:inline">{sidebarOpen ? "Скрыть" : "Меню"}</span>
           </button>
-
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-xs text-zinc-500" />
         </header>
 
         {workMode === "wizard" && (
@@ -2122,7 +2120,7 @@ export default function DashboardPage() {
                 item,
                 ...prev.filter((x) => x.id !== item.id),
               ]);
-              // Не уводим в «Для профи» — превью остаётся в Мастере
+              // Превью остаётся в Мастере
               setActiveId(item.id);
             }}
           />
@@ -2467,7 +2465,7 @@ export default function DashboardPage() {
               {sitePanelOpen && (
               <div className="border-t border-white/5 px-3 pb-2.5 pt-2 xl:px-4">
                 <p className="mb-2 text-[11px] text-zinc-500">
-                  Режим для профи: ручной промпт и выбор модели (включая Claude
+                  Режим редактора: ручной промпт и выбор модели (включая Claude
                   Fable). Для обычной сборки удобнее вкладка «Мастер».
                 </p>
                 {/* Одна строка контролов */}
