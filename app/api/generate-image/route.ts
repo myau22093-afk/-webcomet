@@ -59,60 +59,72 @@ export async function POST(request: Request) {
       );
     }
 
-    try {
-      const wired = getModelConfig(modelConfig.id);
-      console.log(
-        `[ai] generate-image using provider=${wired.provider} model=${wired.modelId} catalog=${modelConfig.id} baseURL=${wired.baseURL}`
-      );
-    } catch (credError) {
-      return NextResponse.json(
-        {
-          error:
-            credError instanceof Error
-              ? credError.message
-              : "Провайдер не настроен",
-        },
-        { status: 500 }
-      );
-    }
+    const fallbackIds = [
+      modelConfig.id,
+      "gemini-3.1-flash-image",
+      "gpt-image-2",
+      "gemini-3-pro-image",
+    ].filter((id, i, arr) => arr.indexOf(id) === i);
 
     const admin = createAdminClient();
     const profile = await getOrCreateBillingProfile(admin, auth.user);
-    const tokenCost = getTokenCost(modelConfig.id);
 
-    try {
-      assertHasTokens(profile, tokenCost);
-    } catch (balanceError) {
-      return NextResponse.json(
-        {
-          error:
-            balanceError instanceof Error
-              ? balanceError.message
-              : "Недостаточно токенов. Пополните баланс.",
-          token_balance: profile.token_balance,
-          token_cost: tokenCost,
-        },
-        { status: 402 }
-      );
+    let result: Awaited<ReturnType<typeof imageWithProviders>> | null = null;
+    let usedConfig = modelConfig;
+    let lastUpstreamError: unknown = null;
+
+    for (const candidateId of fallbackIds) {
+      const candidate = resolveImageModelConfig(candidateId);
+      if (!candidate || candidate.type !== "image") continue;
+      const tokenCost = getTokenCost(candidate.id);
+      try {
+        assertHasTokens(profile, tokenCost);
+      } catch (balanceError) {
+        return NextResponse.json(
+          {
+            error:
+              balanceError instanceof Error
+                ? balanceError.message
+                : "Недостаточно токенов. Пополните баланс.",
+            token_balance: profile.token_balance,
+            token_cost: tokenCost,
+          },
+          { status: 402 }
+        );
+      }
+
+      try {
+        getModelConfig(candidate.id);
+      } catch {
+        continue;
+      }
+
+      try {
+        console.log(
+          `[ai] generate-image try catalog=${candidate.id} model=${candidate.modelId}`
+        );
+        result = await withAiSlot(() =>
+          imageWithProviders({
+            config: candidate,
+            prompt,
+          })
+        );
+        usedConfig = candidate;
+        break;
+      } catch (upstreamError) {
+        const queued = aiQueueErrorResponse(upstreamError);
+        if (queued) {
+          return NextResponse.json(queued.body, { status: queued.status });
+        }
+        lastUpstreamError = upstreamError;
+        console.error(`generate-image failed for ${candidate.id}:`, upstreamError);
+      }
     }
 
-    let result;
-    try {
-      result = await withAiSlot(() =>
-        imageWithProviders({
-          config: modelConfig,
-          prompt,
-        })
-      );
-    } catch (upstreamError) {
-      const queued = aiQueueErrorResponse(upstreamError);
-      if (queued) {
-        return NextResponse.json(queued.body, { status: queued.status });
-      }
-      console.error("generate-image upstream:", upstreamError);
+    if (!result) {
       const raw =
-        upstreamError instanceof Error
-          ? upstreamError.message
+        lastUpstreamError instanceof Error
+          ? lastUpstreamError.message
           : "Ошибка генерации изображения";
       return NextResponse.json(
         {
@@ -122,6 +134,9 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    modelConfig = usedConfig;
+    const tokenCost = getTokenCost(modelConfig.id);
 
     let imageUrl: string | null = result.url ?? null;
 

@@ -10,7 +10,7 @@ import {
   type SiteTemplate,
 } from "@/lib/siteTemplates";
 import { CACHE_HIT_TOKEN_COST, getTokenCost } from "@/lib/tokenConfig";
-import { WIZARD_SITE_MODEL_ID } from "@/lib/wizardBrief";
+import { modelIdForTier } from "@/lib/wizardBrief";
 
 export type SiteRequestKind =
   | "chat"
@@ -79,17 +79,21 @@ export function resolveOptimizedSitePlan(input: {
   const combined = `${input.prompt}\n${input.customRequirements ?? ""}`.trim();
 
   if (input.wizardMode && !input.isEdit) {
-    const sol =
-      getModelById(WIZARD_SITE_MODEL_ID) ?? getModelById("gpt-5.6-sol")!;
+    const wanted =
+      (input.modelId ? getModelById(input.modelId) : null) ??
+      getModelById(modelIdForTier("simple")) ??
+      getModelById("gpt-5.6-sol")!;
+    const solOrPremium =
+      wanted.type === "site" ? wanted : getModelById("gpt-5.6-sol")!;
     const template =
       (input.templateId ? getTemplateById(input.templateId) : null) ??
       matchSiteTemplate(combined);
     return {
       kind: template ? "template" : "create",
-      config: sol,
+      config: solOrPremium,
       reason: template
-        ? `мастер · шаблон «${template.name}» → ${sol.name}`
-        : `мастер → ${sol.name}`,
+        ? `мастер · шаблон «${template.name}» → ${solOrPremium.name}`
+        : `мастер → ${solOrPremium.name}`,
       chatSuggested: false,
       template,
     };

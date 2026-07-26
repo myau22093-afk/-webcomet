@@ -3,7 +3,11 @@ import {
   type SiteSectionId,
   defaultSections,
 } from "@/lib/brand";
-import { SITE_TEMPLATES, getTemplateById } from "@/lib/siteTemplates";
+import {
+  SITE_TEMPLATES,
+  getTemplateById,
+  matchSiteTemplate,
+} from "@/lib/siteTemplates";
 
 export type WizardPalette = {
   id: string;
@@ -14,18 +18,18 @@ export type WizardPalette = {
 export const WIZARD_PALETTES: WizardPalette[] = [
   {
     id: "violet",
-    label: "Фиолетовый акцент",
-    colors: ["#6c3bf4", "#ffffff", "#0b0f19"],
+    label: "Фиолетовый",
+    colors: ["#6c3bf4", "#f5f3ff", "#0b0f19"],
   },
   {
     id: "ocean",
     label: "Океан",
-    colors: ["#0ea5e9", "#f0f9ff", "#0c4a6e"],
+    colors: ["#0ea5e9", "#e0f2fe", "#0c4a6e"],
   },
   {
     id: "forest",
     label: "Зелень",
-    colors: ["#16a34a", "#f0fdf4", "#14532d"],
+    colors: ["#16a34a", "#ecfdf5", "#14532d"],
   },
   {
     id: "sunset",
@@ -35,9 +39,11 @@ export const WIZARD_PALETTES: WizardPalette[] = [
   {
     id: "mono",
     label: "Монохром",
-    colors: ["#e4e4e7", "#fafafa", "#09090b"],
+    colors: ["#a1a1aa", "#fafafa", "#09090b"],
   },
 ];
+
+export type WizardTier = "simple" | "premium";
 
 export type WizardBrief = {
   topic: string;
@@ -45,14 +51,17 @@ export type WizardBrief = {
   paletteId: string | null;
   colors: string[];
   sections: SiteSectionId[];
+  /** Пользователь подтвердил набор блоков («Дальше») */
+  sectionsConfirmed: boolean;
   nicheId: string | null;
+  tier: WizardTier | null;
 };
 
 export type WizardUiStep =
   | "topic"
   | "palette"
   | "sections"
-  | "niche"
+  | "tier"
   | "ready";
 
 export function emptyWizardBrief(): WizardBrief {
@@ -62,23 +71,38 @@ export function emptyWizardBrief(): WizardBrief {
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
+    sectionsConfirmed: false,
     nicheId: null,
+    tier: null,
   };
+}
+
+/** Подставить нишу из текста темы, если узнали */
+export function detectNicheFromTopic(topic: string): string | null {
+  return matchSiteTemplate(topic)?.id ?? null;
 }
 
 export function isBriefReady(brief: WizardBrief): boolean {
   return (
     brief.topic.trim().length >= 3 &&
+    Boolean(brief.paletteId) &&
     brief.colors.length >= 2 &&
-    brief.sections.length >= 2
+    brief.sectionsConfirmed &&
+    brief.sections.length >= 2 &&
+    Boolean(brief.tier)
   );
 }
 
 export function nextScriptedStep(brief: WizardBrief): WizardUiStep | null {
   if (!brief.topic.trim() || brief.topic.trim().length < 3) return "topic";
   if (!brief.paletteId) return "palette";
-  if (brief.sections.length < 2) return "sections";
+  if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
+  if (!brief.tier) return "tier";
   return "ready";
+}
+
+export function modelIdForTier(tier: WizardTier | null): string {
+  return tier === "premium" ? "claude-fable-5" : "gpt-5.6-sol";
 }
 
 export function buildWizardSitePrompt(brief: WizardBrief): {
@@ -88,18 +112,34 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
   sections: SiteSectionId[];
   nicheName: string | null;
   templateId: string | null;
+  modelId: string;
 } {
-  const niche = brief.nicheId ? getTemplateById(brief.nicheId) : null;
+  const nicheId =
+    brief.nicheId ?? detectNicheFromTopic(brief.topic) ?? null;
+  const niche = nicheId ? getTemplateById(nicheId) : null;
   const sectionLabels = SITE_SECTION_OPTIONS.filter((s) =>
     brief.sections.includes(s.id)
   )
     .map((s) => s.label)
     .join(", ");
 
+  const premium =
+    brief.tier === "premium"
+      ? [
+          "PREMIUM: визуально на голову выше обычного лендинга.",
+          "Обязательны плавные анимации появления секций, hover на кнопках/карточках, аккуратная типографика, глубина (градиенты/свет).",
+          "Не делай «шаблонный» плоский сайт — ощущение дорогого студийного продукта.",
+        ]
+      : [
+          "SIMPLE: чистый современный лендинг без лишней сложности.",
+          "Лёгкие hover-эффекты допустимы, тяжёлые анимации не обязательны.",
+        ];
+
   const prompt = [
     `Создай современный лендинг.`,
     `Тема / бизнес: ${brief.topic.trim()}`,
     niche ? `Ниша: ${niche.name}` : null,
+    `Уровень: ${brief.tier === "premium" ? "премиум" : "простой"}`,
     `Секции сайта: ${sectionLabels}`,
     `Цвета бренда: ${brief.colors.join(", ")}`,
   ]
@@ -108,9 +148,10 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
 
   const customRequirements = [
     brief.notes.trim() || null,
+    ...premium,
     "Сделай законченный продающий лендинг на русском.",
     "Кнопки и якорные ссылки должны работать.",
-    "В hero и блоке услуг оставь места под изображения (пустые блоки или img с data-wc-slot).",
+    "В hero и блоке услуг оставь места под изображения (data-wc-slot или пустые медиа-блоки).",
   ]
     .filter(Boolean)
     .join("\n");
@@ -122,12 +163,15 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
     sections: brief.sections,
     nicheName: niche?.name ?? null,
     templateId: niche?.id ?? null,
+    modelId: modelIdForTier(brief.tier),
   };
 }
 
-export const WIZARD_SITE_MODEL_ID = "gpt-5.6-sol";
 export const WIZARD_CHAT_MODEL_ID = "deepseek-chat";
-export const WIZARD_IMAGE_MODEL_ID = "gemini-3.1-flash-image";
+export const WIZARD_IMAGE_MODEL_IDS = [
+  "gemini-3.1-flash-image",
+  "gpt-image-2",
+] as const;
 
 export function nicheOptions() {
   return SITE_TEMPLATES.map((t) => ({ id: t.id, label: t.name }));

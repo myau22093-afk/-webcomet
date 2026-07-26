@@ -7,20 +7,23 @@ import {
   Sparkles,
   ImageIcon,
   RotateCcw,
+  Crown,
+  Zap,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { getTokenCost } from "@/lib/tokenConfig";
 import {
   WIZARD_PALETTES,
-  WIZARD_SITE_MODEL_ID,
-  WIZARD_IMAGE_MODEL_ID,
+  WIZARD_IMAGE_MODEL_IDS,
   buildWizardSitePrompt,
+  detectNicheFromTopic,
   emptyWizardBrief,
   isBriefReady,
+  modelIdForTier,
   nextScriptedStep,
-  nicheOptions,
   sectionOptions,
   type WizardBrief,
+  type WizardTier,
 } from "@/lib/wizardBrief";
 import type { SiteSectionId } from "@/lib/brand";
 import {
@@ -29,11 +32,18 @@ import {
 } from "@/lib/injectSiteImages";
 
 type ChatBubble =
-  | { id: string; kind: "text"; role: "user" | "assistant"; content: string }
+  | {
+      id: string;
+      kind: "text";
+      role: "user" | "assistant";
+      content: string;
+      /** Печатать по буквам */
+      animate?: boolean;
+    }
   | {
       id: string;
       kind: "choice";
-      step: "palette" | "sections" | "niche";
+      step: "palette" | "sections" | "tier";
       title: string;
     };
 
@@ -62,6 +72,90 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function Typewriter({
+  text,
+  onDone,
+}: {
+  text: string;
+  onDone?: () => void;
+}) {
+  const [shown, setShown] = useState("");
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    setShown("");
+    doneRef.current = false;
+    let i = 0;
+    const step = Math.max(1, Math.ceil(text.length / 80));
+    const id = window.setInterval(() => {
+      i = Math.min(text.length, i + step);
+      setShown(text.slice(0, i));
+      if (i >= text.length) {
+        window.clearInterval(id);
+        if (!doneRef.current) {
+          doneRef.current = true;
+          onDone?.();
+        }
+      }
+    }, 16);
+    return () => window.clearInterval(id);
+  }, [text, onDone]);
+
+  return (
+    <span>
+      {shown}
+      {shown.length < text.length ? (
+        <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-violet-300/80 align-middle" />
+      ) : null}
+    </span>
+  );
+}
+
+function BuildLoader() {
+  const lines = [
+    "Собираю структуру…",
+    "Подбираю типографику…",
+    "Настраиваю цвета…",
+    "Рисую блоки…",
+    "Почти готово…",
+  ];
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(
+      () => setIdx((v) => (v + 1) % lines.length),
+      2200
+    );
+    return () => window.clearInterval(t);
+  }, [lines.length]);
+
+  return (
+    <div className="relative flex h-full min-h-[420px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#07090f]">
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-violet-600/25 blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/3 h-40 w-40 rounded-full bg-sky-500/15 blur-3xl" />
+      </div>
+      <div className="relative mb-6 flex h-20 w-20 items-center justify-center">
+        <span className="absolute inset-0 animate-spin rounded-full border border-violet-400/30 border-t-violet-300" />
+        <span className="absolute inset-2 animate-spin rounded-full border border-white/10 border-b-violet-200/80 [animation-duration:1.6s] [animation-direction:reverse]" />
+        <Sparkles className="relative h-6 w-6 text-violet-200" />
+      </div>
+      <p className="relative text-sm font-medium text-zinc-100">{lines[idx]}</p>
+      <p className="relative mt-2 text-[11px] text-zinc-500">
+        Это займёт немного времени — сайт собирается с нуля
+      </p>
+      <div className="relative mt-8 flex gap-1.5">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300/80"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SiteWizard({
   getAccessToken,
   useContacts,
@@ -75,7 +169,8 @@ export function SiteWizard({
       kind: "text",
       role: "assistant",
       content:
-        "Привет! Я помогу собрать сайт. Напиши, для какого бизнеса или темы нужен лендинг — например «стоматология в Казани» или «кофейня».",
+        "Привет! Напиши, для какого бизнеса нужен сайт — например «мебель в Санкт-Петербурге» или «стоматология».",
+      animate: true,
     },
   ]);
   const [input, setInput] = useState("");
@@ -85,21 +180,21 @@ export function SiteWizard({
   const [result, setResult] = useState<WizardResult | null>(null);
   const [previewHtml, setPreviewHtml] = useState("");
   const [error, setError] = useState("");
+  const [showPreviewPane, setShowPreviewPane] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const menuDelayRef = useRef<number | null>(null);
 
-  const siteCost = getTokenCost(WIZARD_SITE_MODEL_ID);
-  const imageCost = getTokenCost(WIZARD_IMAGE_MODEL_ID);
+  const siteCost = getTokenCost(modelIdForTier(brief.tier ?? "simple"));
+  const imageCost = getTokenCost(WIZARD_IMAGE_MODEL_IDS[0]);
   const ready = isBriefReady(brief);
-  const scriptStep = nextScriptedStep(brief);
 
   const briefSummary = useMemo(() => {
     const parts = [
       brief.topic ? `Тема: ${brief.topic}` : null,
       brief.paletteId ? `Палитра: ${brief.paletteId}` : null,
-      brief.sections.length
-        ? `Секции: ${brief.sections.join(", ")}`
-        : null,
+      brief.sections.length ? `Секции: ${brief.sections.join(", ")}` : null,
       brief.nicheId ? `Ниша: ${brief.nicheId}` : null,
+      brief.tier ? `Уровень: ${brief.tier}` : null,
       brief.notes ? `Заметки: ${brief.notes}` : null,
     ];
     return parts.filter(Boolean).join("\n");
@@ -107,52 +202,50 @@ export function SiteWizard({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [bubbles, building, result]);
+  }, [bubbles, building, result, showPreviewPane]);
 
-  function pushAssistant(content: string) {
+  useEffect(() => {
+    return () => {
+      if (menuDelayRef.current) window.clearTimeout(menuDelayRef.current);
+    };
+  }, []);
+
+  function pushAssistant(content: string, animate = true) {
     setBubbles((prev) => [
       ...prev,
-      { id: uid(), kind: "text", role: "assistant", content },
+      { id: uid(), kind: "text", role: "assistant", content, animate },
     ]);
   }
 
-  function pushChoice(step: "palette" | "sections" | "niche", title: string) {
-    setBubbles((prev) => {
-      if (prev.some((b) => b.kind === "choice" && b.step === step)) return prev;
-      return [...prev, { id: uid(), kind: "choice", step, title }];
-    });
+  function pushChoice(
+    step: "palette" | "sections" | "tier",
+    title: string,
+    delayMs = 700
+  ) {
+    if (menuDelayRef.current) window.clearTimeout(menuDelayRef.current);
+    menuDelayRef.current = window.setTimeout(() => {
+      setBubbles((prev) => {
+        if (prev.some((b) => b.kind === "choice" && b.step === step)) {
+          return prev;
+        }
+        return [...prev, { id: uid(), kind: "choice", step, title }];
+      });
+    }, delayMs);
   }
 
   function ensureScriptMenus(next: WizardBrief) {
     const step = nextScriptedStep(next);
     if (step === "palette") {
-      pushChoice("palette", "Какая цветовая палитра?");
+      pushChoice("palette", "Выбери цветовую палитру", 1400);
     } else if (step === "sections") {
-      pushChoice("sections", "Какие блоки нужны на сайте?");
+      pushChoice("sections", "Какие блоки нужны на сайте?", 1400);
+    } else if (step === "tier") {
+      pushChoice("tier", "Какой уровень сайта?", 1400);
     } else if (step === "ready") {
-      pushChoice("niche", "Какой шаблон / ниша ближе? (можно пропустить)");
-      setBubbles((prev) => {
-        if (
-          prev.some(
-            (b) =>
-              b.kind === "text" &&
-              b.role === "assistant" &&
-              b.content.includes("Бриф готов")
-          )
-        ) {
-          return prev;
-        }
-        return [
-          ...prev,
-          {
-            id: uid(),
-            kind: "text",
-            role: "assistant",
-            content:
-              "Бриф готов. Можно собрать сайт — справа появится превью.",
-          },
-        ];
-      });
+      pushAssistant(
+        "Бриф готов — жми «Собрать сайт». Превью откроется справа.",
+        true
+      );
     }
   }
 
@@ -175,16 +268,24 @@ export function SiteWizard({
     const nextBrief = { ...brief };
     if (!nextBrief.topic || nextBrief.topic.length < 3) {
       nextBrief.topic = message;
+      nextBrief.nicheId = detectNicheFromTopic(message);
       setBrief(nextBrief);
     } else {
       nextBrief.notes = [nextBrief.notes, message].filter(Boolean).join("\n");
+      if (!nextBrief.nicheId) {
+        nextBrief.nicheId = detectNicheFromTopic(
+          `${nextBrief.topic}\n${message}`
+        );
+      }
       setBrief(nextBrief);
     }
 
     setChatLoading(true);
     try {
       const history = bubbles
-        .filter((b): b is Extract<ChatBubble, { kind: "text" }> => b.kind === "text")
+        .filter(
+          (b): b is Extract<ChatBubble, { kind: "text" }> => b.kind === "text"
+        )
         .map((b) => ({ role: b.role, content: b.content }));
 
       const res = await fetch("/api/wizard/chat", {
@@ -201,13 +302,13 @@ export function SiteWizard({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Ошибка чата");
-      pushAssistant(data.response ?? data.reply ?? "Ок");
+      pushAssistant(data.response ?? data.reply ?? "Ок", true);
       onBalanceRefresh();
       ensureScriptMenus(nextBrief);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка чата";
       setError(msg);
-      pushAssistant(`Не удалось ответить: ${msg}`);
+      pushAssistant(`Не удалось ответить: ${msg}`, true);
     } finally {
       setChatLoading(false);
     }
@@ -215,7 +316,7 @@ export function SiteWizard({
 
   function pickPalette(id: string) {
     const pal = WIZARD_PALETTES.find((p) => p.id === id);
-    if (!pal) return;
+    if (!pal || brief.paletteId) return;
     const next = { ...brief, paletteId: id, colors: [...pal.colors] };
     setBrief(next);
     setBubbles((prev) => [
@@ -227,7 +328,7 @@ export function SiteWizard({
         content: `Палитра: ${pal.label}`,
       },
     ]);
-    pushAssistant(`Отлично, берём палитру «${pal.label}».`);
+    pushAssistant(`Отлично, палитра «${pal.label}».`, true);
     ensureScriptMenus(next);
   }
 
@@ -243,9 +344,11 @@ export function SiteWizard({
 
   function confirmSections() {
     if (brief.sections.length < 2) {
-      pushAssistant("Выбери хотя бы два блока.");
+      pushAssistant("Выбери хотя бы два блока.", true);
       return;
     }
+    const next = { ...brief, sectionsConfirmed: true };
+    setBrief(next);
     const labels = sectionOptions()
       .filter((s) => brief.sections.includes(s.id as SiteSectionId))
       .map((s) => s.label)
@@ -259,14 +362,13 @@ export function SiteWizard({
         content: `Блоки: ${labels}`,
       },
     ]);
-    pushAssistant("Структуру зафиксировал.");
-    ensureScriptMenus(brief);
+    pushAssistant("Структуру зафиксировал.", true);
+    ensureScriptMenus(next);
   }
 
-  function pickNiche(id: string) {
-    const niche = nicheOptions().find((n) => n.id === id);
-    if (!niche) return;
-    const next = { ...brief, nicheId: id };
+  function pickTier(tier: WizardTier) {
+    if (brief.tier) return;
+    const next = { ...brief, tier };
     setBrief(next);
     setBubbles((prev) => [
       ...prev,
@@ -274,10 +376,16 @@ export function SiteWizard({
         id: uid(),
         kind: "text",
         role: "user",
-        content: `Шаблон: ${niche.label}`,
+        content: tier === "premium" ? "Премиум сайт" : "Простой сайт",
       },
     ]);
-    pushAssistant(`Ниша «${niche.label}» — хороший старт. Можно собирать сайт.`);
+    pushAssistant(
+      tier === "premium"
+        ? "Премиум: сильнее визуал и анимации. Можно собирать."
+        : "Простой: чистый современный лендинг. Можно собирать.",
+      true
+    );
+    ensureScriptMenus(next);
   }
 
   async function buildSite() {
@@ -287,6 +395,7 @@ export function SiteWizard({
       setError("Войдите в аккаунт");
       return;
     }
+    setShowPreviewPane(true);
     setBuilding(true);
     setError("");
     try {
@@ -302,7 +411,7 @@ export function SiteWizard({
           customRequirements: built.customRequirements,
           brandColors: built.brandColors,
           sections: built.sections,
-          modelId: WIZARD_SITE_MODEL_ID,
+          modelId: built.modelId,
           wizardMode: true,
           templateId: built.templateId,
           expressMode: false,
@@ -339,14 +448,46 @@ export function SiteWizard({
         createdAt: data.created_at ?? new Date().toISOString(),
       });
       onBalanceRefresh();
-      pushAssistant("Сайт собран. Можешь добавить картинки кнопкой ниже.");
+      pushAssistant(
+        "Сайт собран. Можно добавить картинки кнопкой ниже.",
+        true
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка генерации";
       setError(msg);
-      pushAssistant(`Не удалось собрать сайт: ${msg}`);
+      pushAssistant(`Не удалось собрать сайт: ${msg}`, true);
     } finally {
       setBuilding(false);
     }
+  }
+
+  async function generateOneImage(
+    accessToken: string,
+    prompt: string
+  ): Promise<string | null> {
+    let lastError = "Модель картинок недоступна";
+    for (const modelId of WIZARD_IMAGE_MODEL_IDS) {
+      try {
+        const res = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ prompt, modelId }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          lastError = data.error ?? lastError;
+          continue;
+        }
+        const url = data.url ?? data.imageUrl;
+        if (url) return url as string;
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : lastError;
+      }
+    }
+    throw new Error(lastError);
   }
 
   async function addImages() {
@@ -359,24 +500,13 @@ export function SiteWizard({
     setImagesLoading(true);
     setError("");
     try {
-      const niche = nicheOptions().find((n) => n.id === brief.nicheId);
-      const prompts = imagePromptsFromBrief(brief.topic, niche?.label);
+      const prompts = imagePromptsFromBrief(
+        brief.topic,
+        brief.nicheId ?? detectNicheFromTopic(brief.topic)
+      );
       const urls: string[] = [];
       for (const prompt of prompts) {
-        const res = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            prompt,
-            modelId: WIZARD_IMAGE_MODEL_ID,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Ошибка картинки");
-        const url = data.url ?? data.imageUrl;
+        const url = await generateOneImage(accessToken, prompt);
         if (url) urls.push(url);
       }
       const html = injectSiteImages(result.html, urls);
@@ -397,12 +527,13 @@ export function SiteWizard({
       pushAssistant(
         urls.length
           ? `Добавил ${urls.length} картинки на сайт.`
-          : "Картинки не удалось получить."
+          : "Картинки не удалось получить.",
+        true
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка картинок";
       setError(msg);
-      pushAssistant(`Картинки: ${msg}`);
+      pushAssistant(`Картинки: ${msg}`, true);
     } finally {
       setImagesLoading(false);
     }
@@ -413,6 +544,7 @@ export function SiteWizard({
     setResult(null);
     setPreviewHtml("");
     setError("");
+    setShowPreviewPane(false);
     setBubbles([
       {
         id: uid(),
@@ -420,18 +552,27 @@ export function SiteWizard({
         role: "assistant",
         content:
           "Начнём заново. Для какого бизнеса или темы делаем сайт?",
+        animate: true,
       },
     ]);
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className="flex min-h-0 w-full flex-col border-white/10 lg:w-[42%] lg:border-r">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+      <div
+        className={`flex min-h-0 flex-col border-white/10 ${
+          showPreviewPane ? "w-full lg:w-[42%] lg:border-r" : "w-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <p className="text-sm font-medium text-zinc-100">Мастер сайта</p>
             <p className="text-[11px] text-zinc-500">
-              Чат + выборы · сборка ≈{siteCost} ток.
+              {brief.tier === "premium"
+                ? `Премиум · ≈${siteCost} ток.`
+                : brief.tier === "simple"
+                  ? `Простой · ≈${siteCost} ток.`
+                  : "Ответь на пару вопросов — соберём сайт"}
             </p>
           </div>
           <button
@@ -444,19 +585,23 @@ export function SiteWizard({
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {bubbles.map((b) => {
             if (b.kind === "text") {
               return (
                 <div
                   key={b.id}
-                  className={`max-w-[92%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                  className={`max-w-[min(92%,36rem)] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
                     b.role === "user"
                       ? "ml-auto bg-violet-500/25 text-violet-50"
-                      : "bg-white/5 text-zinc-200"
+                      : "bg-white/[0.06] text-zinc-200"
                   }`}
                 >
-                  {b.content}
+                  {b.role === "assistant" && b.animate ? (
+                    <Typewriter text={b.content} />
+                  ) : (
+                    b.content
+                  )}
                 </div>
               );
             }
@@ -465,32 +610,41 @@ export function SiteWizard({
               return (
                 <div
                   key={b.id}
-                  className="rounded-2xl border border-white/10 bg-black/25 p-3"
+                  className="max-w-xl rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-4"
                 >
-                  <p className="mb-2 text-xs font-medium text-zinc-300">
+                  <p className="mb-3 text-sm font-medium text-zinc-100">
                     {b.title}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {WIZARD_PALETTES.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        disabled={Boolean(brief.paletteId)}
-                        onClick={() => pickPalette(p.id)}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-200 hover:border-violet-400/50 disabled:opacity-40"
-                      >
-                        <span className="flex gap-0.5">
-                          {p.colors.map((c) => (
-                            <span
-                              key={c}
-                              className="h-3 w-3 rounded-full border border-white/20"
-                              style={{ background: c }}
-                            />
-                          ))}
-                        </span>
-                        {p.label}
-                      </button>
-                    ))}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {WIZARD_PALETTES.map((p) => {
+                      const selected = brief.paletteId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={Boolean(brief.paletteId)}
+                          onClick={() => pickPalette(p.id)}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                            selected
+                              ? "border-violet-400/50 bg-violet-500/15"
+                              : "border-white/10 bg-black/20 hover:border-white/25"
+                          } disabled:opacity-50`}
+                        >
+                          <span className="flex -space-x-1.5">
+                            {p.colors.map((c) => (
+                              <span
+                                key={c}
+                                className="h-7 w-7 rounded-full border-2 border-[#0b0f19] shadow-md"
+                                style={{ background: c }}
+                              />
+                            ))}
+                          </span>
+                          <span className="text-sm text-zinc-200">
+                            {p.label}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -500,39 +654,44 @@ export function SiteWizard({
               return (
                 <div
                   key={b.id}
-                  className="rounded-2xl border border-white/10 bg-black/25 p-3"
+                  className="max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-4"
                 >
-                  <p className="mb-2 text-xs font-medium text-zinc-300">
+                  <p className="mb-3 text-sm font-medium text-zinc-100">
                     {b.title}
                   </p>
-                  <div className="mb-2 flex flex-wrap gap-1.5">
+                  <div className="mb-3 flex flex-wrap gap-2">
                     {sectionOptions().map((s) => {
-                      const on = brief.sections.includes(s.id as SiteSectionId);
+                      const on = brief.sections.includes(
+                        s.id as SiteSectionId
+                      );
                       return (
                         <button
                           key={s.id}
                           type="button"
+                          disabled={brief.sectionsConfirmed}
                           onClick={() =>
                             toggleSection(s.id as SiteSectionId)
                           }
-                          className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                          className={`rounded-full border px-3 py-1.5 text-xs transition ${
                             on
                               ? "border-violet-400/50 bg-violet-500/20 text-violet-100"
-                              : "border-white/15 text-zinc-400"
-                          }`}
+                              : "border-white/15 text-zinc-400 hover:border-white/30"
+                          } disabled:opacity-50`}
                         >
                           {s.label}
                         </button>
                       );
                     })}
                   </div>
-                  <button
-                    type="button"
-                    onClick={confirmSections}
-                    className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] text-zinc-100 hover:bg-white/15"
-                  >
-                    Дальше
-                  </button>
+                  {!brief.sectionsConfirmed ? (
+                    <button
+                      type="button"
+                      onClick={confirmSections}
+                      className="rounded-xl bg-white/10 px-4 py-2 text-xs font-medium text-zinc-100 hover:bg-white/15"
+                    >
+                      Дальше
+                    </button>
+                  ) : null}
                 </div>
               );
             }
@@ -540,54 +699,54 @@ export function SiteWizard({
             return (
               <div
                 key={b.id}
-                className="rounded-2xl border border-white/10 bg-black/25 p-3"
+                className="max-w-xl space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4"
               >
-                <p className="mb-2 text-xs font-medium text-zinc-300">
+                <p className="mb-1 text-sm font-medium text-zinc-100">
                   {b.title}
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {nicheOptions().map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      disabled={Boolean(brief.nicheId)}
-                      onClick={() => pickNiche(n.id)}
-                      className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-zinc-200 hover:border-violet-400/50 disabled:opacity-40"
-                    >
-                      {n.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    disabled={Boolean(brief.nicheId)}
-                    onClick={() => {
-                      setBubbles((prev) => [
-                        ...prev,
-                        {
-                          id: uid(),
-                          kind: "text",
-                          role: "user",
-                          content: "Без шаблона ниши",
-                        },
-                      ]);
-                      pushAssistant("Ок, соберём без готовой ниши.");
-                    }}
-                    className="rounded-full border border-dashed border-white/20 px-2.5 py-1 text-[11px] text-zinc-400 hover:border-violet-400/40"
-                  >
-                    Пропустить
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={Boolean(brief.tier)}
+                  onClick={() => pickTier("simple")}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/12 bg-black/25 p-3 text-left hover:border-violet-400/40 disabled:opacity-50"
+                >
+                  <span className="mt-0.5 rounded-lg bg-white/10 p-2">
+                    <Zap className="h-4 w-4 text-zinc-200" />
+                  </span>
+                  <span>
+                    <span className="block text-sm text-zinc-100">
+                      Простой · −{getTokenCost("gpt-5.6-sol")} ток.
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-zinc-500">
+                      Чистый современный лендинг. Быстрее и дешевле.
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(brief.tier)}
+                  onClick={() => pickTier("premium")}
+                  className="flex w-full items-start gap-3 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-left hover:border-violet-400/50 disabled:opacity-50"
+                >
+                  <span className="mt-0.5 rounded-lg bg-violet-500/20 p-2">
+                    <Crown className="h-4 w-4 text-violet-200" />
+                  </span>
+                  <span>
+                    <span className="block text-sm text-violet-50">
+                      Премиум · −{getTokenCost("claude-fable-5")} ток.
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-violet-200/70">
+                      Сильнее дизайн и анимации — заметно выше обычного.
+                    </span>
+                  </span>
+                </button>
               </div>
             );
           })}
-          {(chatLoading || building || imagesLoading) && (
+          {chatLoading && (
             <div className="inline-flex items-center gap-2 text-xs text-zinc-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {building
-                ? "Собираю сайт…"
-                : imagesLoading
-                  ? "Генерирую картинки…"
-                  : "Печатаю…"}
+              Печатаю…
             </div>
           )}
           <div ref={endRef} />
@@ -628,20 +787,6 @@ export function SiteWizard({
               </button>
             ) : null}
           </div>
-          {!ready && scriptStep ? (
-            <p className="text-[10px] text-zinc-600">
-              Ещё нужно:{" "}
-              {scriptStep === "topic"
-                ? "тема"
-                : scriptStep === "palette"
-                  ? "палитра"
-                  : scriptStep === "sections"
-                    ? "блоки"
-                    : scriptStep === "niche"
-                      ? "ниша"
-                      : "готово"}
-            </p>
-          ) : null}
           <form
             className="flex gap-2"
             onSubmit={(e) => {
@@ -667,24 +812,28 @@ export function SiteWizard({
         </div>
       </div>
 
-      <div className="flex min-h-[320px] flex-1 flex-col bg-black/20">
-        <div className="border-b border-white/10 px-4 py-2 text-xs text-zinc-500">
-          Превью
+      {showPreviewPane ? (
+        <div className="flex min-h-[320px] flex-1 flex-col bg-black/20">
+          <div className="border-b border-white/10 px-4 py-2 text-xs text-zinc-500">
+            Превью
+          </div>
+          <div className="min-h-0 flex-1 p-3">
+            {building ? (
+              <BuildLoader />
+            ) : previewHtml ? (
+              <iframe
+                title="wizard-preview"
+                srcDoc={previewHtml}
+                className="h-full min-h-[420px] w-full rounded-xl border border-white/10 bg-white"
+              />
+            ) : (
+              <div className="flex h-full min-h-[420px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-600">
+                Превью появится после сборки
+              </div>
+            )}
+          </div>
         </div>
-        <div className="min-h-0 flex-1 p-3">
-          {previewHtml ? (
-            <iframe
-              title="wizard-preview"
-              srcDoc={previewHtml}
-              className="h-full min-h-[420px] w-full rounded-xl border border-white/10 bg-white"
-            />
-          ) : (
-            <div className="flex h-full min-h-[420px] items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-600">
-              Здесь появится сайт после «Собрать сайт»
-            </div>
-          )}
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

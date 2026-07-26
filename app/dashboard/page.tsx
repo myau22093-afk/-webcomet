@@ -1781,8 +1781,6 @@ export default function DashboardPage() {
               [
                 { id: "wizard" as const, label: "Мастер", icon: Wand2 },
                 { id: "site" as const, label: "Для профи", icon: Globe2 },
-                { id: "image" as const, label: "Картинки", icon: ImageIcon },
-                { id: "chat" as const, label: "Чат", icon: MessageSquare },
                 { id: "settings" as const, label: "Настройки", icon: Settings },
               ] as const
             ).map((mode) => {
