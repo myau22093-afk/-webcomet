@@ -114,45 +114,74 @@ function Typewriter({
 }
 
 function BuildLoader() {
-  const lines = [
-    "Собираю структуру…",
-    "Подбираю типографику…",
-    "Настраиваю цвета…",
-    "Рисую блоки…",
-    "Почти готово…",
+  const steps = [
+    "Структура страниц",
+    "Типографика и цвета",
+    "Блоки и тексты",
+    "Финальная сборка",
   ];
   const [idx, setIdx] = useState(0);
+
   useEffect(() => {
-    const t = window.setInterval(
-      () => setIdx((v) => (v + 1) % lines.length),
-      2200
-    );
+    const t = window.setInterval(() => {
+      setIdx((v) => (v < steps.length - 1 ? v + 1 : v));
+    }, 2800);
     return () => window.clearInterval(t);
-  }, [lines.length]);
+  }, [steps.length]);
+
+  const progress = ((idx + 1) / steps.length) * 100;
 
   return (
-    <div className="relative flex h-full min-h-[420px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#07090f]">
-      <div className="pointer-events-none absolute inset-0 opacity-70">
-        <div className="absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-violet-600/25 blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/3 h-40 w-40 rounded-full bg-sky-500/15 blur-3xl" />
-      </div>
-      <div className="relative mb-6 flex h-20 w-20 items-center justify-center">
-        <span className="absolute inset-0 animate-spin rounded-full border border-violet-400/30 border-t-violet-300" />
-        <span className="absolute inset-2 animate-spin rounded-full border border-white/10 border-b-violet-200/80 [animation-duration:1.6s] [animation-direction:reverse]" />
-        <Sparkles className="relative h-6 w-6 text-violet-200" />
-      </div>
-      <p className="relative text-sm font-medium text-zinc-100">{lines[idx]}</p>
-      <p className="relative mt-2 text-[11px] text-zinc-500">
-        Это займёт немного времени — сайт собирается с нуля
-      </p>
-      <div className="relative mt-8 flex gap-1.5">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300/80"
-            style={{ animationDelay: `${i * 150}ms` }}
+    <div className="relative flex h-full min-h-[480px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0a0b10] px-6">
+      <div className="relative w-full max-w-md">
+        <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+          Сборка сайта
+        </p>
+        <p className="mt-2 text-xl font-medium tracking-tight text-zinc-50 sm:text-2xl">
+          {steps[idx]}…
+        </p>
+        <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
+          Обычно занимает около минуты. Можно подождать здесь.
+        </p>
+
+        <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-violet-400 transition-[width] duration-700 ease-out"
+            style={{ width: `${progress}%` }}
           />
-        ))}
+        </div>
+
+        <ul className="mt-8 space-y-3">
+          {steps.map((label, i) => {
+            const done = i < idx;
+            const current = i === idx;
+            return (
+              <li
+                key={label}
+                className={`flex items-center gap-3 text-[15px] ${
+                  done
+                    ? "text-zinc-300"
+                    : current
+                      ? "text-zinc-50"
+                      : "text-zinc-600"
+                }`}
+              >
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
+                    done
+                      ? "bg-violet-500/30 text-violet-100"
+                      : current
+                        ? "bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/40"
+                        : "bg-white/5 text-zinc-600"
+                  }`}
+                >
+                  {done ? "✓" : i + 1}
+                </span>
+                {label}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
@@ -254,11 +283,6 @@ export function SiteWizard({
   async function sendChat(text: string) {
     const message = text.trim();
     if (!message || chatLoading) return;
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setError("Войдите в аккаунт");
-      return;
-    }
 
     setError("");
     setBubbles((prev) => [
@@ -267,19 +291,31 @@ export function SiteWizard({
     ]);
     setInput("");
 
+    const isFirstTopic = !brief.topic || brief.topic.length < 3;
     const nextBrief = { ...brief };
-    if (!nextBrief.topic || nextBrief.topic.length < 3) {
+
+    if (isFirstTopic) {
       nextBrief.topic = message;
       nextBrief.nicheId = detectNicheFromTopic(message);
       setBrief(nextBrief);
-    } else {
-      nextBrief.notes = [nextBrief.notes, message].filter(Boolean).join("\n");
-      if (!nextBrief.nicheId) {
-        nextBrief.nicheId = detectNicheFromTopic(
-          `${nextBrief.topic}\n${message}`
-        );
-      }
-      setBrief(nextBrief);
+      // Без AI: сразу к палитре — иначе клиент тонет в вопросах
+      pushAssistant(`Тема: «${message}». Выбери палитру.`, true);
+      ensureScriptMenus(nextBrief);
+      return;
+    }
+
+    nextBrief.notes = [nextBrief.notes, message].filter(Boolean).join("\n");
+    if (!nextBrief.nicheId) {
+      nextBrief.nicheId = detectNicheFromTopic(
+        `${nextBrief.topic}\n${message}`
+      );
+    }
+    setBrief(nextBrief);
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Войдите в аккаунт");
+      return;
     }
 
     setChatLoading(true);
@@ -612,22 +648,22 @@ export function SiteWizard({
         >
           <div
             className={`mx-auto w-full space-y-4 ${
-              showPreviewPane ? "max-w-xl" : "max-w-2xl"
+              showPreviewPane ? "max-w-xl" : "max-w-3xl"
             }`}
           >
             {isFreshStart ? (
-              <div className="mb-2 animate-[wcFadeIn_0.5s_ease]">
-                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-600">
+              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-10">
+                <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-zinc-500">
                   С чего начать
                 </p>
-                <h2 className="mt-2 font-display text-2xl tracking-tight text-zinc-50 sm:text-[1.75rem]">
+                <h2 className="mt-3 font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
                   Опиши бизнес одной фразой
                 </h2>
-                <p className="mt-2 max-w-md text-[14px] leading-relaxed text-zinc-500">
-                  Например: мебель в Санкт-Петербурге, стоматология, салон красоты.
-                  Дальше выберешь цвета и уровень сайта.
+                <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-400">
+                  Например: мебель в Санкт-Петербурге или стоматология. Дальше —
+                  цвета и уровень сайта.
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {[
                     "мебель в СПб",
                     "стоматология",
@@ -638,7 +674,7 @@ export function SiteWizard({
                       key={hint}
                       type="button"
                       onClick={() => void sendChat(hint)}
-                      className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[12px] text-zinc-400 transition hover:border-violet-400/35 hover:bg-violet-500/10 hover:text-zinc-200"
+                      className="rounded-2xl border border-white/12 bg-black/30 px-3 py-3.5 text-[14px] text-zinc-200 transition hover:border-violet-400/40 hover:bg-violet-500/10"
                     >
                       {hint}
                     </button>
@@ -672,12 +708,12 @@ export function SiteWizard({
                 return (
                   <div
                     key={b.id}
-                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5"
+                    className="w-full max-w-3xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 sm:p-6"
                   >
-                    <p className="mb-4 text-[14px] font-medium text-zinc-100">
+                    <p className="mb-4 text-[15px] font-medium text-zinc-100">
                       {b.title}
                     </p>
-                    <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       {WIZARD_PALETTES.map((p) => {
                         const selected = brief.paletteId === p.id;
                         return (
@@ -686,7 +722,7 @@ export function SiteWizard({
                             type="button"
                             disabled={Boolean(brief.paletteId)}
                             onClick={() => pickPalette(p.id)}
-                            className={`flex items-center gap-3.5 rounded-2xl border px-3.5 py-3.5 text-left transition ${
+                            className={`flex items-center gap-3.5 rounded-2xl border px-4 py-4 text-left transition ${
                               selected
                                 ? "border-violet-400/50 bg-violet-500/15"
                                 : "border-white/10 bg-black/25 hover:border-white/25"
@@ -696,12 +732,12 @@ export function SiteWizard({
                               {p.colors.map((c) => (
                                 <span
                                   key={c}
-                                  className="h-8 w-8 rounded-full border-2 border-[#0b0f19] shadow-lg"
+                                  className="h-9 w-9 rounded-full border-2 border-[#0b0f19] shadow-lg"
                                   style={{ background: c }}
                                 />
                               ))}
                             </span>
-                            <span className="text-[14px] text-zinc-200">
+                            <span className="text-[15px] text-zinc-200">
                               {p.label}
                             </span>
                           </button>
