@@ -48,6 +48,7 @@ import {
   type SiteSectionId,
 } from "@/lib/brand";
 import {
+  countImageSlots,
   imagePromptsFromBrief,
   injectSiteImagesDetailed,
 } from "@/lib/injectSiteImages";
@@ -229,6 +230,8 @@ export function SiteWizard({
   const [chatLoading, setChatLoading] = useState(false);
   const [building, setBuilding] = useState(false);
   const [imagesLoading, setImagesLoading] = useState(false);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [imagePickCount, setImagePickCount] = useState(3);
   const [result, setResult] = useState<WizardResult | null>(null);
   const [previewHtml, setPreviewHtml] = useState("");
   const [error, setError] = useState("");
@@ -1025,27 +1028,32 @@ export function SiteWizard({
     throw new Error(lastError);
   }
 
-  async function addImages() {
+  async function addImages(count: number) {
     if (!result || imagesLoading) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
       setError("Войдите в аккаунт");
       return;
     }
+    const n = Math.min(8, Math.max(1, count));
+    setImagePickerOpen(false);
     setImagesLoading(true);
     setError("");
     try {
       const niche =
         (brief.nicheId ? getTemplateById(brief.nicheId)?.name : null) ??
         detectNicheFromTopic(brief.topic);
-      const prompts = imagePromptsFromBrief(brief.topic, niche);
+      const prompts = imagePromptsFromBrief(brief.topic, niche, n);
       const urls: string[] = [];
       for (const prompt of prompts) {
         const url = await generateOneImage(accessToken, prompt);
         if (url) urls.push(url);
       }
       if (!urls.length) {
-        pushAssistant("Картинки не удалось получить — токены за них не должны были списаться повторно.", true);
+        pushAssistant(
+          "Картинки не удалось получить — токены за них не должны были списаться повторно.",
+          true
+        );
         return;
       }
       const { html, injected } = injectSiteImagesDetailed(result.html, urls);
@@ -1063,7 +1071,6 @@ export function SiteWizard({
         createdAt: new Date().toISOString(),
       });
       onBalanceRefresh();
-      // Обновить опубликованный сайт с картинками
       try {
         await fetch("/api/publish/sync", {
           method: "POST",
@@ -1084,8 +1091,8 @@ export function SiteWizard({
       }
       pushAssistant(
         injected > 0
-          ? `Добавил ${urls.length} картинки на сайт (вставлено в вёрстку: ${injected}). Смотри превью справа.`
-          : `Сгенерировал ${urls.length} картинки, но не нашёл куда вставить в вёрстку. Напиши «добавь фото в карточки».`,
+          ? `Добавил ${urls.length} из ${n} картинок (вставлено в блоки: ${injected}). Смотри превью.`
+          : `Сгенерировал ${urls.length} картинки, но не нашёл куда вставить. Напиши «добавь фото в карточки».`,
         true
       );
     } catch (e) {
@@ -1095,6 +1102,13 @@ export function SiteWizard({
     } finally {
       setImagesLoading(false);
     }
+  }
+
+  function openImagePicker() {
+    if (!result || imagesLoading || editing) return;
+    const info = countImageSlots(result.html);
+    setImagePickCount(Math.min(info.slots, 4));
+    setImagePickerOpen(true);
   }
 
   function resetWizard() {
@@ -1898,7 +1912,7 @@ export function SiteWizard({
                   <button
                     type="button"
                     disabled={imagesLoading || editing}
-                    onClick={() => void addImages()}
+                    onClick={() => openImagePicker()}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
                   >
                     {imagesLoading ? (
@@ -1906,7 +1920,7 @@ export function SiteWizard({
                     ) : (
                       <ImageIcon className="h-4 w-4" />
                     )}
-                    Картинки (−{imageCost * 3})
+                    Картинки
                   </button>
                   <button
                     type="button"
@@ -1920,6 +1934,61 @@ export function SiteWizard({
               ) : null}
             </div>
           )}
+          {imagePickerOpen && result ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              {(() => {
+                const info = countImageSlots(result.html);
+                const max = info.slots;
+                const cost = imageCost * imagePickCount;
+                return (
+                  <>
+                    <p className="text-[13px] text-zinc-300">
+                      На сайте примерно{" "}
+                      <span className="text-zinc-100">{max}</span> мест под
+                      фото
+                      {info.emptyCards
+                        ? ` (карточек без фото: ${info.emptyCards})`
+                        : ""}
+                      . Сколько сгенерировать?
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setImagePickCount(n)}
+                          className={`min-w-9 rounded-lg px-2.5 py-1.5 text-[13px] ${
+                            imagePickCount === n
+                              ? "bg-violet-500/30 text-violet-100 ring-1 ring-violet-400/40"
+                              : "bg-black/30 text-zinc-400 hover:bg-white/5"
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={imagesLoading}
+                        onClick={() => void addImages(imagePickCount)}
+                        className="wc-btn wc-btn-primary px-3 py-2 text-[13px] disabled:opacity-50"
+                      >
+                        Сгенерировать {imagePickCount} (−{cost} ток.)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImagePickerOpen(false)}
+                        className="rounded-xl px-3 py-2 text-[13px] text-zinc-500 hover:text-zinc-300"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          ) : null}
           <form
             className="flex gap-2"
             onSubmit={(e) => {
