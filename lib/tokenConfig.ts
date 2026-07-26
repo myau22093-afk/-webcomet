@@ -1,7 +1,7 @@
 /**
  * Списание токенов: плюс даже на Enterprise (~1 ₽/токен).
  * Fable ≈130 ₽ API → 250 ток.; картинки с запасом.
- * Кеш (API 0 ₽) → CACHE_HIT_TOKEN_COST — жирный плюс, клиенту дешевле полной генерации.
+ * Кеш (API 0 ₽): клиенту списываем как за полную генерацию модели — тебе чистая маржа.
  */
 export const TOKEN_COSTS: Record<string, { cost: number }> = {
   "claude-fable-5": { cost: 250 },
@@ -19,10 +19,10 @@ export const TOKEN_COSTS: Record<string, { cost: number }> = {
 };
 
 /**
- * Повтор того же промпта из кеша. API = 0.
- * Клиенту выгоднее полной генерации (250), тебе — почти чистая маржа.
+ * @deprecated Кеш больше не даёт скидку клиенту.
+ * Оставлен как алиас полной цены Sol — не используй для списания.
  */
-export const CACHE_HIT_TOKEN_COST = 80;
+export const CACHE_HIT_TOKEN_COST = TOKEN_COSTS["gpt-5.6-sol"].cost;
 
 /** Пол ~1 ₽/токен; крупные пакеты чуть выгоднее клиенту, без демпинга ниже 1 ₽ */
 export const TOKEN_PACKAGES = [

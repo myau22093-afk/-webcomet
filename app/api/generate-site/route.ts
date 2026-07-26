@@ -30,7 +30,7 @@ import {
   normalizeBrandColors,
   sectionLabels,
 } from "@/lib/brand";
-import { getTokenCost, CACHE_HIT_TOKEN_COST } from "@/lib/tokenConfig";
+import { getTokenCost } from "@/lib/tokenConfig";
 import { resolveSiteStyle } from "@/lib/siteStyles";
 import { chatWithProviders, getModelConfig } from "@/lib/providers";
 import type { ChatMessage } from "@/lib/promptra";
@@ -640,8 +640,9 @@ export async function POST(request: Request) {
           : null;
 
       if (hit) {
+        const cacheCharge = getTokenCost(modelConfig.id);
         try {
-          assertHasTokens(profile, CACHE_HIT_TOKEN_COST);
+          assertHasTokens(profile, cacheCharge);
         } catch (balanceError) {
           return NextResponse.json(
             {
@@ -650,15 +651,15 @@ export async function POST(request: Request) {
                   ? balanceError.message
                   : "Недостаточно токенов. Пополните баланс.",
               token_balance: profile.token_balance,
-              token_cost: CACHE_HIT_TOKEN_COST,
+              token_cost: cacheCharge,
             },
             { status: 402 }
           );
         }
 
-        const spend = await chargeTokens(admin, profile, CACHE_HIT_TOKEN_COST, {
+        const spend = await chargeTokens(admin, profile, cacheCharge, {
           modelId: modelConfig.id,
-          description: `Генерация сайта · ускоренный результат`,
+          description: `Генерация сайта · из кеша (полная цена)`,
         });
         await logApiUsage({
           userId: auth.user.id,
@@ -671,8 +672,8 @@ export async function POST(request: Request) {
           kind: plan.kind,
           reason:
             hit.cacheKind === "global"
-              ? `cache-hit global −${CACHE_HIT_TOKEN_COST}`
-              : `cache-hit personal −${CACHE_HIT_TOKEN_COST}`,
+              ? `cache-hit global −${cacheCharge} (full price, API 0)`
+              : `cache-hit personal −${cacheCharge} (full price, API 0)`,
           promptHash,
         });
 

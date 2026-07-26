@@ -9,7 +9,7 @@ import {
   matchSiteTemplate,
   type SiteTemplate,
 } from "@/lib/siteTemplates";
-import { CACHE_HIT_TOKEN_COST, getTokenCost } from "@/lib/tokenConfig";
+import { getTokenCost } from "@/lib/tokenConfig";
 import { modelIdForTier } from "@/lib/wizardBrief";
 
 export type SiteRequestKind =
@@ -29,9 +29,9 @@ export type OptimizedSitePlan = {
 };
 
 export type SiteChargePreview = {
-  /** Сколько спишем, если это НЕ точный повтор из кеша */
+  /** Сколько спишем за генерацию (и за кеш — та же сумма) */
   tokens: number;
-  /** Повтор того же промпта */
+  /** = tokens; оставлен для совместимости UI */
   cacheTokens: number;
   label: string;
   kind: SiteRequestKind;
@@ -212,7 +212,7 @@ export function estimateSiteTokenCharge(input: {
   if (plan.chatSuggested) {
     return {
       tokens: 0,
-      cacheTokens: CACHE_HIT_TOKEN_COST,
+      cacheTokens: 0,
       label: "Это вопрос для вкладки «Чат»",
       kind: plan.kind,
       modelName: plan.config.name,
@@ -222,7 +222,7 @@ export function estimateSiteTokenCharge(input: {
   const tokens = getTokenCost(plan.config.id);
   return {
     tokens,
-    cacheTokens: CACHE_HIT_TOKEN_COST,
+    cacheTokens: tokens,
     label: plan.reason,
     kind: plan.kind,
     modelName: plan.config.name,
