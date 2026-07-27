@@ -68,6 +68,8 @@ export type WizardBrief = {
   sectionsConfirmed: boolean;
   nicheId: string | null;
   tier: WizardTier | null;
+  /** Каркас Simple из витрины / structureTemplates */
+  structureLayoutId: string | null;
 };
 
 export type WizardUiStep =
@@ -101,6 +103,7 @@ export function emptyWizardBrief(): WizardBrief {
     sectionsConfirmed: true,
     nicheId: null,
     tier: null,
+    structureLayoutId: null,
   };
 }
 

@@ -17,17 +17,17 @@ const CARDS = [
   {
     title: "Авторский эспрессо",
     text: "Зерно с обжаркой недели",
-    src: "/landing/cinema-espresso.jpg",
+    src: "/landing/cinema-espresso.webp",
   },
   {
     title: "Завтраки до 12:00",
     text: "Сырники, боулы, круассаны",
-    src: "/landing/cinema-brunch.jpg",
+    src: "/landing/cinema-brunch.webp",
   },
   {
     title: "Тихие столы",
     text: "Для работы и встреч",
-    src: "/landing/cinema-table.jpg",
+    src: "/landing/cinema-table.webp",
   },
 ] as const;
 
@@ -147,7 +147,7 @@ export function GenerationCinema() {
               {hasImages ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src="/landing/cinema-hero.jpg"
+                  src="/landing/cinema-hero.webp"
                   alt=""
                   className="wc-cinema-photo"
                 />

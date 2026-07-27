@@ -15,53 +15,134 @@ type Props = {
 };
 
 function DemoThumb({ demo }: { demo: LandingDemo }) {
+  const vars = {
+    "--demo-accent": demo.accent,
+    "--demo-surface": demo.surface,
+    "--demo-muted": demo.muted,
+  } as CSSProperties;
+  const [g0, g1, g2] = demo.gallery;
+
   return (
-    <div
-      className="wc-demo-thumb"
-      style={
-        {
-          "--demo-accent": demo.accent,
-          "--demo-surface": demo.surface,
-          "--demo-muted": demo.muted,
-        } as CSSProperties
-      }
-    >
+    <div className={`wc-demo-thumb layout-${demo.layoutId}`} style={vars}>
       <div className="wc-demo-thumb-chrome">
         <span />
         <span />
         <span />
         <em>{demo.brand.toLowerCase()}.ru</em>
       </div>
-      <div className="wc-demo-thumb-site">
-        <div className="wc-demo-thumb-nav">
-          <strong>{demo.brand}</strong>
-          <em style={{ background: demo.accent }} />
+
+      {demo.layoutId === "hero-center" ? (
+        <div className="wc-demo-thumb-site">
+          <div className="wc-demo-thumb-nav">
+            <strong>{demo.brand}</strong>
+            <span className="wc-demo-pill" style={{ background: demo.accent }}>
+              {demo.navCta}
+            </span>
+          </div>
+          <div className="wc-demo-center-hero">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={demo.image} alt="" />
+            <div className="wc-demo-center-copy">
+              <b>{demo.headline}</b>
+              <span className="wc-demo-pill" style={{ background: demo.accent }}>
+                {demo.heroCta}
+              </span>
+            </div>
+          </div>
+          <div className="wc-demo-thumb-rows">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g0} alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g1} alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g2} alt="" />
+          </div>
         </div>
-        <div className="wc-demo-thumb-hero">
-          <div className="wc-demo-thumb-copy">
+      ) : demo.layoutId === "stack-cards" ? (
+        <div className="wc-demo-thumb-site">
+          <div className="wc-demo-thumb-nav">
+            <strong>{demo.brand}</strong>
+            <span className="wc-demo-pill" style={{ background: demo.accent }}>
+              {demo.navCta}
+            </span>
+          </div>
+          <div className="wc-demo-stack-head">
             <b>{demo.headline}</b>
-            <i style={{ background: demo.accent }} />
+            <span className="wc-demo-pill" style={{ background: demo.accent }}>
+              {demo.heroCta}
+            </span>
           </div>
-          <div className="wc-demo-thumb-photo">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={demo.image} alt="" />
+          <div className="wc-demo-stack-list">
+            {[g0, g1, g2].map((src) => (
+              <div key={src} className="wc-demo-stack-row">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" />
+                <i />
+              </div>
+            ))}
           </div>
         </div>
-        <div className="wc-demo-thumb-rows">
-          <span>
+      ) : demo.layoutId === "editorial" ? (
+        <div className="wc-demo-thumb-site">
+          <div className="wc-demo-thumb-nav">
+            <strong>{demo.brand}</strong>
+            <span className="wc-demo-pill" style={{ background: demo.accent }}>
+              {demo.navCta}
+            </span>
+          </div>
+          <div className="wc-demo-editorial-head">
+            <b>{demo.headline}</b>
+          </div>
+          <div className="wc-demo-editorial-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={demo.image} alt="" />
-          </span>
-          <span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={demo.image} alt="" />
-          </span>
-          <span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={demo.image} alt="" />
+          </div>
+          <div className="wc-demo-editorial-cols">
+            {[g0, g1, g2].map((src, i) => (
+              <div key={src}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" />
+                <em>0{i + 1}</em>
+              </div>
+            ))}
+          </div>
+          <span
+            className="wc-demo-pill wc-demo-pill-sm"
+            style={{ background: demo.accent }}
+          >
+            {demo.heroCta}
           </span>
         </div>
-      </div>
+      ) : (
+        <div className="wc-demo-thumb-site">
+          <div className="wc-demo-thumb-nav">
+            <strong>{demo.brand}</strong>
+            <span className="wc-demo-pill" style={{ background: demo.accent }}>
+              {demo.navCta}
+            </span>
+          </div>
+          <div className="wc-demo-thumb-hero">
+            <div className="wc-demo-thumb-copy">
+              <b>{demo.headline}</b>
+              <span className="wc-demo-pill" style={{ background: demo.accent }}>
+                {demo.heroCta}
+              </span>
+            </div>
+            <div className="wc-demo-thumb-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={demo.image} alt="" />
+            </div>
+          </div>
+          <div className="wc-demo-thumb-rows">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g0} alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g1} alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={g2} alt="" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -76,6 +157,7 @@ function startDemo(demo: LandingDemo, loggedIn: boolean) {
     topic: demo.topic,
     nicheId: demo.nicheId,
     demoId: demo.id,
+    structureLayoutId: demo.layoutId,
   });
   window.location.href = loggedIn
     ? "/dashboard"
@@ -210,17 +292,17 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                   <header>
                     <strong>{active.brand}</strong>
                     <button type="button" tabIndex={-1}>
-                      Связаться
+                      {active.navCta}
                     </button>
                   </header>
                   <div className="wc-demo-modal-hero">
                     <div>
                       <h3>{active.headline}</h3>
                       <p>
-                        Пример лендинга в нише «{active.niche}». Структура,
-                        акценты и блоки — то, что Мастер соберёт под ваш бренд.
+                        Структура «{active.layoutId}» · ниша «{active.niche}».
+                        Мастер стартует с этой темой и каркасом.
                       </p>
-                      <span>Оставить заявку</span>
+                      <span>{active.heroCta}</span>
                     </div>
                     <aside className="wc-demo-modal-aside">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -228,21 +310,13 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                     </aside>
                   </div>
                   <div className="wc-demo-modal-grid">
-                    <article>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={active.image} alt="" />
-                      <p>Услуга 1</p>
-                    </article>
-                    <article>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={active.image} alt="" />
-                      <p>Услуга 2</p>
-                    </article>
-                    <article>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={active.image} alt="" />
-                      <p>Услуга 3</p>
-                    </article>
+                    {active.gallery.map((src, i) => (
+                      <article key={src}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" />
+                        <p>Услуга {i + 1}</p>
+                      </article>
+                    ))}
                   </div>
                 </div>
               </div>

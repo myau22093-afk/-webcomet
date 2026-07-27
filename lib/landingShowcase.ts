@@ -1,4 +1,10 @@
-/** Демо-витрина главной: ниши → старт Мастера с готовым topic */
+/** Демо-витрина главной: ниши → старт Мастера с темой и структурой */
+
+export type LandingLayoutId =
+  | "hero-split"
+  | "hero-center"
+  | "stack-cards"
+  | "editorial";
 
 export type LandingDemo = {
   id: string;
@@ -8,15 +14,18 @@ export type LandingDemo = {
   topic: string;
   brand: string;
   headline: string;
-  /** CSS accent for mini-preview */
   accent: string;
-  /** Page background tone */
   surface: string;
-  /** Muted text */
   muted: string;
   tag: string;
-  /** Локальная иллюстрация ниши */
+  /** Главное фото hero */
   image: string;
+  /** Разные фото для блоков карточек */
+  gallery: [string, string, string];
+  /** Каркас как в Мастере (structureTemplates) */
+  layoutId: LandingLayoutId;
+  navCta: string;
+  heroCta: string;
 };
 
 export const LANDING_DEMOS: LandingDemo[] = [
@@ -32,7 +41,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#1a120e",
     muted: "#c4a484",
     tag: "Еда",
-    image: "/landing/demo-cafe.jpg",
+    image: "/landing/demo-cafe.webp",
+    gallery: [
+      "/landing/cinema-espresso.webp",
+      "/landing/cinema-brunch.webp",
+      "/landing/cinema-table.webp",
+    ],
+    layoutId: "hero-split",
+    navCta: "Бронь",
+    heroCta: "Забронировать",
   },
   {
     id: "dentistry",
@@ -46,7 +63,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0c1414",
     muted: "#8fb9b4",
     tag: "Медицина",
-    image: "/landing/demo-dentistry.jpg",
+    image: "/landing/demo-dentistry.webp",
+    gallery: [
+      "/landing/demo-dentistry-2.webp",
+      "/landing/demo-dentistry-3.webp",
+      "/landing/demo-dentistry.webp",
+    ],
+    layoutId: "hero-center",
+    navCta: "Запись",
+    heroCta: "Записаться",
   },
   {
     id: "law",
@@ -60,7 +85,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0e1118",
     muted: "#9aa3b2",
     tag: "Услуги",
-    image: "/landing/demo-law.jpg",
+    image: "/landing/demo-law.webp",
+    gallery: [
+      "/landing/demo-law-2.webp",
+      "/landing/demo-law-3.webp",
+      "/landing/demo-law.webp",
+    ],
+    layoutId: "editorial",
+    navCta: "Контакт",
+    heroCta: "Консультация",
   },
   {
     id: "fitness",
@@ -74,7 +107,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#140a0e",
     muted: "#c48a96",
     tag: "Спорт",
-    image: "/landing/demo-fitness.jpg",
+    image: "/landing/demo-fitness.webp",
+    gallery: [
+      "/landing/demo-fitness-2.webp",
+      "/landing/demo-fitness-3.webp",
+      "/landing/demo-fitness.webp",
+    ],
+    layoutId: "stack-cards",
+    navCta: "Абонемент",
+    heroCta: "Начать",
   },
   {
     id: "beauty",
@@ -88,7 +129,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#160a12",
     muted: "#c995b0",
     tag: "Красота",
-    image: "/landing/demo-beauty.jpg",
+    image: "/landing/demo-beauty.webp",
+    gallery: [
+      "/landing/demo-beauty-2.webp",
+      "/landing/demo-beauty-3.webp",
+      "/landing/demo-beauty.webp",
+    ],
+    layoutId: "hero-split",
+    navCta: "Запись",
+    heroCta: "Записаться",
   },
   {
     id: "restaurant",
@@ -102,7 +151,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#15100c",
     muted: "#c4a078",
     tag: "Еда",
-    image: "/landing/demo-restaurant.jpg",
+    image: "/landing/demo-restaurant.webp",
+    gallery: [
+      "/landing/demo-restaurant-2.webp",
+      "/landing/demo-restaurant-3.webp",
+      "/landing/demo-restaurant.webp",
+    ],
+    layoutId: "hero-center",
+    navCta: "Стол",
+    heroCta: "Забронировать",
   },
   {
     id: "furniture",
@@ -116,7 +173,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0a1218",
     muted: "#8ab0c4",
     tag: "Магазин",
-    image: "/landing/demo-furniture.jpg",
+    image: "/landing/demo-furniture.webp",
+    gallery: [
+      "/landing/demo-furniture-2.webp",
+      "/landing/demo-furniture-3.webp",
+      "/landing/demo-furniture.webp",
+    ],
+    layoutId: "stack-cards",
+    navCta: "Каталог",
+    heroCta: "Рассчитать",
   },
   {
     id: "ecommerce",
@@ -130,7 +195,15 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0a1412",
     muted: "#86b8a8",
     tag: "Shop",
-    image: "/landing/demo-ecommerce.jpg",
+    image: "/landing/demo-ecommerce.webp",
+    gallery: [
+      "/landing/demo-ecommerce-2.webp",
+      "/landing/demo-ecommerce-3.webp",
+      "/landing/demo-ecommerce.webp",
+    ],
+    layoutId: "editorial",
+    navCta: "Корзина",
+    heroCta: "В каталог",
   },
 ];
 
@@ -140,6 +213,7 @@ export type WizardSeed = {
   topic: string;
   nicheId: string;
   demoId?: string;
+  structureLayoutId?: string;
 };
 
 export function writeWizardSeed(seed: WizardSeed) {

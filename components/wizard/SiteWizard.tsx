@@ -344,6 +344,9 @@ export function SiteWizard({
         const seeded = emptyWizardBrief();
         seeded.topic = seed.topic.trim();
         seeded.nicheId = seed.nicheId || detectNicheFromTopic(seed.topic);
+        if (seed.structureLayoutId) {
+          seeded.structureLayoutId = seed.structureLayoutId;
+        }
         const city = extractCityFromTopic(seed.topic);
         if (city) seeded.city = city;
         seeded.seoFocus = joinSeoPhrases(suggestSeoPhrases(seeded));
@@ -1078,6 +1081,7 @@ export function SiteWizard({
           modelId: built.modelId,
           wizardMode: true,
           templateId: built.templateId,
+          structureLayoutId: brief.structureLayoutId,
           expressMode: false,
           useContacts: brief.useSettingsContacts === true,
           qualityMode: "quality",

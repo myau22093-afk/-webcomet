@@ -22,6 +22,7 @@ import {
 } from "@/lib/costOptimization";
 import {
   buildStructureAdaptPrompt,
+  getStructureLayoutById,
   pickStructureLayout,
 } from "@/lib/structureTemplates";
 import { isWizardPremiumModel } from "@/lib/wizardBrief";
@@ -470,6 +471,7 @@ export async function POST(request: Request) {
       useContacts?: boolean;
       wizardMode?: boolean;
       templateId?: string;
+      structureLayoutId?: string;
     };
 
     const prompt = body.prompt?.trim() ?? "";
@@ -485,6 +487,10 @@ export async function POST(request: Request) {
     const wizardMode = Boolean(body.wizardMode) && !isEdit;
     const requestedTemplateId =
       typeof body.templateId === "string" ? body.templateId.trim() : "";
+    const requestedStructureLayoutId =
+      typeof body.structureLayoutId === "string"
+        ? body.structureLayoutId.trim()
+        : "";
     const brandLogo =
       typeof body.brandLogo === "string" ? body.brandLogo.trim() : "";
     const brandColors = normalizeBrandColors(body.brandColors);
@@ -616,7 +622,8 @@ export async function POST(request: Request) {
       wizardMode && !isEdit && !isWizardPremium;
 
     const structureLayout = useStructureAdapt
-      ? pickStructureLayout(
+      ? getStructureLayoutById(requestedStructureLayoutId) ??
+        pickStructureLayout(
           `${effectivePrompt}\n${customRequirements}\n${brandColors.join(",")}`
         )
       : null;
