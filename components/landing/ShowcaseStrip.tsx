@@ -26,17 +26,41 @@ function DemoThumb({ demo }: { demo: LandingDemo }) {
         } as CSSProperties
       }
     >
-      <div className="wc-demo-thumb-bar">
-        <span>{demo.brand}</span>
-        <em style={{ background: demo.accent }} />
+      <div className="wc-demo-thumb-chrome">
+        <span />
+        <span />
+        <span />
+        <em>{demo.brand.toLowerCase()}.ru</em>
       </div>
-      <div className="wc-demo-thumb-photo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={demo.image} alt="" />
-      </div>
-      <div className="wc-demo-thumb-body">
-        <strong>{demo.headline}</strong>
-        <p>{demo.niche}</p>
+      <div className="wc-demo-thumb-site">
+        <div className="wc-demo-thumb-nav">
+          <strong>{demo.brand}</strong>
+          <em style={{ background: demo.accent }} />
+        </div>
+        <div className="wc-demo-thumb-hero">
+          <div className="wc-demo-thumb-copy">
+            <b>{demo.headline}</b>
+            <i style={{ background: demo.accent }} />
+          </div>
+          <div className="wc-demo-thumb-photo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={demo.image} alt="" />
+          </div>
+        </div>
+        <div className="wc-demo-thumb-rows">
+          <span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={demo.image} alt="" />
+          </span>
+          <span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={demo.image} alt="" />
+          </span>
+          <span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={demo.image} alt="" />
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -130,7 +154,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
             <div className="wc-showcase-meta">
               <span className="wc-showcase-tag">{demo.tag}</span>
               <strong>{demo.niche}</strong>
-              <span>{demo.title}</span>
+              <span>{demo.headline}</span>
             </div>
           </motion.button>
         ))}
