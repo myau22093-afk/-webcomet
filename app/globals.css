@@ -323,23 +323,28 @@ h3,
   align-items: baseline;
 }
 
-/* Бесшовный цикл: цвета сайта, начало = конец сегмента */
+/* Бесшовный перелив: два одинаковых периода, сдвиг ровно на один */
 .wc-brand-web,
 .wc-brand-comet {
   background-image: linear-gradient(
     90deg,
-    #c4b5fd 0%,
-    #6c3bf4 20%,
-    #38bdf8 40%,
-    #818cf8 60%,
-    #a78bfa 80%,
-    #c4b5fd 100%
+    #c4b5fd,
+    #6c3bf4,
+    #38bdf8,
+    #818cf8,
+    #a78bfa,
+    #c4b5fd,
+    #6c3bf4,
+    #38bdf8,
+    #818cf8,
+    #a78bfa,
+    #c4b5fd
   );
-  background-size: 300% 100%;
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent !important;
-  animation: wcBrandShimmer 8s linear infinite;
+  animation: wcBrandShimmer 7s linear infinite;
 }
 
 .wc-brand-web {
@@ -352,11 +357,11 @@ h3,
 }
 
 @keyframes wcBrandShimmer {
-  0% {
+  from {
     background-position: 0% 50%;
   }
-  100% {
-    background-position: 100% 50%;
+  to {
+    background-position: -100% 50%;
   }
 }
 
