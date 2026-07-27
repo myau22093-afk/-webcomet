@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
@@ -33,10 +33,12 @@ function DemoThumb({ demo }: { demo: LandingDemo }) {
       <div className="wc-demo-thumb-body">
         <strong>{demo.headline}</strong>
         <p>Лендинг · форма · услуги</p>
-        <div className="wc-demo-thumb-grid">
-          <i />
-          <i />
-          <i />
+        <div className="wc-demo-thumb-scene" data-niche={demo.id}>
+          <div className="wc-demo-thumb-hero" />
+          <div className="wc-demo-thumb-stack">
+            <span />
+            <span />
+          </div>
         </div>
       </div>
     </div>
@@ -63,10 +65,23 @@ export function ShowcaseStrip({ loggedIn }: Props) {
   const railRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<LandingDemo | null>(null);
 
-  function scrollBy(dir: -1 | 1) {
+  useEffect(() => {
     const el = railRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * Math.min(360, el.clientWidth * 0.7), behavior: "smooth" });
+    const blockWheel = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+    el.addEventListener("wheel", blockWheel, { passive: false });
+    return () => el.removeEventListener("wheel", blockWheel);
+  }, []);
+
+  function scrollByDir(dir: -1 | 1) {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({
+      left: dir * Math.min(360, el.clientWidth * 0.7),
+      behavior: "smooth",
+    });
   }
 
   return (
@@ -86,7 +101,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
           <button
             type="button"
             className="wc-showcase-nav-btn"
-            onClick={() => scrollBy(-1)}
+            onClick={() => scrollByDir(-1)}
             aria-label="Назад"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -94,7 +109,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
           <button
             type="button"
             className="wc-showcase-nav-btn"
-            onClick={() => scrollBy(1)}
+            onClick={() => scrollByDir(1)}
             aria-label="Вперёд"
           >
             <ChevronRight className="h-5 w-5" />
@@ -186,19 +201,22 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                       </p>
                       <span>Оставить заявку</span>
                     </div>
-                    <aside />
+                    <aside
+                      className="wc-demo-modal-aside"
+                      data-niche={active.id}
+                    />
                   </div>
                   <div className="wc-demo-modal-grid">
                     <article>
-                      <b />
+                      <b data-niche={active.id} data-slot="1" />
                       <p>Услуга 1</p>
                     </article>
                     <article>
-                      <b />
+                      <b data-niche={active.id} data-slot="2" />
                       <p>Услуга 2</p>
                     </article>
                     <article>
-                      <b />
+                      <b data-niche={active.id} data-slot="3" />
                       <p>Услуга 3</p>
                     </article>
                   </div>
