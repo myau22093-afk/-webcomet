@@ -56,6 +56,7 @@ import { PublishModal } from "@/components/PublishModal";
 import { CometPlayground } from "@/components/wizard/CometPlayground";
 import { PaletteMock } from "@/components/wizard/PaletteMock";
 import { looksLikeSiteEdit } from "@/lib/costOptimization";
+import { readWizardSeed } from "@/lib/landingShowcase";
 
 type ChatBubble =
   | {
@@ -338,6 +339,30 @@ export function SiteWizard({
 
   useEffect(() => {
     try {
+      const seed = readWizardSeed();
+      if (seed) {
+        const seeded = emptyWizardBrief();
+        seeded.topic = seed.topic.trim();
+        seeded.nicheId = seed.nicheId || detectNicheFromTopic(seed.topic);
+        const city = extractCityFromTopic(seed.topic);
+        if (city) seeded.city = city;
+        seeded.seoFocus = joinSeoPhrases(suggestSeoPhrases(seeded));
+        setBrief(seeded);
+        setBubbles([
+          {
+            id: uid(),
+            kind: "text",
+            role: "user",
+            content: seeded.topic,
+          },
+        ]);
+        setResult(null);
+        setPreviewHtml("");
+        setShowPreviewPane(false);
+        setHydrated(true);
+        return;
+      }
+
       const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw) as {

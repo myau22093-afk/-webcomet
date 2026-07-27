@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -25,8 +25,30 @@ const registerSchema = z
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
+function safeNextPath(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+  return raw;
+}
+
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+          <p className="text-zinc-400">Загрузка…</p>
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
+  );
+}
+
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
   const [loading, setLoading] = useState(false);
 
   const form = useForm<RegisterForm>({
@@ -64,7 +86,7 @@ export default function RegisterPage() {
       }
 
       toast.success("Регистрация успешна — 100 токенов на балансе");
-      router.push("/dashboard");
+      router.push(nextPath);
       router.refresh();
     } catch (error) {
       toast.error(getAuthErrorMessage(error, "Ошибка регистрации"));

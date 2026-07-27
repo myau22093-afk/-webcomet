@@ -5,22 +5,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { GenerationCinema } from "@/components/landing/GenerationCinema";
+import { ShowcaseStrip } from "@/components/landing/ShowcaseStrip";
 import { getSupabase } from "@/lib/supabaseClient";
-
-const features = [
-  {
-    title: "Скорость",
-    text: "Лендинг за пару минут: идея, стиль, превью — без дизайнера и верстальщика.",
-  },
-  {
-    title: "Качество",
-    text: "Секции, типографика и анимации на уровне студийных сайтов.",
-  },
-  {
-    title: "Цена",
-    text: "Старт бесплатно. Платите токенами только за генерации.",
-  },
-];
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -42,10 +29,15 @@ export default function HomePage() {
   }, []);
 
   const primaryHref = loggedIn ? "/dashboard" : "/register";
-  const primaryLabel = loggedIn ? "Открыть дашборд" : "Попробовать бесплатно";
+  const primaryLabel = loggedIn ? "Открыть Мастер" : "Попробовать бесплатно";
 
   return (
-    <div className="wc-landing relative min-h-dvh overflow-hidden text-white">
+    <div className="wc-landing relative min-h-dvh overflow-x-hidden text-white">
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+      />
+
       <div className="wc-hero-stage" aria-hidden>
         <picture>
           <source srcSet="/hero-bg.webp?v=4" type="image/webp" />
@@ -66,7 +58,7 @@ export default function HomePage() {
       </div>
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <BrandLogo size="lg" />
+        <BrandLogo size="md" />
         <nav className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/pricing"
@@ -100,58 +92,62 @@ export default function HomePage() {
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-14">
-        <motion.section
-          initial={{ opacity: 1, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="mx-auto max-w-3xl text-center"
-        >
-          <h1 className="font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl">
-            Создай свой сайт за 5 минут
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-zinc-200 sm:text-lg">
-            Опиши идею — WebComet соберёт лендинг, сгенерирует картинки и
-            поможет в чате. Код и живое превью сразу.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href={primaryHref}
-              className="wc-btn wc-btn-glow min-h-12 w-full px-8 text-base sm:w-auto"
-            >
-              {primaryLabel}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            {!loggedIn && (
+      <main className="relative z-10">
+        <section className="wc-hero-compose mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6 sm:pb-14 sm:pt-8">
+          <motion.div
+            className="wc-hero-copy"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <p className="wc-hero-brand" aria-label="WebComet">
+              <span className="wc-brand-web">Web</span>
+              <span className="wc-brand-comet">Comet</span>
+            </p>
+            <h1 className="wc-hero-headline">
+              Сайт собирается
+              <br />
+              на ваших глазах
+            </h1>
+            <p className="wc-hero-lead">
+              Опиши идею или выбери пример ниже — ИИ соберёт лендинг, картинки и
+              правки в чате.
+            </p>
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Link
-                href="/pricing"
-                className="text-sm text-zinc-400 underline-offset-4 transition hover:text-white hover:underline"
+                href={primaryHref}
+                className="wc-btn wc-btn-glow min-h-12 px-8 text-base"
               >
-                Смотреть тарифы
+                {primaryLabel}
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            )}
-          </div>
-        </motion.section>
+              <a
+                href="#showcase"
+                className="text-center text-sm text-zinc-400 underline-offset-4 transition hover:text-white hover:underline sm:text-left"
+              >
+                Смотреть примеры
+              </a>
+            </div>
+          </motion.div>
 
-        <section className="wc-stagger mt-16 grid gap-4 sm:mt-20 sm:grid-cols-3 sm:gap-5">
-          {features.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-white/12 bg-[#0a0b12]/80 p-5 sm:p-6"
-            >
-              <span className="wc-feature-streak" aria-hidden />
-              <h2 className="font-display text-lg font-semibold tracking-tight sm:text-xl">
-                {item.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-                {item.text}
-              </p>
-            </article>
-          ))}
+          <motion.div
+            className="wc-hero-cinema-wrap"
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <GenerationCinema />
+          </motion.div>
         </section>
+
+        <div id="showcase" className="wc-landing-below">
+          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+            <ShowcaseStrip loggedIn={loggedIn} />
+          </div>
+        </div>
       </main>
 
-      <footer className="relative z-10 border-t border-white/10 bg-black/35 backdrop-blur-md">
+      <footer className="relative z-10 border-t border-white/10 bg-black/50">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <BrandLogo size="sm" />
