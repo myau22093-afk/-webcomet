@@ -14,7 +14,13 @@ type Props = {
   loggedIn: boolean;
 };
 
-function DemoThumb({ demo }: { demo: LandingDemo }) {
+function DemoThumb({
+  demo,
+  size = "card",
+}: {
+  demo: LandingDemo;
+  size?: "card" | "modal";
+}) {
   const vars = {
     "--demo-accent": demo.accent,
     "--demo-surface": demo.surface,
@@ -23,7 +29,10 @@ function DemoThumb({ demo }: { demo: LandingDemo }) {
   const [g0, g1, g2] = demo.gallery;
 
   return (
-    <div className={`wc-demo-thumb layout-${demo.layoutId}`} style={vars}>
+    <div
+      className={`wc-demo-thumb layout-${demo.layoutId}${size === "modal" ? " wc-demo-thumb--modal" : ""}`}
+      style={vars}
+    >
       <div className="wc-demo-thumb-chrome">
         <span />
         <span />
@@ -196,8 +205,8 @@ export function ShowcaseStrip({ loggedIn }: Props) {
             Выбери стиль — соберём похожий
           </h2>
           <p className="wc-showcase-sub">
-            Живые примеры ниш. Открой превью и нажми «Сделать такой» — Мастер
-            стартует с этой темой.
+            Живые примеры ниш. «Сделать такой» — Мастер берёт эту тему и тот же
+            каркас layout, что на превью.
           </p>
         </div>
         <div className="wc-showcase-nav">
@@ -272,60 +281,16 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                 <X className="h-5 w-5" />
               </button>
 
-              <div
-                className="wc-demo-modal-preview"
-                style={
-                  {
-                    "--demo-accent": active.accent,
-                    "--demo-surface": active.surface,
-                    "--demo-muted": active.muted,
-                  } as CSSProperties
-                }
-              >
-                <div className="wc-demo-modal-chrome">
-                  <span />
-                  <span />
-                  <span />
-                  <em>{active.brand.toLowerCase()}.ru</em>
-                </div>
-                <div className="wc-demo-modal-site">
-                  <header>
-                    <strong>{active.brand}</strong>
-                    <button type="button" tabIndex={-1}>
-                      {active.navCta}
-                    </button>
-                  </header>
-                  <div className="wc-demo-modal-hero">
-                    <div>
-                      <h3>{active.headline}</h3>
-                      <p>
-                        Структура «{active.layoutId}» · ниша «{active.niche}».
-                        Мастер стартует с этой темой и каркасом.
-                      </p>
-                      <span>{active.heroCta}</span>
-                    </div>
-                    <aside className="wc-demo-modal-aside">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={active.image} alt="" />
-                    </aside>
-                  </div>
-                  <div className="wc-demo-modal-grid">
-                    {active.gallery.map((src, i) => (
-                      <article key={src}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" />
-                        <p>Услуга {i + 1}</p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <DemoThumb demo={active} size="modal" />
 
               <div className="wc-demo-modal-actions">
                 <div>
                   <p className="wc-showcase-tag">{active.tag}</p>
                   <h3>{active.niche}</h3>
-                  <p>{active.title}</p>
+                  <p>
+                    {active.title} · каркас «{active.layoutId}» уйдёт в Мастер
+                    как есть
+                  </p>
                 </div>
                 <button
                   type="button"

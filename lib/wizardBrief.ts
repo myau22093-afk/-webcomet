@@ -294,7 +294,12 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
     .filter(Boolean)
     .join("\n");
 
+  const lockedLayout = brief.structureLayoutId?.trim() || null;
+
   const customRequirements = [
+    lockedLayout
+      ? `ОБЯЗАТЕЛЬНЫЙ каркас layoutId=${lockedLayout}: сохрани структуру секций и композицию hero как в выбранном шаблоне витрины. Не подменяй другим layout.`
+      : null,
     brief.notes.trim() || null,
     brief.seoFocus.trim()
       ? `Поисковые запросы (вплети естественно в title, H1 и тексты; не используй длинное тире; пиши как люди в поиске):\n${parseSeoPhrases(brief.seoFocus).join("\n")}`

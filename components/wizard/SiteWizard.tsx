@@ -344,8 +344,8 @@ export function SiteWizard({
         const seeded = emptyWizardBrief();
         seeded.topic = seed.topic.trim();
         seeded.nicheId = seed.nicheId || detectNicheFromTopic(seed.topic);
-        if (seed.structureLayoutId) {
-          seeded.structureLayoutId = seed.structureLayoutId;
+        if (seed.structureLayoutId?.trim()) {
+          seeded.structureLayoutId = seed.structureLayoutId.trim();
         }
         const city = extractCityFromTopic(seed.topic);
         if (city) seeded.city = city;
@@ -1081,7 +1081,7 @@ export function SiteWizard({
           modelId: built.modelId,
           wizardMode: true,
           templateId: built.templateId,
-          structureLayoutId: brief.structureLayoutId,
+          structureLayoutId: brief.structureLayoutId || undefined,
           expressMode: false,
           useContacts: brief.useSettingsContacts === true,
           qualityMode: "quality",

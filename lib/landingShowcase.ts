@@ -213,7 +213,8 @@ export type WizardSeed = {
   topic: string;
   nicheId: string;
   demoId?: string;
-  structureLayoutId?: string;
+  /** Должен совпадать с id из structureTemplates */
+  structureLayoutId?: LandingLayoutId;
 };
 
 export function writeWizardSeed(seed: WizardSeed) {
@@ -224,6 +225,13 @@ export function writeWizardSeed(seed: WizardSeed) {
   }
 }
 
+const VALID_LAYOUT_IDS = new Set<string>([
+  "hero-split",
+  "hero-center",
+  "stack-cards",
+  "editorial",
+]);
+
 export function readWizardSeed(): WizardSeed | null {
   try {
     const raw = localStorage.getItem(WIZARD_SEED_KEY);
@@ -231,6 +239,12 @@ export function readWizardSeed(): WizardSeed | null {
     localStorage.removeItem(WIZARD_SEED_KEY);
     const data = JSON.parse(raw) as WizardSeed;
     if (!data?.topic || data.topic.trim().length < 3) return null;
+    if (
+      data.structureLayoutId &&
+      !VALID_LAYOUT_IDS.has(data.structureLayoutId)
+    ) {
+      delete data.structureLayoutId;
+    }
     return data;
   } catch {
     return null;

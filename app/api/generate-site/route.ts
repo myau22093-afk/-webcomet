@@ -614,22 +614,42 @@ export async function POST(request: Request) {
     const generateTokenCost = getTokenCost(modelConfig.id);
     const activeTemplate = plan.template;
 
-    // Мастер «Простой» (Sol): layout-скелет → дешёвая адаптация.
-    // «Премиум» (Kimi/Fable): полный сайт с нуля, без нишевых/structure шаблонов.
+    // Мастер «Простой» (Sol): layout-скелет → адаптация.
+    // «Премиум» без выбранного каркаса: полный сайт с нуля.
+    // Явный structureLayoutId (витрина / seed) — всегда этот каркас, без fallback.
     const isWizardPremium =
       wizardMode && !isEdit && isWizardPremiumModel(modelConfig.id);
+    const forcedStructureLayout = requestedStructureLayoutId
+      ? getStructureLayoutById(requestedStructureLayoutId)
+      : null;
+    if (requestedStructureLayoutId && !forcedStructureLayout) {
+      return NextResponse.json(
+        {
+          error: `Неизвестный каркас layout: «${requestedStructureLayoutId}». Выберите шаблон заново на главной.`,
+          structureLayoutId: requestedStructureLayoutId,
+        },
+        { status: 400 }
+      );
+    }
     const useStructureAdapt =
-      wizardMode && !isEdit && !isWizardPremium;
+      wizardMode &&
+      !isEdit &&
+      (!isWizardPremium || Boolean(forcedStructureLayout));
 
     const structureLayout = useStructureAdapt
-      ? getStructureLayoutById(requestedStructureLayoutId) ??
+      ? forcedStructureLayout ??
         pickStructureLayout(
           `${effectivePrompt}\n${customRequirements}\n${brandColors.join(",")}`
         )
       : null;
 
     if (structureLayout) {
-      reason = `мастер · структура «${structureLayout.id}» → ${modelConfig.name}`;
+      reason = forcedStructureLayout
+        ? `мастер · зафиксирован каркас «${structureLayout.id}» → ${modelConfig.name}`
+        : `мастер · структура «${structureLayout.id}» → ${modelConfig.name}`;
+      console.log(
+        `[ai] generate-site structureLayout locked=${Boolean(forcedStructureLayout)} id=${structureLayout.id}`
+      );
     } else if (isWizardPremium) {
       reason = `мастер · премиум с нуля → ${modelConfig.name}`;
     }
