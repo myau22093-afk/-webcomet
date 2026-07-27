@@ -1,0 +1,16 @@
+---
+description: After WebComet changes, always commit, push, and deploy to VPS
+alwaysApply: true
+---
+
+# Always deploy WebComet
+
+When you finish code changes for WebComet:
+
+1. Commit (unless the user forbade commits for that change).
+2. Push to `origin/main`.
+3. Deploy immediately via SSH:
+   `ssh -i ~/.ssh/id_ed25519 root@92.242.61.24 "cd /opt/webcomet && bash scripts/deploy-vps.sh"`
+4. Do not wait for the user to ask «задеплой».
+
+Prod: https://webcomet.ru · VPS path `/opt/webcomet`.
