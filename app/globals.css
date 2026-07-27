@@ -1394,7 +1394,8 @@ h3,
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: var(--demo-surface, #111);
-  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
   transition: border-color 0.2s ease, transform 0.25s ease;
 }
 
@@ -1422,66 +1423,35 @@ h3,
   border-radius: 999px;
 }
 
+.wc-demo-thumb-photo {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.wc-demo-thumb-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .wc-demo-thumb-body {
-  padding: 0.9rem 0.8rem 1rem;
+  padding: 0.75rem 0.8rem 0.9rem;
 }
 
 .wc-demo-thumb-body strong {
   display: block;
   font-family: "Syne", sans-serif;
-  font-size: 1.05rem;
+  font-size: 1rem;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .wc-demo-thumb-body p {
-  margin: 0.35rem 0 0.75rem;
-  font-size: 0.72rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
   color: var(--demo-muted);
-}
-
-.wc-demo-thumb-scene {
-  display: grid;
-  grid-template-columns: 1.35fr 0.8fr;
-  gap: 0.4rem;
-  min-height: 72px;
-}
-
-.wc-demo-thumb-hero {
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--demo-accent) 40%, transparent);
-  background:
-    radial-gradient(
-      ellipse 70% 60% at 30% 40%,
-      color-mix(in srgb, var(--demo-accent) 55%, white),
-      transparent 60%
-    ),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--demo-accent) 35%, #111),
-      #0a0a0c 70%
-    );
-}
-
-.wc-demo-thumb-stack {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.wc-demo-thumb-stack span {
-  display: block;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--demo-accent) 30%, transparent);
-  background: color-mix(in srgb, var(--demo-accent) 22%, transparent);
-}
-
-.wc-demo-thumb-stack span:first-child {
-  min-height: 38px;
-}
-
-.wc-demo-thumb-stack span:last-child {
-  min-height: 28px;
-  opacity: 0.75;
 }
 
 .wc-showcase-meta {
@@ -1658,17 +1628,16 @@ h3,
   min-height: 140px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(
-      ellipse 60% 50% at 40% 35%,
-      color-mix(in srgb, var(--demo-accent) 55%, white),
-      transparent 60%
-    ),
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--demo-accent) 30%, #151515),
-      #0a0a0c
-    );
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.wc-demo-modal-aside img {
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+  object-fit: cover;
+  display: block;
 }
 
 .wc-demo-modal-grid {
@@ -1678,25 +1647,19 @@ h3,
 }
 
 .wc-demo-modal-grid article {
-  padding: 0.75rem;
+  padding: 0.55rem;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
 
-.wc-demo-modal-grid b {
+.wc-demo-modal-grid img {
   display: block;
-  height: 48px;
   width: 100%;
+  height: 56px;
   margin-bottom: 0.45rem;
   border-radius: 8px;
-  background:
-    radial-gradient(
-      circle at 40% 40%,
-      color-mix(in srgb, var(--demo-accent) 50%, white),
-      transparent 55%
-    ),
-    color-mix(in srgb, var(--demo-accent) 28%, #121212);
+  object-fit: cover;
 }
 
 .wc-demo-modal-grid p {

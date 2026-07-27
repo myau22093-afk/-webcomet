@@ -17,17 +17,17 @@ const CARDS = [
   {
     title: "Авторский эспрессо",
     text: "Зерно с обжаркой недели",
-    shot: "espresso",
+    src: "/landing/cinema-espresso.svg",
   },
   {
     title: "Завтраки до 12:00",
     text: "Сырники, боулы, круассаны",
-    shot: "brunch",
+    src: "/landing/cinema-brunch.svg",
   },
   {
     title: "Тихие столы",
     text: "Для работы и встреч",
-    shot: "table",
+    src: "/landing/cinema-table.svg",
   },
 ] as const;
 
@@ -145,7 +145,12 @@ export function GenerationCinema() {
               transition={{ duration: 0.5 }}
             >
               {hasImages ? (
-                <div className="wc-shot wc-shot--hero" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/landing/cinema-hero.svg"
+                  alt=""
+                  className="wc-cinema-photo"
+                />
               ) : (
                 <div className="wc-cinema-visual-placeholder">
                   {!wire && <span>фото</span>}
@@ -173,7 +178,8 @@ export function GenerationCinema() {
                   className={`wc-cinema-card-media${hasImages ? " has-photo" : ""}`}
                 >
                   {hasImages ? (
-                    <div className={`wc-shot wc-shot--${card.shot}`} />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={card.src} alt="" />
                   ) : null}
                 </div>
                 {wire ? (

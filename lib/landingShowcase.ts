@@ -15,6 +15,8 @@ export type LandingDemo = {
   /** Muted text */
   muted: string;
   tag: string;
+  /** Локальная иллюстрация ниши */
+  image: string;
 };
 
 export const LANDING_DEMOS: LandingDemo[] = [
@@ -30,6 +32,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#1a120e",
     muted: "#c4a484",
     tag: "Еда",
+    image: "/landing/demo-cafe.svg",
   },
   {
     id: "dentistry",
@@ -43,6 +46,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0c1414",
     muted: "#8fb9b4",
     tag: "Медицина",
+    image: "/landing/demo-dentistry.svg",
   },
   {
     id: "law",
@@ -56,6 +60,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0e1118",
     muted: "#9aa3b2",
     tag: "Услуги",
+    image: "/landing/demo-law.svg",
   },
   {
     id: "fitness",
@@ -69,6 +74,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#140a0e",
     muted: "#c48a96",
     tag: "Спорт",
+    image: "/landing/demo-fitness.svg",
   },
   {
     id: "beauty",
@@ -82,6 +88,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#160a12",
     muted: "#c995b0",
     tag: "Красота",
+    image: "/landing/demo-beauty.svg",
   },
   {
     id: "restaurant",
@@ -95,6 +102,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#15100c",
     muted: "#c4a078",
     tag: "Еда",
+    image: "/landing/demo-restaurant.svg",
   },
   {
     id: "furniture",
@@ -108,6 +116,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0a1218",
     muted: "#8ab0c4",
     tag: "Магазин",
+    image: "/landing/demo-furniture.svg",
   },
   {
     id: "ecommerce",
@@ -121,6 +130,7 @@ export const LANDING_DEMOS: LandingDemo[] = [
     surface: "#0a1412",
     muted: "#86b8a8",
     tag: "Shop",
+    image: "/landing/demo-ecommerce.svg",
   },
 ];
 

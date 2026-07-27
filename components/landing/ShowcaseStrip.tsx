@@ -30,16 +30,13 @@ function DemoThumb({ demo }: { demo: LandingDemo }) {
         <span>{demo.brand}</span>
         <em style={{ background: demo.accent }} />
       </div>
+      <div className="wc-demo-thumb-photo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={demo.image} alt="" />
+      </div>
       <div className="wc-demo-thumb-body">
         <strong>{demo.headline}</strong>
-        <p>Лендинг · форма · услуги</p>
-        <div className="wc-demo-thumb-scene" data-niche={demo.id}>
-          <div className="wc-demo-thumb-hero" />
-          <div className="wc-demo-thumb-stack">
-            <span />
-            <span />
-          </div>
-        </div>
+        <p>{demo.niche}</p>
       </div>
     </div>
   );
@@ -201,22 +198,25 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                       </p>
                       <span>Оставить заявку</span>
                     </div>
-                    <aside
-                      className="wc-demo-modal-aside"
-                      data-niche={active.id}
-                    />
+                    <aside className="wc-demo-modal-aside">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={active.image} alt="" />
+                    </aside>
                   </div>
                   <div className="wc-demo-modal-grid">
                     <article>
-                      <b data-niche={active.id} data-slot="1" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={active.image} alt="" />
                       <p>Услуга 1</p>
                     </article>
                     <article>
-                      <b data-niche={active.id} data-slot="2" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={active.image} alt="" />
                       <p>Услуга 2</p>
                     </article>
                     <article>
-                      <b data-niche={active.id} data-slot="3" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={active.image} alt="" />
                       <p>Услуга 3</p>
                     </article>
                   </div>
