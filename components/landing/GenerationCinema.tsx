@@ -13,18 +13,23 @@ const STEPS = [
 
 const STEP_MS = 2400;
 
-const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80",
-  card1: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80",
-  card2: "https://images.unsplash.com/photo-1442512595331-e89e7384260c?auto=format&fit=crop&w=400&q=80",
-  card3: "https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=400&q=80",
-};
-
 const CARDS = [
-  { title: "Авторский эспрессо", text: "Зерно с обжаркой недели", img: IMAGES.card1 },
-  { title: "Завтраки до 12:00", text: "Сырники, боулы, круассаны", img: IMAGES.card2 },
-  { title: "Тихие столы", text: "Для работы и встреч", img: IMAGES.card3 },
-];
+  {
+    title: "Авторский эспрессо",
+    text: "Зерно с обжаркой недели",
+    shot: "espresso",
+  },
+  {
+    title: "Завтраки до 12:00",
+    text: "Сырники, боулы, круассаны",
+    shot: "brunch",
+  },
+  {
+    title: "Тихие столы",
+    text: "Для работы и встреч",
+    shot: "table",
+  },
+] as const;
 
 export function GenerationCinema() {
   const [step, setStep] = useState(0);
@@ -65,11 +70,7 @@ export function GenerationCinema() {
 
       <div className={`wc-cinema-stage${wire ? " is-wire" : ""}`}>
         <div className="wc-cinema-site wc-cinema-site--cafe">
-          <motion.nav
-            className="wc-cinema-nav"
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.35 }}
-          >
+          <motion.nav className="wc-cinema-nav" animate={{ opacity: 1 }}>
             <span className={`wc-cinema-brand-pill${wire ? " is-wire" : ""}`}>
               {wire ? "" : "Daily Cup"}
             </span>
@@ -144,8 +145,7 @@ export function GenerationCinema() {
               transition={{ duration: 0.5 }}
             >
               {hasImages ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={IMAGES.hero} alt="" className="wc-cinema-photo" />
+                <div className="wc-shot wc-shot--hero" />
               ) : (
                 <div className="wc-cinema-visual-placeholder">
                   {!wire && <span>фото</span>}
@@ -173,8 +173,7 @@ export function GenerationCinema() {
                   className={`wc-cinema-card-media${hasImages ? " has-photo" : ""}`}
                 >
                   {hasImages ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={card.img} alt="" />
+                    <div className={`wc-shot wc-shot--${card.shot}`} />
                   ) : null}
                 </div>
                 {wire ? (
