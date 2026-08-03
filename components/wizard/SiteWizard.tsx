@@ -1110,7 +1110,7 @@ export function SiteWizard({
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div
-        className={`relative flex min-h-0 flex-col border-white/10 ${
+        className={`relative flex min-h-0 min-w-0 flex-col border-white/10 ${
           showPreviewPane ? "w-full lg:w-[44%] lg:border-r" : "w-full"
         }`}
       >
@@ -1153,7 +1153,7 @@ export function SiteWizard({
           }`}
         >
           <div
-            className={`mx-auto w-full space-y-4 ${
+            className={`mx-auto w-full min-w-0 space-y-4 ${
               showPreviewPane ? "max-w-xl" : "max-w-3xl"
             }`}
           >
@@ -1216,10 +1216,13 @@ export function SiteWizard({
                 const palB =
                   WIZARD_PALETTES.find((p) => p.id === abB) ?? WIZARD_PALETTES[1];
                 const locked = Boolean(brief.paletteId);
+                const narrow = showPreviewPane;
                 return (
                   <div
                     key={b.id}
-                    className="w-full max-w-3xl animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 sm:p-6"
+                    className={`w-full max-w-full animate-[wcFadeIn_0.4s_ease] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] ${
+                      narrow ? "p-4" : "p-5 sm:p-6"
+                    }`}
                   >
                     <p className="mb-1 text-[15px] font-medium text-zinc-100">
                       {b.title}
@@ -1228,8 +1231,12 @@ export function SiteWizard({
                       A/B сравнение — выбери сторону или любую из списка ниже
                     </p>
 
-                    <div className="mb-5 grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
+                    <div
+                      className={`mb-5 grid gap-3 ${
+                        narrow ? "grid-cols-1" : "sm:grid-cols-2"
+                      }`}
+                    >
+                      <div className="min-w-0 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
                             Вариант A
@@ -1238,7 +1245,7 @@ export function SiteWizard({
                             disabled={locked}
                             value={abA}
                             onChange={(e) => setAbA(e.target.value)}
-                            className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
+                            className="max-w-[55%] rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
                           >
                             {WIZARD_PALETTES.map((p) => (
                               <option key={p.id} value={p.id}>
@@ -1255,7 +1262,7 @@ export function SiteWizard({
                           onPick={() => pickPalette(palA.id)}
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="min-w-0 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
                             Вариант B
@@ -1264,7 +1271,7 @@ export function SiteWizard({
                             disabled={locked}
                             value={abB}
                             onChange={(e) => setAbB(e.target.value)}
-                            className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
+                            className="max-w-[55%] rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-[12px] text-zinc-200"
                           >
                             {WIZARD_PALETTES.map((p) => (
                               <option key={p.id} value={p.id}>
@@ -1283,7 +1290,13 @@ export function SiteWizard({
                       </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                      className={`grid gap-2.5 ${
+                        narrow
+                          ? "grid-cols-1"
+                          : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                      }`}
+                    >
                       {WIZARD_PALETTES.map((p) => {
                         const selected = brief.paletteId === p.id;
                         return (
@@ -1292,22 +1305,22 @@ export function SiteWizard({
                             type="button"
                             disabled={locked}
                             onClick={() => pickPalette(p.id)}
-                            className={`flex items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition ${
+                            className={`flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 text-left transition ${
                               selected
                                 ? "border-violet-400/50 bg-violet-500/15"
                                 : "border-white/10 bg-black/25 hover:border-white/25"
                             } disabled:opacity-50`}
                           >
-                            <span className="flex -space-x-2">
+                            <span className="flex shrink-0 -space-x-2">
                               {p.colors.map((c) => (
                                 <span
                                   key={c}
-                                  className="h-8 w-8 rounded-full border-2 border-[#0b0f19] shadow-lg"
+                                  className="h-7 w-7 rounded-full border-2 border-[#0b0f19] shadow-lg"
                                   style={{ background: c }}
                                 />
                               ))}
                             </span>
-                            <span className="text-[14px] text-zinc-200">
+                            <span className="truncate text-[13px] text-zinc-200">
                               {p.label}
                             </span>
                           </button>
@@ -1317,23 +1330,25 @@ export function SiteWizard({
                         type="button"
                         disabled={locked}
                         onClick={() => setShowCustomPicker(true)}
-                        className={`flex items-center gap-3.5 rounded-2xl border px-4 py-3.5 text-left transition duration-300 ${
+                        className={`flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 text-left transition duration-300 ${
                           customSelected || showCustomPicker
                             ? "border-violet-400/50 bg-violet-500/15"
                             : "border-dashed border-white/20 bg-black/25 hover:border-white/35"
                         } disabled:opacity-50`}
                       >
-                        <span className="flex -space-x-2">
+                        <span className="flex shrink-0 -space-x-2">
                           {[0, 1, 2].map((i) => (
                             <span
                               key={i}
-                              className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-white/30 bg-white/[0.03] text-zinc-400"
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-white/30 bg-white/[0.03] text-zinc-400"
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </span>
                           ))}
                         </span>
-                        <span className="text-[14px] text-zinc-200">Свой</span>
+                        <span className="truncate text-[13px] text-zinc-200">
+                          Свой
+                        </span>
                       </button>
                     </div>
                     {showCustomPicker && !brief.paletteId ? (
