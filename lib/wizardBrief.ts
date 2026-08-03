@@ -68,6 +68,8 @@ export type WizardBrief = {
   sectionsConfirmed: boolean;
   nicheId: string | null;
   tier: WizardTier | null;
+  /** null = ещё не спросили; генерировать фото после сборки */
+  wantPhotos: boolean | null;
   /** Каркас Simple из витрины / structureTemplates */
   structureLayoutId: string | null;
 };
@@ -80,6 +82,7 @@ export type WizardUiStep =
   | "assets"
   | "sections"
   | "tier"
+  | "photos"
   | "ready";
 
 export function emptyWizardBrief(): WizardBrief {
@@ -103,6 +106,7 @@ export function emptyWizardBrief(): WizardBrief {
     sectionsConfirmed: true,
     nicheId: null,
     tier: null,
+    wantPhotos: null,
     structureLayoutId: null,
   };
 }
@@ -214,7 +218,8 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.assetsConfirmed &&
     brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
-    Boolean(brief.tier)
+    Boolean(brief.tier) &&
+    typeof brief.wantPhotos === "boolean"
   );
 }
 
@@ -233,6 +238,7 @@ export function nextScriptedStep(
   if (!brief.assetsConfirmed) return "assets";
   if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
   if (!brief.tier) return "tier";
+  if (typeof brief.wantPhotos !== "boolean") return "photos";
   return "ready";
 }
 

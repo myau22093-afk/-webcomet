@@ -66,7 +66,7 @@ type ChatBubble =
   | {
       id: string;
       kind: "choice";
-      step: "palette" | "sections" | "tier" | "details" | "assets" | "contacts";
+      step: "palette" | "sections" | "tier" | "details" | "assets" | "contacts" | "photos";
       title: string;
     };
 
@@ -386,7 +386,8 @@ export function SiteWizard({
       step === "details" ||
       step === "assets" ||
       step === "sections" ||
-      step === "tier"
+      step === "tier" ||
+      step === "photos"
     ) {
       const has = bubbles.some(
         (b) => b.kind === "choice" && b.step === step
@@ -416,7 +417,14 @@ export function SiteWizard({
   }
 
   function pushChoice(
-    step: "palette" | "sections" | "tier" | "details" | "assets" | "contacts",
+    step:
+      | "palette"
+      | "sections"
+      | "tier"
+      | "details"
+      | "assets"
+      | "contacts"
+      | "photos",
     title: string,
     delayMs = 500
   ) {
@@ -451,6 +459,8 @@ export function SiteWizard({
       pushChoice("sections", "Какие блоки нужны на сайте?", 500);
     } else if (step === "tier") {
       pushChoice("tier", "Какой уровень сайта?", 500);
+    } else if (step === "photos") {
+      pushChoice("photos", "Добавить фотографии на сайт?", 500);
     }
   }
 
@@ -887,14 +897,35 @@ export function SiteWizard({
         role: "user",
         content: tier === "premium" ? "Премиум сайт" : "Простой сайт",
       },
+    ]);
+    ensureScriptMenus(next);
+  }
+
+  const AUTO_PHOTO_COUNT = 3;
+  const photoTokenHint =
+    AUTO_PHOTO_COUNT * getTokenCost("gemini-3.1-flash-image");
+
+  function pickWantPhotos(want: boolean) {
+    if (typeof brief.wantPhotos === "boolean") return;
+    const next = { ...brief, wantPhotos: want };
+    setBrief(next);
+    setBubbles((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        kind: "text",
+        role: "user",
+        content: want
+          ? `Да, добавить фото (−${photoTokenHint} ток.)`
+          : "Нет, без фото",
+      },
       {
         id: uid(),
         kind: "text",
         role: "assistant",
-        content:
-          tier === "premium"
-            ? "Премиум выбран. Бриф готов — жми «Собрать сайт», превью справа."
-            : "Простой лендинг. Бриф готов — жми «Собрать сайт», превью справа.",
+        content: want
+          ? "Ок — после сборки сгенерирую фото в блоки сайта. Жми «Собрать сайт»."
+          : "Без фото. Бриф готов — жми «Собрать сайт», превью справа.",
         animate: true,
       },
     ]);
@@ -965,10 +996,18 @@ export function SiteWizard({
         createdAt: data.created_at ?? new Date().toISOString(),
       });
       onBalanceRefresh();
-      pushAssistant(
-        "Сайт собран. Справа превью — скажи или напиши правку («кнопки зелёные»), добавь картинки или жми «Опубликовать».",
-        true
-      );
+      if (brief.wantPhotos) {
+        pushAssistant(
+          "Сайт собран. Сейчас генерирую фотографии для блоков…",
+          true
+        );
+        await addImages(AUTO_PHOTO_COUNT, site);
+      } else {
+        pushAssistant(
+          "Сайт собран. Справа превью — скажи или напиши правку («кнопки зелёные»), добавь картинки или жми «Опубликовать».",
+          true
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка генерации";
       setError(msg);
@@ -1007,8 +1046,9 @@ export function SiteWizard({
     throw new Error(lastError);
   }
 
-  async function addImages(count: number) {
-    if (!result || imagesLoading) return;
+  async function addImages(count: number, base?: WizardResult) {
+    const site = base ?? result;
+    if (!site || imagesLoading) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
       setError("Войдите в аккаунт");
@@ -1035,8 +1075,8 @@ export function SiteWizard({
         );
         return;
       }
-      const { html, injected } = injectSiteImagesDetailed(result.html, urls);
-      const next = { ...result, html };
+      const { html, injected } = injectSiteImagesDetailed(site.html, urls);
+      const next = { ...site, html };
       setResult(next);
       setPreviewHtml(
         buildPreviewHtml({ html: next.html, css: next.css, js: next.js })
@@ -1617,54 +1657,110 @@ export function SiteWizard({
                 );
               }
 
-              if (b.step !== "tier") return null;
+              if (b.step === "tier") {
+                return (
+                  <div
+                    key={b.id}
+                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                  >
+                    <p className="mb-1 text-[14px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={Boolean(brief.tier)}
+                      onClick={() => pickTier("simple")}
+                      className="flex w-full items-start gap-3.5 rounded-2xl border border-white/12 bg-black/25 p-3.5 text-left transition hover:border-violet-400/40 disabled:opacity-50"
+                    >
+                      <span className="mt-0.5 rounded-xl bg-white/10 p-2.5">
+                        <Zap className="h-4 w-4 text-zinc-200" />
+                      </span>
+                      <span>
+                        <span className="block text-[14px] text-zinc-100">
+                          Простой · −{getTokenCost("gpt-5.6-sol")} ток.
+                        </span>
+                        <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
+                          Чистый современный лендинг. Быстрее и дешевле.
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={Boolean(brief.tier)}
+                      onClick={() => pickTier("premium")}
+                      className="flex w-full items-start gap-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5 text-left transition hover:border-violet-400/50 disabled:opacity-50"
+                    >
+                      <span className="mt-0.5 rounded-xl bg-violet-500/20 p-2.5">
+                        <Crown className="h-4 w-4 text-violet-200" />
+                      </span>
+                      <span>
+                        <span className="block text-[14px] text-violet-50">
+                          Премиум · −{getTokenCost("claude-fable-5")} ток.
+                        </span>
+                        <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
+                          Сильнее дизайн и анимации — заметно выше обычного.
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                );
+              }
 
-              return (
-                <div
-                  key={b.id}
-                  className="max-w-xl animate-[wcFadeIn_0.4s_ease] space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
-                >
-                  <p className="mb-1 text-[14px] font-medium text-zinc-100">
-                    {b.title}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={Boolean(brief.tier)}
-                    onClick={() => pickTier("simple")}
-                    className="flex w-full items-start gap-3.5 rounded-2xl border border-white/12 bg-black/25 p-3.5 text-left transition hover:border-violet-400/40 disabled:opacity-50"
+              if (b.step === "photos") {
+                const locked = typeof brief.wantPhotos === "boolean";
+                return (
+                  <div
+                    key={b.id}
+                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
                   >
-                    <span className="mt-0.5 rounded-xl bg-white/10 p-2.5">
-                      <Zap className="h-4 w-4 text-zinc-200" />
-                    </span>
-                    <span>
-                      <span className="block text-[14px] text-zinc-100">
-                        Простой · −{getTokenCost("gpt-5.6-sol")} ток.
+                    <p className="mb-1 text-[14px] font-medium text-zinc-100">
+                      {b.title}
+                    </p>
+                    <p className="mb-2 text-[13px] leading-relaxed text-zinc-500">
+                      После сборки сгенерируем ~{AUTO_PHOTO_COUNT} фото в hero и
+                      карточки. Можно пропустить и добавить позже.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={() => pickWantPhotos(true)}
+                      className="flex w-full items-start gap-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5 text-left transition hover:border-violet-400/50 disabled:opacity-50"
+                    >
+                      <span className="mt-0.5 rounded-xl bg-violet-500/20 p-2.5">
+                        <ImageIcon className="h-4 w-4 text-violet-200" />
                       </span>
-                      <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
-                        Чистый современный лендинг. Быстрее и дешевле.
+                      <span>
+                        <span className="block text-[14px] text-violet-50">
+                          Да, с фото · −{photoTokenHint} ток.
+                        </span>
+                        <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
+                          {AUTO_PHOTO_COUNT} картинки под нишу автоматически
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={Boolean(brief.tier)}
-                    onClick={() => pickTier("premium")}
-                    className="flex w-full items-start gap-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5 text-left transition hover:border-violet-400/50 disabled:opacity-50"
-                  >
-                    <span className="mt-0.5 rounded-xl bg-violet-500/20 p-2.5">
-                      <Crown className="h-4 w-4 text-violet-200" />
-                    </span>
-                    <span>
-                      <span className="block text-[14px] text-violet-50">
-                        Премиум · −{getTokenCost("claude-fable-5")} ток.
+                    </button>
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={() => pickWantPhotos(false)}
+                      className="flex w-full items-start gap-3.5 rounded-2xl border border-white/12 bg-black/25 p-3.5 text-left transition hover:border-white/25 disabled:opacity-50"
+                    >
+                      <span className="mt-0.5 rounded-xl bg-white/10 p-2.5">
+                        <Zap className="h-4 w-4 text-zinc-200" />
                       </span>
-                      <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
-                        Сильнее дизайн и анимации — заметно выше обычного.
+                      <span>
+                        <span className="block text-[14px] text-zinc-100">
+                          Нет, без фото
+                        </span>
+                        <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
+                          Только вёрстка и тексты — фото можно добавить после
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                </div>
-              );
+                    </button>
+                  </div>
+                );
+              }
+
+              return null;
             })}
 
             {chatLoading || editing ? (
@@ -1689,7 +1785,7 @@ export function SiteWizard({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!ready || building}
+                disabled={!ready || building || imagesLoading}
                 onClick={() => void buildSite()}
                 className="wc-btn wc-btn-primary px-4 py-2.5 text-[13px] disabled:opacity-50"
               >
