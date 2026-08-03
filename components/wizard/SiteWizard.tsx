@@ -39,7 +39,6 @@ import {
 } from "@/lib/wizardBrief";
 import { getTemplateById } from "@/lib/siteTemplates";
 import {
-  LOGO_ACCEPT,
   PREVIEW_DEVICE_WIDTH,
   type PreviewDevice,
   type SiteSectionId,
@@ -256,9 +255,6 @@ export function SiteWizard({
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [listening, setListening] = useState(false);
-  const [uploadingKind, setUploadingKind] = useState<
-    null | "reference" | "logo" | "tz"
-  >(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [abA, setAbA] = useState("violet");
@@ -269,9 +265,6 @@ export function SiteWizard({
   const menuDelayRef = useRef<number | null>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
   const resultRef = useRef<WizardResult | null>(null);
-  const refInputRef = useRef<HTMLInputElement>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const tzInputRef = useRef<HTMLInputElement>(null);
 
   resultRef.current = result;
 
@@ -297,7 +290,7 @@ export function SiteWizard({
       brief.city ? `Город: ${brief.city}` : null,
       brief.paletteId ? `Палитра: ${brief.paletteId}` : null,
       brief.tier ? `Уровень: ${brief.tier}` : null,
-      brief.notes ? `Заметки: ${brief.notes}` : null,
+      brief.notes ? `Пожелания: ${brief.notes}` : null,
     ];
     return parts.filter(Boolean).join("\n");
   }, [brief]);
@@ -453,7 +446,7 @@ export function SiteWizard({
         500
       );
     } else if (step === "assets") {
-      pushChoice("assets", "Референс, логотип, ТЗ — по желанию", 500);
+      pushChoice("assets", "Пожелания — по желанию", 500);
     } else if (step === "sections") {
       pushChoice("sections", "Какие блоки нужны на сайте?", 500);
     } else if (step === "tier") {
@@ -743,123 +736,19 @@ export function SiteWizard({
   function confirmAssets() {
     const next = { ...brief, assetsConfirmed: true };
     setBrief(next);
-    const bits = [
-      brief.logoUrl ? "логотип" : null,
-      brief.referenceUrls.length
-        ? `референсы (${brief.referenceUrls.length})`
-        : null,
-      brief.tzFileName ? `ТЗ: ${brief.tzFileName}` : null,
-    ].filter(Boolean);
+    const wishes = brief.notes.trim();
     setBubbles((prev) => [
       ...prev,
       {
         id: uid(),
         kind: "text",
         role: "user",
-        content: bits.length
-          ? `Материалы: ${bits.join(", ")}`
-          : "Без референса и ТЗ — ок",
+        content: wishes
+          ? `Пожелания: ${wishes.slice(0, 200)}${wishes.length > 200 ? "…" : ""}`
+          : "Без доп. пожеланий — ок",
       },
     ]);
     ensureScriptMenus(next);
-  }
-
-  async function uploadWizardFiles(
-    kind: "reference" | "logo" | "tz",
-    files: FileList | null
-  ) {
-    if (!files?.length) return;
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setError("Войдите в аккаунт");
-      return;
-    }
-    setUploadingKind(kind);
-    setError("");
-    try {
-      if (kind === "tz") {
-        const file = files[0];
-        const isText =
-          file.type.startsWith("text/") ||
-          /\.(txt|md|markdown|csv)$/i.test(file.name);
-        if (isText) {
-          const text = await file.text();
-          setBrief((prev) => ({
-            ...prev,
-            tzText: text.slice(0, 8000),
-            tzFileName: file.name,
-          }));
-          return;
-        }
-      }
-
-      const fileArr = Array.from(files);
-      // Сразу base64 — multipart через Caddy/Docker часто приходит пустым
-      const encoded = await Promise.all(
-        fileArr.map(
-          (f) =>
-            new Promise<{
-              name: string;
-              type: string;
-              dataBase64: string;
-            }>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = String(reader.result || "");
-                const dataBase64 = result.includes(",")
-                  ? result.split(",")[1] || ""
-                  : result;
-                if (!dataBase64) {
-                  reject(new Error(`Пустой файл: ${f.name}`));
-                  return;
-                }
-                resolve({
-                  name: (f.name || "file.bin").slice(0, 80),
-                  type: f.type || "application/octet-stream",
-                  dataBase64,
-                });
-              };
-              reader.onerror = () =>
-                reject(new Error("Не удалось прочитать файл"));
-              reader.readAsDataURL(f);
-            })
-        )
-      );
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          kind: kind === "logo" ? "logo" : "files",
-          files: encoded,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки");
-      const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
-      if (!urls.length) throw new Error("Сервер не вернул URL файла");
-      if (kind === "logo") {
-        setBrief((prev) => ({ ...prev, logoUrl: urls[0] ?? null }));
-      } else if (kind === "reference") {
-        setBrief((prev) => ({
-          ...prev,
-          referenceUrls: [...prev.referenceUrls, ...urls].slice(0, 6),
-        }));
-      } else {
-        setBrief((prev) => ({
-          ...prev,
-          tzFileName: files[0]?.name ?? "ТЗ",
-          tzText: prev.tzText || `Файл ТЗ загружен: ${urls[0] ?? ""}`,
-        }));
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка загрузки");
-    } finally {
-      setUploadingKind(null);
-    }
   }
 
   function toggleVoice() {
@@ -1638,144 +1527,29 @@ export function SiteWizard({
                       {b.title}
                     </p>
                     <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
-                      Можно пропустить. Если есть — сайт будет ближе к вашему
-                      стилю.
+                      Можно пропустить. Напиши, что важно: стиль, тон, что
+                      показать или чего избегать.
                     </p>
-                    <div className="space-y-2.5">
-                      <input
-                        ref={refInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => {
-                          void uploadWizardFiles("reference", e.target.files);
-                          e.target.value = "";
-                        }}
-                      />
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept={LOGO_ACCEPT}
-                        className="hidden"
-                        onChange={(e) => {
-                          void uploadWizardFiles("logo", e.target.files);
-                          e.target.value = "";
-                        }}
-                      />
-                      <input
-                        ref={tzInputRef}
-                        type="file"
-                        accept=".txt,.md,.pdf,.doc,.docx,text/plain,application/pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          void uploadWizardFiles("tz", e.target.files);
-                          e.target.value = "";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        disabled={locked || uploadingKind === "reference"}
-                        onClick={() => refInputRef.current?.click()}
-                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
-                      >
-                        <span>Референс (картинки сайта)</span>
-                        <span className="text-zinc-500">
-                          {uploadingKind === "reference"
-                            ? "…"
-                            : brief.referenceUrls.length
-                              ? `${brief.referenceUrls.length} файл.`
-                              : "+"}
-                        </span>
-                      </button>
-                      {brief.referenceUrls.length > 0 ? (
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                          {brief.referenceUrls.map((url) => (
-                            <div
-                              key={url}
-                              className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/40"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={url}
-                                alt="Референс"
-                                className="h-full w-full object-cover"
-                              />
-                              {!locked ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setBrief((prev) => ({
-                                      ...prev,
-                                      referenceUrls: prev.referenceUrls.filter(
-                                        (u) => u !== url
-                                      ),
-                                    }))
-                                  }
-                                  className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 text-[11px] text-zinc-200"
-                                >
-                                  ×
-                                </button>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={locked || uploadingKind === "logo"}
-                        onClick={() => logoInputRef.current?.click()}
-                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
-                      >
-                        <span>Логотип</span>
-                        <span className="text-zinc-500">
-                          {uploadingKind === "logo"
-                            ? "…"
-                            : brief.logoUrl
-                              ? "загружен"
-                              : "+"}
-                        </span>
-                      </button>
-                      {brief.logoUrl ? (
-                        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={brief.logoUrl}
-                            alt="Логотип"
-                            className="h-12 w-12 rounded-lg object-contain bg-white/5"
-                          />
-                          <span className="truncate text-[12px] text-zinc-400">
-                            {brief.logoUrl.split("/").pop()}
-                          </span>
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={locked || uploadingKind === "tz"}
-                        onClick={() => tzInputRef.current?.click()}
-                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-white/25 disabled:opacity-50"
-                      >
-                        <span>Файл ТЗ</span>
-                        <span className="text-zinc-500">
-                          {uploadingKind === "tz"
-                            ? "…"
-                            : brief.tzFileName
-                              ? brief.tzFileName
-                              : "+"}
-                        </span>
-                      </button>
-                    </div>
+                    <textarea
+                      value={brief.notes}
+                      disabled={locked}
+                      onChange={(e) =>
+                        setBrief((prev) => ({
+                          ...prev,
+                          notes: e.target.value.slice(0, 2000),
+                        }))
+                      }
+                      placeholder="Пожелания…"
+                      rows={4}
+                      className="wc-input w-full resize-y py-2.5 text-[14px] disabled:opacity-50"
+                    />
                     {!locked ? (
                       <button
                         type="button"
                         onClick={confirmAssets}
                         className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
                       >
-                        {brief.logoUrl ||
-                        brief.referenceUrls.length ||
-                        brief.tzFileName
-                          ? "Дальше"
-                          : "Пропустить"}
+                        {brief.notes.trim() ? "Дальше" : "Пропустить"}
                       </button>
                     ) : null}
                   </div>
