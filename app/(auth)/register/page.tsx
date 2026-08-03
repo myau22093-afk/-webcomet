@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabaseClient";
+import { FREE_TOKENS } from "@/lib/tokenConfig";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
 const registerSchema = z
@@ -85,7 +86,9 @@ function RegisterContent() {
         return;
       }
 
-      toast.success("Регистрация успешна — 100 токенов на балансе");
+      toast.success(
+        `Регистрация успешна — ${FREE_TOKENS} токенов на балансе`
+      );
       router.push(nextPath);
       router.refresh();
     } catch (error) {

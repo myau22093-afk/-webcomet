@@ -34,7 +34,8 @@ export const TOKEN_PACKAGES = [
 
 export type TokenPackageId = (typeof TOKEN_PACKAGES)[number]["id"];
 
-export const FREE_TOKENS = 100;
+/** Хватает на 1 пробный сайт (Sol = 110) + чуть чата Мастера */
+export const FREE_TOKENS = 120;
 
 export const DEFAULT_TOKEN_COST = 28;
 
