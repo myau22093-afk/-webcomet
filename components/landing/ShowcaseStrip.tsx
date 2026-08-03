@@ -205,7 +205,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
             Выбери стиль — соберём похожий
           </h2>
           <p className="wc-showcase-sub">
-            Живые примеры ниш. «Сделать такой» — Мастер берёт эту тему и тот же
+            Живые примеры ниш. «Сделать такой» — Студия берёт эту тему и тот же
             каркас layout, что на превью.
           </p>
         </div>
@@ -288,7 +288,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                   <p className="wc-showcase-tag">{active.tag}</p>
                   <h3>{active.niche}</h3>
                   <p>
-                    {active.title} · каркас «{active.layoutId}» уйдёт в Мастер
+                    {active.title} · каркас «{active.layoutId}» уйдёт в Студию
                     как есть
                   </p>
                 </div>

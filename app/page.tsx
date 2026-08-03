@@ -29,7 +29,7 @@ export default function HomePage() {
   }, []);
 
   const primaryHref = loggedIn ? "/dashboard" : "/register";
-  const primaryLabel = loggedIn ? "Открыть Мастер" : "Попробовать бесплатно";
+  const primaryLabel = loggedIn ? "Открыть Студию" : "Попробовать бесплатно";
 
   return (
     <div className="wc-landing relative min-h-dvh overflow-x-hidden text-white">

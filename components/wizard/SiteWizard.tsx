@@ -13,6 +13,7 @@ import {
   Mic,
   Plus,
   Rocket,
+  Archive,
   Maximize2,
   Monitor,
   Smartphone,
@@ -256,6 +257,7 @@ export function SiteWizard({
   const [hydrated, setHydrated] = useState(false);
   const [listening, setListening] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [abA, setAbA] = useState("violet");
@@ -994,6 +996,50 @@ export function SiteWizard({
     }
   }
 
+  async function downloadZip() {
+    if (!result || exportingZip) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Войдите в аккаунт");
+      return;
+    }
+    setExportingZip(true);
+    setError("");
+    try {
+      const res = await fetch("/api/export-zip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          html: result.html,
+          css: result.css,
+          js: result.js,
+          title: brief.topic.trim() || brief.companyName.trim() || "Сайт",
+          format: "zip",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error ?? "Не удалось создать ZIP"
+        );
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "webcomet-site.zip";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка ZIP");
+    } finally {
+      setExportingZip(false);
+    }
+  }
+
   async function buildSite() {
     if (!ready || building) return;
     const accessToken = await getAccessToken();
@@ -1252,14 +1298,14 @@ export function SiteWizard({
             </span>
             <div>
               <p className="text-[15px] font-medium tracking-tight text-zinc-100">
-                Мастер сайта
+                Студия
               </p>
               <p className="text-[12px] text-zinc-500">
                 {brief.tier === "premium"
                   ? `Премиум · ${siteCost} ток.`
                   : brief.tier === "simple"
                     ? `Простой · ${siteCost} ток.`
-                    : "Пара вопросов — и сайт готов"}
+                    : "Собери сайт и правь в одном месте"}
               </p>
             </div>
           </div>
@@ -1938,6 +1984,19 @@ export function SiteWizard({
                   </button>
                   <button
                     type="button"
+                    disabled={exportingZip || editing || imagesLoading}
+                    onClick={() => void downloadZip()}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                  >
+                    {exportingZip ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Archive className="h-4 w-4" />
+                    )}
+                    ZIP
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setPublishOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-500/15 px-4 py-2.5 text-[13px] text-violet-100 transition hover:bg-violet-500/25"
                   >
@@ -2089,14 +2148,30 @@ export function SiteWizard({
                 <span className="hidden sm:inline">На весь экран</span>
               </button>
               {result ? (
-                <button
-                  type="button"
-                  onClick={() => setPublishOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 text-[12px] text-violet-100 transition hover:bg-violet-500/25"
-                >
-                  <Rocket className="h-3.5 w-3.5" />
-                  Опубликовать
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={exportingZip}
+                    title="Скачать ZIP"
+                    onClick={() => void downloadZip()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-[12px] text-zinc-300 transition hover:bg-white/5 disabled:opacity-50"
+                  >
+                    {exportingZip ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Archive className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline">ZIP</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 text-[12px] text-violet-100 transition hover:bg-violet-500/25"
+                  >
+                    <Rocket className="h-3.5 w-3.5" />
+                    Опубликовать
+                  </button>
+                </>
               ) : null}
             </div>
           </div>
