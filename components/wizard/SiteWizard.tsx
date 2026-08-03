@@ -255,6 +255,7 @@ export function SiteWizard({
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [listening, setListening] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [abA, setAbA] = useState("violet");
@@ -265,6 +266,7 @@ export function SiteWizard({
   const menuDelayRef = useRef<number | null>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
   const resultRef = useRef<WizardResult | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   resultRef.current = result;
 
@@ -460,7 +462,7 @@ export function SiteWizard({
     } else if (step === "tier") {
       pushChoice("tier", "Какой уровень сайта?", 500);
     } else if (step === "photos") {
-      pushChoice("photos", "Добавить фотографии на сайт?", 500);
+      pushChoice("photos", "Свои фото на сайт?", 500);
     }
   }
 
@@ -901,13 +903,9 @@ export function SiteWizard({
     ensureScriptMenus(next);
   }
 
-  const AUTO_PHOTO_COUNT = 3;
-  const photoTokenHint =
-    AUTO_PHOTO_COUNT * getTokenCost("gemini-3.1-flash-image");
-
-  function pickWantPhotos(want: boolean) {
-    if (typeof brief.wantPhotos === "boolean") return;
-    const next = { ...brief, wantPhotos: want };
+  function confirmPhotos() {
+    if (brief.photosConfirmed) return;
+    const next = { ...brief, photosConfirmed: true };
     setBrief(next);
     setBubbles((prev) => [
       ...prev,
@@ -915,20 +913,85 @@ export function SiteWizard({
         id: uid(),
         kind: "text",
         role: "user",
-        content: want
-          ? `Да, добавить фото (−${photoTokenHint} ток.)`
-          : "Нет, без фото",
+        content: brief.photoUrls.length
+          ? `Свои фото: ${brief.photoUrls.length} шт.`
+          : "Без своих фото — ок",
       },
       {
         id: uid(),
         kind: "text",
         role: "assistant",
-        content: want
-          ? "Ок — после сборки сгенерирую фото в блоки сайта. Жми «Собрать сайт»."
-          : "Без фото. Бриф готов — жми «Собрать сайт», превью справа.",
+        content: brief.photoUrls.length
+          ? "Ок — после сборки вставлю твои фото в блоки. ИИ-картинки можно добавить позже. Жми «Собрать сайт»."
+          : "Без своих фото. После сборки можно сгенерировать картинки кнопкой. Жми «Собрать сайт».",
         animate: true,
       },
     ]);
+  }
+
+  async function uploadOwnPhotos(files: FileList | null) {
+    if (!files?.length || brief.photosConfirmed) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setError("Войдите в аккаунт");
+      return;
+    }
+    setUploadingPhotos(true);
+    setError("");
+    try {
+      const fileArr = Array.from(files).slice(0, 8);
+      const encoded = await Promise.all(
+        fileArr.map(
+          (f) =>
+            new Promise<{
+              name: string;
+              type: string;
+              dataBase64: string;
+            }>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = String(reader.result || "");
+                const dataBase64 = result.includes(",")
+                  ? result.split(",")[1] || ""
+                  : result;
+                if (!dataBase64) {
+                  reject(new Error(`Пустой файл: ${f.name}`));
+                  return;
+                }
+                resolve({
+                  name: (f.name || "photo.jpg").slice(0, 80),
+                  type: f.type || "image/jpeg",
+                  dataBase64,
+                });
+              };
+              reader.onerror = () =>
+                reject(new Error("Не удалось прочитать файл"));
+              reader.readAsDataURL(f);
+            })
+        )
+      );
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ kind: "files", files: encoded }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки");
+      const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
+      if (!urls.length) throw new Error("Сервер не вернул URL файла");
+      setBrief((prev) => ({
+        ...prev,
+        photoUrls: [...prev.photoUrls, ...urls].slice(0, 8),
+      }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка загрузки фото");
+    } finally {
+      setUploadingPhotos(false);
+    }
   }
 
   async function buildSite() {
@@ -979,35 +1042,59 @@ export function SiteWizard({
         js: data.js ?? "",
         id: data.id,
       };
-      setResult(site);
-      setPreviewHtml(
-        buildPreviewHtml({
+
+      let finalSite = site;
+      if (brief.photoUrls.length > 0) {
+        const { html, injected } = injectSiteImagesDetailed(
+          site.html,
+          brief.photoUrls
+        );
+        finalSite = { ...site, html };
+        setResult(finalSite);
+        setPreviewHtml(
+          buildPreviewHtml({
+            html: finalSite.html,
+            css: finalSite.css,
+            js: finalSite.js,
+          })
+        );
+        onSiteReady({
+          id: String(data.id ?? crypto.randomUUID()),
+          prompt: displayTitle,
+          html: finalSite.html,
+          css: finalSite.css,
+          js: finalSite.js,
+          createdAt: data.created_at ?? new Date().toISOString(),
+        });
+        pushAssistant(
+          injected > 0
+            ? `Сайт собран, вставил твои фото (${injected}). Справа превью — правки в чате или кнопка «Добавить фото» для ИИ-картинок.`
+            : "Сайт собран. Свои фото загружены, но слотов мало — добавь ещё через «Добавить фото» или напиши правку.",
+          true
+        );
+      } else {
+        setResult(site);
+        setPreviewHtml(
+          buildPreviewHtml({
+            html: site.html,
+            css: site.css,
+            js: site.js,
+          })
+        );
+        onSiteReady({
+          id: String(data.id ?? crypto.randomUUID()),
+          prompt: displayTitle,
           html: site.html,
           css: site.css,
           js: site.js,
-        })
-      );
-      onSiteReady({
-        id: String(data.id ?? crypto.randomUUID()),
-        prompt: displayTitle,
-        html: site.html,
-        css: site.css,
-        js: site.js,
-        createdAt: data.created_at ?? new Date().toISOString(),
-      });
-      onBalanceRefresh();
-      if (brief.wantPhotos) {
+          createdAt: data.created_at ?? new Date().toISOString(),
+        });
         pushAssistant(
-          "Сайт собран. Сейчас генерирую фотографии для блоков…",
-          true
-        );
-        await addImages(AUTO_PHOTO_COUNT, site);
-      } else {
-        pushAssistant(
-          "Сайт собран. Справа превью — скажи или напиши правку («кнопки зелёные»), добавь картинки или жми «Опубликовать».",
+          "Сайт собран. Справа превью — скажи или напиши правку, добавь фото кнопкой или жми «Опубликовать».",
           true
         );
       }
+      onBalanceRefresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Ошибка генерации";
       setError(msg);
@@ -1707,55 +1794,93 @@ export function SiteWizard({
               }
 
               if (b.step === "photos") {
-                const locked = typeof brief.wantPhotos === "boolean";
+                const locked = brief.photosConfirmed;
                 return (
                   <div
                     key={b.id}
-                    className="max-w-xl animate-[wcFadeIn_0.4s_ease] space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+                    className="wc-expand-in w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-5"
                   >
                     <p className="mb-1 text-[14px] font-medium text-zinc-100">
                       {b.title}
                     </p>
-                    <p className="mb-2 text-[13px] leading-relaxed text-zinc-500">
-                      После сборки сгенерируем ~{AUTO_PHOTO_COUNT} фото в hero и
-                      карточки. Можно пропустить и добавить позже.
+                    <p className="mb-3 text-[13px] leading-relaxed text-zinc-500">
+                      Загрузи реальные фото — врачи, зал, товары, работы. После
+                      сборки вставятся в блоки. ИИ-картинки можно добавить
+                      позже отдельной кнопкой.
                     </p>
-                    <button
-                      type="button"
-                      disabled={locked}
-                      onClick={() => pickWantPhotos(true)}
-                      className="flex w-full items-start gap-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5 text-left transition hover:border-violet-400/50 disabled:opacity-50"
-                    >
-                      <span className="mt-0.5 rounded-xl bg-violet-500/20 p-2.5">
-                        <ImageIcon className="h-4 w-4 text-violet-200" />
-                      </span>
-                      <span>
-                        <span className="block text-[14px] text-violet-50">
-                          Да, с фото · −{photoTokenHint} ток.
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        void uploadOwnPhotos(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                    {!locked ? (
+                      <button
+                        type="button"
+                        disabled={uploadingPhotos}
+                        onClick={() => photoInputRef.current?.click()}
+                        className="flex w-full items-center justify-between rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-left text-[13px] text-zinc-200 transition hover:border-violet-400/40 disabled:opacity-50"
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <ImageIcon className="h-4 w-4 text-violet-200" />
+                          Добавить свои фото
                         </span>
-                        <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
-                          {AUTO_PHOTO_COUNT} картинки под нишу автоматически
+                        <span className="text-zinc-500">
+                          {uploadingPhotos
+                            ? "…"
+                            : brief.photoUrls.length
+                              ? `${brief.photoUrls.length} шт.`
+                              : "+"}
                         </span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={locked}
-                      onClick={() => pickWantPhotos(false)}
-                      className="flex w-full items-start gap-3.5 rounded-2xl border border-white/12 bg-black/25 p-3.5 text-left transition hover:border-white/25 disabled:opacity-50"
-                    >
-                      <span className="mt-0.5 rounded-xl bg-white/10 p-2.5">
-                        <Zap className="h-4 w-4 text-zinc-200" />
-                      </span>
-                      <span>
-                        <span className="block text-[14px] text-zinc-100">
-                          Нет, без фото
-                        </span>
-                        <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
-                          Только вёрстка и тексты — фото можно добавить после
-                        </span>
-                      </span>
-                    </button>
+                      </button>
+                    ) : null}
+                    {brief.photoUrls.length > 0 ? (
+                      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {brief.photoUrls.map((url) => (
+                          <div
+                            key={url}
+                            className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/40"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt="Фото"
+                              className="h-full w-full object-cover"
+                            />
+                            {!locked ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setBrief((prev) => ({
+                                    ...prev,
+                                    photoUrls: prev.photoUrls.filter(
+                                      (u) => u !== url
+                                    ),
+                                  }))
+                                }
+                                className="absolute right-1 top-1 rounded-md bg-black/70 px-1.5 text-[11px] text-zinc-200"
+                              >
+                                ×
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {!locked ? (
+                      <button
+                        type="button"
+                        onClick={confirmPhotos}
+                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
+                      >
+                        {brief.photoUrls.length ? "Дальше" : "Пропустить"}
+                      </button>
+                    ) : null}
                   </div>
                 );
               }

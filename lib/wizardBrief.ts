@@ -68,8 +68,9 @@ export type WizardBrief = {
   sectionsConfirmed: boolean;
   nicheId: string | null;
   tier: WizardTier | null;
-  /** null = ещё не спросили; генерировать фото после сборки */
-  wantPhotos: boolean | null;
+  /** Реальные фото клиента для слотов hero/услуг */
+  photoUrls: string[];
+  photosConfirmed: boolean;
   /** Каркас Simple из витрины / structureTemplates */
   structureLayoutId: string | null;
 };
@@ -106,7 +107,8 @@ export function emptyWizardBrief(): WizardBrief {
     sectionsConfirmed: true,
     nicheId: null,
     tier: null,
-    wantPhotos: null,
+    photoUrls: [],
+    photosConfirmed: false,
     structureLayoutId: null,
   };
 }
@@ -219,7 +221,7 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
     Boolean(brief.tier) &&
-    typeof brief.wantPhotos === "boolean"
+    brief.photosConfirmed
   );
 }
 
@@ -238,7 +240,7 @@ export function nextScriptedStep(
   if (!brief.assetsConfirmed) return "assets";
   if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
   if (!brief.tier) return "tier";
-  if (typeof brief.wantPhotos !== "boolean") return "photos";
+  if (!brief.photosConfirmed) return "photos";
   return "ready";
 }
 
