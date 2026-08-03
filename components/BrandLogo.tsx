@@ -23,7 +23,7 @@ export function BrandLogo({
   const inner = (
     <span
       className={`wc-brand-logo ${sizeClass[size]} ${className}`.trim()}
-      aria-label="WebComet"
+      aria-label="WebComet.ru"
     >
       {markOnly ? (
         <span className="wc-brand-wordmark">
@@ -33,6 +33,7 @@ export function BrandLogo({
         <span className="wc-brand-wordmark">
           <span className="wc-brand-web">Web</span>
           <span className="wc-brand-comet">Comet</span>
+          <span className="wc-brand-tld">.ru</span>
         </span>
       )}
     </span>

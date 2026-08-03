@@ -3,9 +3,9 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WebComet — создай сайт за 5 минут",
+  title: "WebComet.ru — создай сайт за 5 минут",
   description:
-    "AI-платформа для генерации сайтов, изображений и чата. Премиальный дизайн за минуты.",
+    "AI-платформа WebComet.ru для генерации сайтов, изображений и чата. Премиальный дизайн за минуты.",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
   },
