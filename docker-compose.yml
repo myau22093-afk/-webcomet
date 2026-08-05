@@ -13,7 +13,7 @@ services:
       PORT: "8080"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
-      AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-4}
+      AI_MAX_CONCURRENT: ${AI_MAX_CONCURRENT:-16}
       AI_QUEUE_WAIT_MS: ${AI_QUEUE_WAIT_MS:-120000}
     expose:
       - "8080"
@@ -21,8 +21,8 @@ services:
       - webcomet_uploads:/app/public/uploads
       - webcomet_hosted:/app/public/hosted
     restart: unless-stopped
-    mem_limit: 1536m
-    cpus: 1.5
+    mem_limit: 4096m
+    cpus: 4
 
   # HTTPS (Let's Encrypt) при сером облаке Cloudflare (DNS only)
   caddy:

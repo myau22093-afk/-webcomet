@@ -5,7 +5,7 @@
 
 const maxConcurrent = Math.max(
   1,
-  Number.parseInt(process.env.AI_MAX_CONCURRENT || "4", 10) || 4
+  Number.parseInt(process.env.AI_MAX_CONCURRENT || "16", 10) || 16
 );
 const maxWaitMs = Math.max(
   5_000,

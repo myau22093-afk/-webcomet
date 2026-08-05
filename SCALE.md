@@ -3,12 +3,12 @@
 **Concurrent online** = people browsing login/dashboard (CDN + app).  
 **Not** 3k–9k parallel AI site generations — those go through a queue.
 
-## Current VPS (starter)
+## Current VPS
 
-Reg.ru **2 CPU / 2 GB** + single `docker compose` service:
+Single `docker compose` service (host ~**12 vCPU / 11 GB**):
 
-- Online browsing: tens
-- Parallel AI: `AI_MAX_CONCURRENT` (default **4**) per instance
+- Online browsing: thousands (UI/API without heavy AI)
+- Parallel AI: `AI_MAX_CONCURRENT` (default **16**) per instance — only site/chat/image generations queue; everyone else uses the app normally
 
 ## Target architecture
 
@@ -55,7 +55,7 @@ Origin stays on **HTTP :80** (HTTPS via Cloudflare).
 Env (add to `.env`):
 
 ```bash
-AI_MAX_CONCURRENT=6
+AI_MAX_CONCURRENT=16
 AI_QUEUE_WAIT_MS=120000
 NEXT_PUBLIC_APP_URL=https://webcomet.ru
 ```
