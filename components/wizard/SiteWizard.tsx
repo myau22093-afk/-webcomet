@@ -56,6 +56,9 @@ import { PaletteMock } from "@/components/wizard/PaletteMock";
 import { looksLikeSiteEdit } from "@/lib/costOptimization";
 import { readWizardSeed } from "@/lib/landingShowcase";
 
+/** Временный кадр для съёмки ролика — поставь false после видео */
+const VIDEO_PROMO_SHOT = true;
+
 type ChatBubble =
   | {
       id: string;
@@ -1361,6 +1364,9 @@ export function SiteWizard({
             }`}
           >
             {isFreshStart ? (
+              VIDEO_PROMO_SHOT ? (
+                <div className="mb-2 hidden" aria-hidden />
+              ) : (
               <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] px-1 py-2 sm:py-6">
                 <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
                   С чего начать
@@ -1389,6 +1395,7 @@ export function SiteWizard({
                   ))}
                 </div>
               </div>
+              )
             ) : null}
 
             {bubbles.map((b) => {
@@ -2092,49 +2099,67 @@ export function SiteWizard({
               })()}
             </div>
           ) : null}
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void sendChat(input);
-            }}
+          <div
+            className={
+              VIDEO_PROMO_SHOT
+                ? "flex flex-col items-center gap-3 py-2"
+                : undefined
+            }
           >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                result
-                  ? "Правка голосом или текстом: «кнопки зелёные»…"
-                  : brief.topic
-                    ? "Уточнение…"
-                    : "Напиши тему сайта…"
-              }
-              className="wc-input flex-1 py-3 text-[14px]"
-              disabled={chatLoading || editing}
-            />
-            <button
-              type="button"
-              onClick={toggleVoice}
-              title={listening ? "Стоп" : "Голосовой ввод"}
-              aria-pressed={listening}
-              className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 ${
-                listening ? "wc-mic-recording border-violet-400/50 text-violet-100" : ""
-              }`}
+            {VIDEO_PROMO_SHOT ? (
+              <p className="font-display text-center text-[22px] font-semibold tracking-tight text-zinc-50 sm:text-[28px]">
+                собери сайт с ии
+              </p>
+            ) : null}
+            <form
+              className={`flex gap-2 ${VIDEO_PROMO_SHOT ? "w-full max-w-2xl" : "w-full"}`}
+              onSubmit={(e) => {
+                e.preventDefault();
+                void sendChat(input);
+              }}
             >
-              {listening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              type="submit"
-              disabled={chatLoading || editing || !input.trim()}
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 disabled:opacity-40"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  result
+                    ? "Правка голосом или текстом: «кнопки зелёные»…"
+                    : brief.topic
+                      ? "Уточнение…"
+                      : "Напиши тему сайта…"
+                }
+                className="wc-input flex-1 py-3 text-[14px]"
+                disabled={chatLoading || editing}
+              />
+              <button
+                type="button"
+                onClick={toggleVoice}
+                title={listening ? "Стоп" : "Голосовой ввод"}
+                aria-pressed={listening}
+                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 ${
+                  listening ? "wc-mic-recording border-violet-400/50 text-violet-100" : ""
+                }`}
+              >
+                {listening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                type="submit"
+                disabled={chatLoading || editing || !input.trim()}
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 disabled:opacity-40"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+            {VIDEO_PROMO_SHOT ? (
+              <p className="font-display text-center text-[18px] font-medium tracking-wide text-violet-300/90 sm:text-[20px]">
+                webcomet.ru
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
