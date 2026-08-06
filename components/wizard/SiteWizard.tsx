@@ -51,6 +51,7 @@ import {
   injectSiteImagesDetailed,
 } from "@/lib/injectSiteImages";
 import { PublishModal } from "@/components/PublishModal";
+import { BrandLogo } from "@/components/BrandLogo";
 import { CometPlayground } from "@/components/wizard/CometPlayground";
 import { PaletteMock } from "@/components/wizard/PaletteMock";
 import { looksLikeSiteEdit } from "@/lib/costOptimization";
@@ -2155,9 +2156,11 @@ export function SiteWizard({
               </button>
             </form>
             {VIDEO_PROMO_SHOT ? (
-              <p className="font-display text-center text-[18px] font-medium tracking-wide text-violet-300/90 sm:text-[20px]">
-                webcomet.ru
-              </p>
+              <BrandLogo
+                href=""
+                size="lg"
+                className="!text-[36px] sm:!text-[40px]"
+              />
             ) : null}
           </div>
         </div>
