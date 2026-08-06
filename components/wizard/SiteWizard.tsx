@@ -11,6 +11,7 @@ import {
   Zap,
   Wand2,
   Mic,
+  MicOff,
   Plus,
   Rocket,
   Archive,
@@ -267,6 +268,7 @@ export function SiteWizard({
   const previewStageRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
+  const voiceListeningRef = useRef(false);
   const resultRef = useRef<WizardResult | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -766,7 +768,8 @@ export function SiteWizard({
   }
 
   function toggleVoice() {
-    if (listening) {
+    if (listening || voiceListeningRef.current) {
+      voiceListeningRef.current = false;
       try {
         speechRef.current?.stop();
       } catch {
@@ -787,6 +790,7 @@ export function SiteWizard({
           results: ArrayLike<{
             0?: { transcript?: string };
             isFinal: boolean;
+            length: number;
           }>;
         }) => void) | null;
         onerror: ((ev: { error: string }) => void) | null;
@@ -803,6 +807,7 @@ export function SiteWizard({
           results: ArrayLike<{
             0?: { transcript?: string };
             isFinal: boolean;
+            length: number;
           }>;
         }) => void) | null;
         onerror: ((ev: { error: string }) => void) | null;
@@ -814,45 +819,70 @@ export function SiteWizard({
       setError("Голос — только в Chrome или Edge");
       return;
     }
+    try {
+      speechRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
     const recognition = new Ctor();
     recognition.lang = "ru-RU";
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     speechRef.current = recognition;
+    voiceListeningRef.current = true;
     setListening(true);
-    let committed = input;
+    setError(null);
+    const baseBefore = input.trim();
+    let committed = "";
     recognition.onresult = (event) => {
-      let finalText = "";
+      let finals = "";
       let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const chunk = event.results[i][0]?.transcript ?? "";
-        if (event.results[i].isFinal) finalText += chunk;
+        if (event.results[i].isFinal) finals += chunk;
         else interim += chunk;
       }
-      if (finalText) {
-        committed = committed.trim()
-          ? `${committed.trim()} ${finalText.trim()}`
-          : finalText.trim();
-        setInput(committed);
-      } else if (interim) {
-        setInput(committed ? `${committed} ${interim}` : interim);
+      committed = finals.trim();
+      const live = [baseBefore, committed, interim.trim()]
+        .filter(Boolean)
+        .join(" ");
+      setInput(live);
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "aborted" || event.error === "no-speech") {
+        return;
+      }
+      voiceListeningRef.current = false;
+      setListening(false);
+      if (event.error === "not-allowed") {
+        setError(
+          "Нет доступа к микрофону. Разрешите микрофон для webcomet.ru в браузере."
+        );
+      } else {
+        setError("Не удалось распознать речь. Попробуйте ещё раз.");
       }
     };
-    recognition.onerror = () => setListening(false);
     recognition.onend = () => {
-      setListening(false);
-      const finalMsg = committed.trim();
-      if (finalMsg && resultRef.current) {
-        setInput(finalMsg);
-        window.setTimeout(() => {
-          void sendChat(finalMsg);
-        }, 60);
+      const live = [baseBefore, committed].filter(Boolean).join(" ");
+      if (live) setInput(live);
+      // Chrome иногда рвёт сессию на паузе — перезапускаем, пока микрофон включён
+      if (voiceListeningRef.current) {
+        try {
+          recognition.start();
+          return;
+        } catch {
+          /* fall through */
+        }
       }
+      voiceListeningRef.current = false;
+      setListening(false);
     };
     try {
       recognition.start();
     } catch {
+      voiceListeningRef.current = false;
       setListening(false);
+      setError("Не удалось запустить микрофон.");
     }
   }
 
@@ -2085,12 +2115,17 @@ export function SiteWizard({
             <button
               type="button"
               onClick={toggleVoice}
-              title="Голосовой ввод"
+              title={listening ? "Стоп" : "Голосовой ввод"}
+              aria-pressed={listening}
               className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 ${
-                listening ? "wc-mic-recording" : ""
+                listening ? "wc-mic-recording border-violet-400/50 text-violet-100" : ""
               }`}
             >
-              <Mic className="h-4 w-4" />
+              {listening ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
             </button>
             <button
               type="submit"
