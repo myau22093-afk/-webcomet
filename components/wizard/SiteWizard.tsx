@@ -831,7 +831,7 @@ export function SiteWizard({
     speechRef.current = recognition;
     voiceListeningRef.current = true;
     setListening(true);
-    setError(null);
+    setError("");
     const baseBefore = input.trim();
     let committed = "";
     recognition.onresult = (event) => {
