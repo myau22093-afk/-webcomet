@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
-import { getSupabase } from "@/lib/supabaseClient";
-import { FREE_TOKENS } from "@/lib/tokenConfig";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
 const registerSchema = z
@@ -47,10 +45,11 @@ export default function RegisterPage() {
 }
 
 function RegisterContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
   const [loading, setLoading] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -68,34 +67,98 @@ function RegisterContent() {
           secret: data.passphrase,
         }),
       });
-      const payload = await res.json() as { error?: string; ok?: boolean; email?: string };
+      const payload = (await res.json()) as {
+        error?: string;
+        ok?: boolean;
+        email?: string;
+        needsEmailConfirmation?: boolean;
+      };
 
       if (!res.ok) {
         toast.error(payload.error ?? "Ошибка регистрации");
         return;
       }
 
-      const { error } = await getSupabase().auth.signInWithPassword({
-        email: data.email,
-        password: data.passphrase,
-      });
-
-      if (error) {
-        toast.error(getAuthErrorMessage(error, "Аккаунт создан, но вход не удался"));
-        router.push("/login");
+      if (payload.needsEmailConfirmation !== false) {
+        setPendingEmail(payload.email ?? data.email);
+        toast.success("Письмо отправлено — подтвердите email");
         return;
       }
 
-      toast.success(
-        `Регистрация успешна — ${FREE_TOKENS} токенов на балансе`
-      );
-      router.push(nextPath);
-      router.refresh();
+      // На случай если в Supabase отключено Confirm email
+      toast.success("Регистрация успешна");
+      window.location.href = `/login?next=${encodeURIComponent(nextPath)}`;
     } catch (error) {
       toast.error(getAuthErrorMessage(error, "Ошибка регистрации"));
     } finally {
       setLoading(false);
     }
+  }
+
+  async function resendConfirmation() {
+    if (!pendingEmail) return;
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail }),
+      });
+      const payload = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        toast.error(payload.error ?? "Не удалось отправить письмо");
+        return;
+      }
+      toast.success("Письмо отправлено ещё раз");
+    } catch (error) {
+      toast.error(getAuthErrorMessage(error, "Не удалось отправить письмо"));
+    } finally {
+      setResending(false);
+    }
+  }
+
+  if (pendingEmail) {
+    return (
+      <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+        <motion.div
+          initial={{ opacity: 1, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="glass-card w-full max-w-md p-8"
+        >
+          <BrandLogo size="sm" className="mb-6" />
+          <h1 className="font-display text-2xl font-semibold">
+            Подтвердите email
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            Мы отправили ссылку на{" "}
+            <span className="font-medium text-zinc-200">{pendingEmail}</span>.
+            Откройте письмо и нажмите кнопку подтверждения — после этого можно
+            войти.
+          </p>
+          <p className="mt-3 text-sm text-zinc-500">
+            Письма нет? Проверьте «Спам» и «Промоакции».
+          </p>
+          <button
+            type="button"
+            disabled={resending}
+            onClick={() => void resendConfirmation()}
+            className="wc-btn wc-btn-primary mt-8 w-full py-3 text-sm disabled:opacity-50"
+          >
+            {resending ? "Отправляем…" : "Отправить письмо ещё раз"}
+          </button>
+          <p className="mt-6 text-center text-sm text-zinc-500">
+            Уже подтвердили?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-violet-300 hover:text-violet-200"
+            >
+              Войти
+            </Link>
+          </p>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -109,7 +172,7 @@ function RegisterContent() {
         <BrandLogo size="sm" className="mb-6" />
         <h1 className="font-display text-2xl font-semibold">Регистрация</h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Создайте аккаунт с email и паролем
+          Укажите реальный email — на него придёт ссылка подтверждения
         </p>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-4">

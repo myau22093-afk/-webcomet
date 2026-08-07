@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getOrCreateBillingProfile } from "@/lib/billing";
+import { createAdminClient } from "@/lib/supabaseAdmin";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -37,6 +39,20 @@ export async function GET(request: Request) {
     );
   }
 
-  const safeNext = next.startsWith("/") ? next : "/dashboard";
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await getOrCreateBillingProfile(createAdminClient(), {
+        id: user.id,
+        email: user.email,
+      });
+    }
+  } catch (e) {
+    console.error("auth callback profile:", e);
+  }
+
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   return NextResponse.redirect(`${origin}${safeNext}`);
 }

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { authRatelimit, clientIp } from "@/lib/rateLimit";
-import { createAdminClient } from "@/lib/supabaseAdmin";
-import { FREE_TOKENS } from "@/lib/tokenConfig";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -10,6 +9,12 @@ const bodySchema = z.object({
   secret: z.string().min(6).optional(),
   password: z.string().min(6).optional(),
 });
+
+function appOrigin(request: Request): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  return new URL(request.url).origin;
+}
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const email = parsed.data.email;
+    const email = parsed.data.email.trim().toLowerCase();
     const accountSecret = parsed.data.secret || parsed.data.password || "";
     if (accountSecret.length < 6) {
       return NextResponse.json(
@@ -36,17 +41,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const admin = createAdminClient();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+    if (!url || !anon) {
+      return NextResponse.json(
+        { error: "Auth не настроен на сервере" },
+        { status: 500 }
+      );
+    }
 
-    const { data, error } = await admin.auth.admin.createUser({
+    // Anon signUp — Supabase шлёт письмо подтверждения (если включено в Auth → Email)
+    const supabase = createClient(url, anon, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const redirectTo = `${appOrigin(request)}/auth/callback?next=/dashboard`;
+    const { data, error } = await supabase.auth.signUp({
       email,
       password: accountSecret,
-      email_confirm: true,
+      options: {
+        emailRedirectTo: redirectTo,
+      },
     });
 
     if (error) {
       const msg = error.message.toLowerCase();
-      if (msg.includes("already") || msg.includes("registered")) {
+      if (
+        msg.includes("already") ||
+        msg.includes("registered") ||
+        msg.includes("exists")
+      ) {
         return NextResponse.json(
           {
             error:
@@ -58,39 +82,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    if (!data.user) {
+    // Supabase иногда отвечает «успехом» на повторную регистрацию без identities
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       return NextResponse.json(
-        { error: "Не удалось создать аккаунт" },
-        { status: 500 }
+        {
+          error:
+            "Аккаунт с таким email уже есть. Войдите или сбросьте пароль.",
+        },
+        { status: 409 }
       );
     }
 
-    await admin.from("profiles").upsert(
-      {
-        id: data.user.id,
-        email,
-        tier: "starter",
-        token_balance: FREE_TOKENS,
-        total_tokens_used: 0,
-        free_tokens_claimed: true,
-        subscription_status: "trial",
-      },
-      { onConflict: "id" }
-    );
+    const needsEmailConfirmation = !data.session;
 
-    try {
-      await admin.from("transactions").insert({
-        user_id: data.user.id,
-        amount: 0,
-        tokens: FREE_TOKENS,
-        type: "bonus",
-        description: "Бесплатные токены при регистрации",
-      });
-    } catch {
-      /* таблица может ещё не существовать */
-    }
-
-    return NextResponse.json({ ok: true, email });
+    return NextResponse.json({
+      ok: true,
+      email,
+      needsEmailConfirmation,
+    });
   } catch (error) {
     console.error("register API error:", error);
     return NextResponse.json(

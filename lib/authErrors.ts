@@ -9,7 +9,7 @@ export function getAuthErrorMessage(error: unknown, fallback: string): string {
       return "Неверный email или пароль. Если вы регистрировались без пароля — используйте «Забыли пароль?»";
     }
     if (msg.includes("email not confirmed")) {
-      return "Email ещё не подтверждён. Напишите в поддержку или зарегистрируйтесь заново — подтверждение почты для входа больше не требуется.";
+      return "Email ещё не подтверждён. Откройте письмо со ссылкой или нажмите «Отправить ещё раз» на странице регистрации.";
     }
     return error.message;
   }

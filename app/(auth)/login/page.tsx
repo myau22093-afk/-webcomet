@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -20,16 +20,39 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+          <p className="text-zinc-400">Загрузка…</p>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err) toast.error(err);
+  }, [searchParams]);
+
   async function onSubmit(data: LoginForm) {
     setLoading(true);
+    setNeedsConfirm(false);
     try {
       const { error } = await getSupabase().auth.signInWithPassword({
         email: data.email,
@@ -37,6 +60,10 @@ export default function LoginPage() {
       });
 
       if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("email not confirmed")) {
+          setNeedsConfirm(true);
+        }
         toast.error(getAuthErrorMessage(error, "Ошибка входа"));
         return;
       }
@@ -48,6 +75,32 @@ export default function LoginPage() {
       toast.error(getAuthErrorMessage(error, "Ошибка входа"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    const email = form.getValues("email").trim();
+    if (!email) {
+      toast.error("Введите email");
+      return;
+    }
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        toast.error(payload.error ?? "Не удалось отправить письмо");
+        return;
+      }
+      toast.success("Письмо подтверждения отправлено");
+    } catch (error) {
+      toast.error(getAuthErrorMessage(error, "Не удалось отправить письмо"));
+    } finally {
+      setResending(false);
     }
   }
 
@@ -112,6 +165,17 @@ export default function LoginPage() {
             {loading ? "Вход..." : "Войти"}
           </button>
         </form>
+
+        {needsConfirm ? (
+          <button
+            type="button"
+            disabled={resending}
+            onClick={() => void resendConfirmation()}
+            className="mt-3 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-sm text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-50"
+          >
+            {resending ? "Отправляем…" : "Отправить письмо подтверждения ещё раз"}
+          </button>
+        ) : null}
 
         <p className="mt-4 text-center text-sm text-zinc-500">
           <Link
