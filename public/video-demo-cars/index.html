@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Маквин — аренда премиальных автомобилей</title>
+  <meta name="description" content="Маквин — аренда люксовых и спорткаров. Забронируйте автомобиль мечты. Тел: +7 993 738-57-73" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+
+  <header class="header" id="header">
+    <a class="logo" href="#top" aria-label="Маквин — на главную">
+      <span class="logo-mark">M</span>
+      <span class="logo-text">Маквин</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="#fleet">Автопарк</a>
+      <a href="#advantages">Преимущества</a>
+      <a href="#experience">Опыт</a>
+      <a href="#booking">Бронь</a>
+    </nav>
+    <div class="header-actions">
+      <a class="phone-link" href="tel:+79937385773">+7 993 738-57-73</a>
+      <a class="btn btn-accent" href="#booking">Забронировать</a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Меню" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-media">
+        <img
+          src="images/hero.jpg"
+          alt="Премиальный автомобиль Маквин на закате"
+          class="hero-img"
+          id="heroImg"
+        />
+        <div class="hero-veil"></div>
+      </div>
+      <div class="hero-content">
+        <p class="brand-signal reveal">Маквин</p>
+        <h1 class="hero-title reveal">
+          Аренда,<br />которая<br /><span>заводит</span>
+        </h1>
+        <p class="hero-lead reveal">
+          Премиальные авто на сутки и дольше. Без скрытых платежей — только драйв.
+        </p>
+        <div class="hero-cta reveal">
+          <a class="btn btn-accent btn-lg" href="#fleet">Выбрать авто</a>
+          <a class="btn btn-ghost btn-lg" href="tel:+79937385773">Позвонить</a>
+        </div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-slide-hint">
+          <span>01</span><i>/</i><span>04</span>
+        </div>
+        <a class="scroll-hint" href="#stats">
+          <span>Листайте</span>
+          <div class="scroll-line"></div>
+        </a>
+      </div>
+    </section>
+
+    <section class="stats" id="stats">
+      <div class="stats-track">
+        <div class="stat">
+          <strong>50+</strong>
+          <span>моделей в парке</span>
+        </div>
+        <div class="stat">
+          <strong>15 мин</strong>
+          <span>до выдачи авто</span>
+        </div>
+        <div class="stat">
+          <strong>24/7</strong>
+          <span>поддержка на линии</span>
+        </div>
+        <div class="stat">
+          <strong>0 ₽</strong>
+          <span>скрытых комиссий</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="fleet" id="fleet">
+      <div class="fleet-intro">
+        <p class="eyebrow">Автопарк</p>
+        <h2>Выберите<br />свой характер</h2>
+        <p class="section-lead">От делового седана до чистого адреналина — каждый день с Маквин звучит по-своему.</p>
+        <a class="btn btn-dark" href="#booking">Забронировать</a>
+      </div>
+      <div class="fleet-grid">
+        <article class="car-card" data-tilt>
+          <div class="car-media">
+            <img src="images/porsche.jpg" alt="Porsche 911" loading="lazy" />
+          </div>
+          <div class="car-info">
+            <div class="car-top">
+              <h3>Porsche 911</h3>
+              <span class="car-tag">Спорт</span>
+            </div>
+            <p>Икона скорости. Город и трасса — без компромиссов.</p>
+            <div class="car-bottom">
+              <span class="price">от <strong>18 900 ₽</strong> / сутки</span>
+              <a class="text-link" href="#booking">Забронировать →</a>
+            </div>
+          </div>
+        </article>
+        <article class="car-card" data-tilt>
+          <div class="car-media">
+            <img src="images/mercedes.jpg" alt="Mercedes-Benz S-Class" loading="lazy" />
+          </div>
+          <div class="car-info">
+            <div class="car-top">
+              <h3>Mercedes S-Class</h3>
+              <span class="car-tag">Бизнес</span>
+            </div>
+            <p>Тишина, статус и комфорт бизнес-класса.</p>
+            <div class="car-bottom">
+              <span class="price">от <strong>14 500 ₽</strong> / сутки</span>
+              <a class="text-link" href="#booking">Забронировать →</a>
+            </div>
+          </div>
+        </article>
+        <article class="car-card" data-tilt>
+          <div class="car-media">
+            <img src="images/bmw.jpg" alt="BMW M4" loading="lazy" />
+          </div>
+          <div class="car-info">
+            <div class="car-top">
+              <h3>BMW M4 Competition</h3>
+              <span class="car-tag">Драйв</span>
+            </div>
+            <p>Агрессия линий и характер настоящего M.</p>
+            <div class="car-bottom">
+              <span class="price">от <strong>16 200 ₽</strong> / сутки</span>
+              <a class="text-link" href="#booking">Забронировать →</a>
+            </div>
+          </div>
+        </article>
+        <article class="car-card" data-tilt>
+          <div class="car-media">
+            <img src="images/rangerover.jpg" alt="Range Rover" loading="lazy" />
+          </div>
+          <div class="car-info">
+            <div class="car-top">
+              <h3>Range Rover Sport</h3>
+              <span class="car-tag">Премиум</span>
+            </div>
+            <p>Высота посадки и уверенность в любом сценарии.</p>
+            <div class="car-bottom">
+              <span class="price">от <strong>12 900 ₽</strong> / сутки</span>
+              <a class="text-link" href="#booking">Забронировать →</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="advantages" id="advantages">
+      <div class="adv-copy">
+        <p class="eyebrow light">Почему Маквин</p>
+        <h2>Сервис,<br />как у частного клуба</h2>
+        <p class="section-lead light">Мы убрали всё лишнее между вами и ключами. Остались скорость, прозрачность и уважение к вашему времени.</p>
+      </div>
+      <div class="adv-grid">
+        <div class="adv-item">
+          <span class="adv-num">01</span>
+          <h3>Прозрачная цена</h3>
+          <p>Цена на сайте — финальная. Без «сюрпризов» при выдаче.</p>
+        </div>
+        <div class="adv-item">
+          <span class="adv-num">02</span>
+          <h3>Быстрая выдача</h3>
+          <p>Документы онлайн, осмотр за минуты — и вы уже за рулём.</p>
+        </div>
+        <div class="adv-item">
+          <span class="adv-num">03</span>
+          <h3>Чистый парк</h3>
+          <p>Каждый автомобиль проходит детейлинг перед каждой арендой.</p>
+        </div>
+        <div class="adv-item">
+          <span class="adv-num">04</span>
+          <h3>Поддержка 24/7</h3>
+          <p>Один номер на всё: бронь, помощь на дороге, продление.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="experience" id="experience">
+      <div class="exp-visual">
+        <img
+          src="images/interior.jpg"
+          alt="Интерьер премиального автомобиля"
+          loading="lazy"
+        />
+        <div class="exp-overlay"></div>
+      </div>
+      <div class="exp-content">
+        <p class="eyebrow light">Опыт</p>
+        <h2>Не просто аренда.<br />Момент силы.</h2>
+        <p>Свадьба, деловая встреча, выходные за городом или просто «потому что можно» — Маквин делает день заметным.</p>
+        <ul class="exp-list">
+          <li>Доставка авто по городу</li>
+          <li>Детские кресла и доп. опции</li>
+          <li>Гибкий срок: от суток</li>
+        </ul>
+        <a class="btn btn-accent" href="#booking">Оставить заявку</a>
+      </div>
+    </section>
+
+    <section class="process">
+      <div class="process-head">
+        <p class="eyebrow">Как это работает</p>
+        <h2>Три шага до ключей</h2>
+      </div>
+      <div class="process-steps">
+        <div class="step">
+          <span class="step-n">01</span>
+          <h3>Выберите авто</h3>
+          <p>Смотрите парк и отмечайте модель под настроение и задачу.</p>
+        </div>
+        <div class="step">
+          <span class="step-n">02</span>
+          <h3>Оставьте заявку</h3>
+          <p>Напишите даты и контакты — менеджер подтвердит за минуты.</p>
+        </div>
+        <div class="step">
+          <span class="step-n">03</span>
+          <h3>Забирайте и езжайте</h3>
+          <p>Приезжайте в точку выдачи или закажите доставку.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust">
+      <p class="trust-label">Нам доверяют те, кто ценит время</p>
+      <div class="trust-row">
+        <span>FORBES</span>
+        <span>AUTO RU</span>
+        <span>РБК</span>
+        <span>DRIVE2</span>
+        <span>КОММЕРСАНТЪ</span>
+      </div>
+    </section>
+
+    <section class="booking" id="booking">
+      <div class="booking-side">
+        <p class="eyebrow">Бронирование</p>
+        <h2>Заберите<br />день себе</h2>
+        <p class="section-lead">Оставьте заявку — перезвоним и подберём авто под ваш сценарий.</p>
+        <a class="booking-phone" href="tel:+79937385773">
+          <span>Или звоните сразу</span>
+          <strong>+7 993 738-57-73</strong>
+        </a>
+      </div>
+      <form class="booking-form" id="bookingForm">
+        <div class="form-row">
+          <label>
+            <span>Имя</span>
+            <input type="text" name="name" placeholder="Алексей" required autocomplete="given-name" />
+          </label>
+          <label>
+            <span>Телефон</span>
+            <input type="tel" name="phone" placeholder="+7 (___) ___-__-__" required autocomplete="tel" />
+          </label>
+        </div>
+        <label>
+          <span>Автомобиль</span>
+          <select name="car" required>
+            <option value="" disabled selected>Выберите модель</option>
+            <option>Porsche 911</option>
+            <option>Mercedes S-Class</option>
+            <option>BMW M4 Competition</option>
+            <option>Range Rover Sport</option>
+            <option>Помогите выбрать</option>
+          </select>
+        </label>
+        <div class="form-row">
+          <label>
+            <span>Дата начала</span>
+            <input type="date" name="start" required />
+          </label>
+          <label>
+            <span>Дата окончания</span>
+            <input type="date" name="end" required />
+          </label>
+        </div>
+        <label>
+          <span>Комментарий</span>
+          <textarea name="message" rows="3" placeholder="Доставка, аэропорт, особые пожелания…"></textarea>
+        </label>
+        <button type="submit" class="btn btn-accent btn-lg btn-block">Отправить заявку</button>
+        <p class="form-note">Нажимая кнопку, вы соглашаетесь на обратный звонок по указанному номеру.</p>
+        <p class="form-success" id="formSuccess" hidden>Заявка принята. Мы свяжемся с вами в ближайшее время.</p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="logo" href="#top">
+          <span class="logo-mark">M</span>
+          <span class="logo-text">Маквин</span>
+        </a>
+        <p>Аренда премиальных автомобилей. Драйв без лишних слов.</p>
+      </div>
+      <div class="footer-cols">
+        <div>
+          <h4>Парк</h4>
+          <a href="#fleet">Спорт</a>
+          <a href="#fleet">Бизнес</a>
+          <a href="#fleet">SUV</a>
+        </div>
+        <div>
+          <h4>Компания</h4>
+          <a href="#advantages">Преимущества</a>
+          <a href="#experience">Опыт</a>
+          <a href="#booking">Бронь</a>
+        </div>
+        <div>
+          <h4>Контакты</h4>
+          <a href="tel:+79937385773">+7 993 738-57-73</a>
+          <a href="mailto:hello@mcqueen.ru">hello@mcqueen.ru</a>
+          <span>Ежедневно 09:00–23:00</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Маквин. Все права защищены.</span>
+      <div class="socials">
+        <a href="#" aria-label="Telegram">TG</a>
+        <a href="#" aria-label="Instagram">IG</a>
+        <a href="#" aria-label="YouTube">YT</a>
+      </div>
+    </div>
+  </footer>
+
+  <a class="fab-phone" href="tel:+79937385773" aria-label="Позвонить">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6.6 10.8c1.6 3.1 3.5 5 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.6 10.8z" fill="currentColor"/>
+    </svg>
+  </a>
+
+  <script src="script.js"></script>
+</body>
+</html>

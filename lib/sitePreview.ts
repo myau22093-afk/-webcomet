@@ -51,17 +51,17 @@ export function resolvePreviewAssetOrigin(): string {
   return "";
 }
 
-/** /uploads/... → абсолютные URL, чтобы превью в srcdoc их видело */
+/** /uploads/... и /video-demo-cars/... → абсолютные URL, чтобы превью в srcdoc их видело */
 export function absolutizeUploadUrls(content: string, origin: string): string {
   const base = origin.replace(/\/$/, "");
   if (!base) return content;
   return content
     .replace(
-      /\b(src|href)=(["'])(\/uploads\/[^"']+)\2/gi,
+      /\b(src|href)=(["'])(\/(?:uploads|video-demo-cars)\/[^"']+)\2/gi,
       (_m, attr, q, path) => `${attr}=${q}${base}${path}${q}`
     )
     .replace(
-      /url\(\s*(['"]?)(\/uploads\/[^"')\s]+)\1\s*\)/gi,
+      /url\(\s*(['"]?)(\/(?:uploads|video-demo-cars)\/[^"')\s]+)\1\s*\)/gi,
       (_m, q, path) => `url(${q}${base}${path}${q})`
     );
 }
