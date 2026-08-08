@@ -56,8 +56,7 @@ export function AuthHashHandler({
         }
 
         window.history.replaceState({}, "", window.location.pathname);
-        router.replace(redirectTo);
-        router.refresh();
+        window.location.assign(redirectTo);
       } catch {
         if (!cancelled) setBusy(false);
       }

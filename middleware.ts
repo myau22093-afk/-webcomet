@@ -55,7 +55,12 @@ export async function middleware(request: NextRequest) {
 
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise<{ data: { session: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null } }), 8000)
+    ),
+  ]);
 
   const pathname = request.nextUrl.pathname;
   const isProtectedPage =

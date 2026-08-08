@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
 import { AuthHashHandler } from "@/components/AuthHashHandler";
 import { getSupabase } from "@/lib/supabaseClient";
-import { getAuthErrorMessage } from "@/lib/authErrors";
+import { getAuthErrorMessage, withAuthTimeout } from "@/lib/authErrors";
 
 const loginSchema = z.object({
   email: z.string().email("Введите корректный email"),
@@ -35,7 +35,6 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
@@ -55,10 +54,13 @@ function LoginContent() {
     setLoading(true);
     setNeedsConfirm(false);
     try {
-      const { error } = await getSupabase().auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      const { error } = await withAuthTimeout(
+        getSupabase().auth.signInWithPassword({
+          email: data.email.trim(),
+          password: data.password,
+        }),
+        20000
+      );
 
       if (error) {
         const msg = error.message.toLowerCase();
@@ -66,15 +68,16 @@ function LoginContent() {
           setNeedsConfirm(true);
         }
         toast.error(getAuthErrorMessage(error, "Ошибка входа"));
+        setLoading(false);
         return;
       }
 
       toast.success("Вход выполнен");
-      router.push("/dashboard");
-      router.refresh();
+      // Жёсткий переход: иначе в Яндексе cookie/сессия иногда не успевают
+      // и middleware кидает обратно на /login с «красной» ошибкой.
+      window.location.assign("/dashboard");
     } catch (error) {
       toast.error(getAuthErrorMessage(error, "Ошибка входа"));
-    } finally {
       setLoading(false);
     }
   }

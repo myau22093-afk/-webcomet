@@ -1,10 +1,13 @@
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof TypeError && error.message === "Failed to fetch") {
-    return "Не удалось подключиться к Supabase. Проверьте NEXT_PUBLIC_SUPABASE_URL в .env.local — возьмите Project URL из Dashboard → Settings → API (формат: https://abcdefgh.supabase.co). После изменения перезапустите npm run dev.";
+    return "Сеть оборвалась при входе. Обнови страницу и попробуй ещё раз (лучше Chrome, не встроенный браузер мессенджера).";
   }
 
   if (error instanceof Error && error.message) {
     const msg = error.message.toLowerCase();
+    if (msg === "timeout" || msg.includes("timed out") || msg.includes("timeout")) {
+      return "Вход занял слишком много времени. Обнови страницу и войди ещё раз.";
+    }
     if (msg.includes("invalid login credentials")) {
       return "Неверный email или пароль. Если вы регистрировались без пароля — используйте «Забыли пароль?»";
     }
@@ -15,4 +18,21 @@ export function getAuthErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+export async function withAuthTimeout<T>(
+  promise: PromiseLike<T>,
+  ms = 20000
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
