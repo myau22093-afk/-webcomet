@@ -10,6 +10,7 @@ import {
   Crown,
   Zap,
   Wand2,
+  Menu,
   Mic,
   MicOff,
   Plus,
@@ -90,6 +91,7 @@ type Props = {
   useContacts: boolean;
   settingsContacts?: SettingsContacts;
   onBalanceRefresh: () => void;
+  onToggleSidebar?: () => void;
   onSiteReady: (site: {
     id: string;
     prompt: string;
@@ -235,6 +237,7 @@ export function SiteWizard({
   useContacts,
   settingsContacts,
   onBalanceRefresh,
+  onToggleSidebar,
   onSiteReady,
 }: Props) {
   const [brief, setBrief] = useState<WizardBrief>(() => emptyWizardBrief());
@@ -1321,11 +1324,23 @@ export function SiteWizard({
           <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-violet-600/[0.07] blur-3xl" />
         </div>
 
-        <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+        <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5 sm:px-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
-              <Wand2 className="h-5 w-5 text-violet-200" />
-            </span>
+            {onToggleSidebar ? (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                title="Меню"
+                aria-label="Меню"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/20 transition hover:bg-violet-500/25"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
+                <Wand2 className="h-5 w-5 text-violet-200" />
+              </span>
+            )}
             <div>
               <p className="text-[15px] font-medium tracking-tight text-zinc-100">
                 Студия
@@ -1351,8 +1366,8 @@ export function SiteWizard({
         </div>
 
         <div
-          className={`relative z-[1] flex-1 overflow-y-auto px-5 py-5 ${
-            isFreshStart ? "flex flex-col justify-center" : ""
+          className={`relative z-[1] flex-1 overflow-y-auto px-5 py-3 sm:py-4 ${
+            isFreshStart ? "flex flex-col justify-start" : ""
           }`}
         >
           <div
@@ -1361,7 +1376,7 @@ export function SiteWizard({
             }`}
           >
             {isFreshStart ? (
-              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] px-1 py-2 sm:py-6">
+              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] px-1 py-1 sm:py-2">
                 <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
                   С чего начать
                 </p>

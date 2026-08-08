@@ -2091,17 +2091,19 @@ export default function DashboardPage() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center border-b border-white/10 px-4 py-2.5">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="wc-btn wc-btn-ghost gap-2 px-3 py-2 text-xs"
-            aria-label="Меню"
-          >
-            <Menu className="h-4 w-4" />
-            <span className="hidden sm:inline">{sidebarOpen ? "Скрыть" : "Меню"}</span>
-          </button>
-        </header>
+        {workMode !== "wizard" ? (
+          <header className="flex items-center border-b border-white/10 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10"
+              aria-label={sidebarOpen ? "Скрыть меню" : "Открыть меню"}
+              title={sidebarOpen ? "Скрыть меню" : "Меню"}
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          </header>
+        ) : null}
 
         {workMode === "wizard" && (
           <SiteWizard
@@ -2112,6 +2114,7 @@ export default function DashboardPage() {
               email: contactEmail,
               socials: contactSocials,
             }}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
             onBalanceRefresh={() => {
               void (async () => {
                 const t = await getFreshAccessToken();
