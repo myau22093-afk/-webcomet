@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandLogo } from "@/components/BrandLogo";
+import { AuthHashHandler } from "@/components/AuthHashHandler";
 import { getSupabase } from "@/lib/supabaseClient";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
@@ -106,6 +107,7 @@ function LoginContent() {
 
   return (
     <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+      <AuthHashHandler redirectTo="/dashboard" />
       <motion.div
         initial={{ opacity: 1, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

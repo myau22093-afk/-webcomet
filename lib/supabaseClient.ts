@@ -25,7 +25,14 @@ function getSupabaseConfig() {
 
 export function createClient() {
   const { url, key } = getSupabaseConfig();
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    auth: {
+      flowType: "pkce",
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
 }
 
 export function getSupabase() {
