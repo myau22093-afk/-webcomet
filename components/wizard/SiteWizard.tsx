@@ -1366,8 +1366,10 @@ export function SiteWizard({
         </div>
 
         <div
-          className={`relative z-[1] flex-1 overflow-y-auto px-5 py-3 sm:py-4 ${
-            isFreshStart ? "flex flex-col justify-start" : ""
+          className={`relative z-[1] flex-1 overflow-y-auto px-5 ${
+            isFreshStart
+              ? "flex flex-col justify-center py-6 sm:py-8"
+              : "py-3 sm:py-4"
           }`}
         >
           <div
@@ -1376,17 +1378,17 @@ export function SiteWizard({
             }`}
           >
             {isFreshStart ? (
-              <div className="mb-4 w-full animate-[wcFadeIn_0.5s_ease] px-1 py-1 sm:py-2">
-                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+              <div className="mx-auto w-full max-w-xl animate-[wcFadeIn_0.5s_ease] text-center sm:max-w-2xl">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
                   С чего начать
                 </p>
-                <h2 className="mt-4 font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
+                <h2 className="mt-3 font-display text-[1.75rem] leading-tight tracking-tight text-zinc-50 sm:mt-4 sm:text-4xl">
                   Опиши бизнес одной фразой
                 </h2>
-                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-400">
+                <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-zinc-400 sm:mt-4 sm:text-[16px]">
                   Например: магазин мебели, стоматология, кафе.
                 </p>
-                <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="mx-auto mt-7 grid max-w-lg grid-cols-2 gap-2.5 sm:mt-8 sm:max-w-none sm:grid-cols-4 sm:gap-3">
                   {[
                     "магазин мебели",
                     "стоматология",
@@ -1397,7 +1399,7 @@ export function SiteWizard({
                       key={hint}
                       type="button"
                       onClick={() => void sendChat(hint)}
-                      className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3.5 text-[14px] text-zinc-200 transition hover:border-violet-400/35 hover:bg-violet-500/10"
+                      className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-[13px] text-zinc-200 transition hover:border-violet-400/35 hover:bg-violet-500/10 sm:py-3.5 sm:text-[14px]"
                     >
                       {hint}
                     </button>
