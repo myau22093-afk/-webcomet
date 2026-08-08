@@ -344,6 +344,10 @@ export function SiteWizard({
         };
         if (data.brief) {
           const merged = { ...emptyWizardBrief(), ...data.brief };
+          merged.sectionsConfirmed = true;
+          if (!merged.sections?.length) {
+            merged.sections = emptyWizardBrief().sections;
+          }
           if (
             data.brief.assetsConfirmed === undefined &&
             (data.brief.tier || data.brief.detailsConfirmed)
@@ -358,7 +362,13 @@ export function SiteWizard({
           }
           setBrief(merged);
         }
-        if (Array.isArray(data.bubbles)) setBubbles(data.bubbles);
+        if (Array.isArray(data.bubbles)) {
+          setBubbles(
+            data.bubbles.filter(
+              (b) => !(b.kind === "choice" && b.step === "sections")
+            )
+          );
+        }
         if (data.result) setResult(data.result);
         if (data.previewHtml) setPreviewHtml(data.previewHtml);
         if (data.showPreviewPane) setShowPreviewPane(true);
@@ -464,8 +474,6 @@ export function SiteWizard({
       );
     } else if (step === "assets") {
       pushChoice("assets", "Пожелания — по желанию", 500);
-    } else if (step === "sections") {
-      pushChoice("sections", "Какие блоки нужны на сайте?", 500);
     } else if (step === "tier") {
       pushChoice("tier", "Какой уровень сайта?", 500);
     } else if (step === "photos") {

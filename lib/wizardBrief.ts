@@ -104,7 +104,7 @@ export function emptyWizardBrief(): WizardBrief {
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
-    sectionsConfirmed: false,
+    sectionsConfirmed: true,
     nicheId: null,
     tier: null,
     photoUrls: [],
@@ -218,7 +218,6 @@ export function isBriefReady(brief: WizardBrief): boolean {
     brief.companyName.trim().length >= 2 &&
     brief.useSettingsContacts !== null &&
     brief.assetsConfirmed &&
-    brief.sectionsConfirmed &&
     brief.sections.length >= 2 &&
     Boolean(brief.tier) &&
     brief.photosConfirmed
@@ -238,7 +237,6 @@ export function nextScriptedStep(
     return "contacts";
   }
   if (!brief.assetsConfirmed) return "assets";
-  if (!brief.sectionsConfirmed || brief.sections.length < 2) return "sections";
   if (!brief.tier) return "tier";
   if (!brief.photosConfirmed) return "photos";
   return "ready";
