@@ -631,6 +631,17 @@ export function SiteWizard({
       return;
     }
 
+    // Пользователь нажал «Дальше» без названия — ответ в чате = название компании
+    const waitingCompanyName =
+      !result &&
+      brief.topic.trim().length >= 3 &&
+      !brief.detailsConfirmed &&
+      brief.companyName.trim().length < 2;
+    if (waitingCompanyName) {
+      applyCompanyNameFromChat(message);
+      return;
+    }
+
     nextBrief.notes = [nextBrief.notes, message].filter(Boolean).join("\n");
     if (!nextBrief.nicheId) {
       nextBrief.nicheId = detectNicheFromTopic(
@@ -720,7 +731,10 @@ export function SiteWizard({
 
   function confirmDetails() {
     if (brief.companyName.trim().length < 2) {
-      pushAssistant("Укажи название компании или бренда.", true);
+      pushAssistant(
+        "Сначала впиши название компании в поле выше — или напиши его сюда в чат.",
+        true
+      );
       return;
     }
     const seo = joinSeoPhrases(suggestSeoPhrases(brief));
@@ -749,6 +763,28 @@ export function SiteWizard({
           .join(" · "),
       },
     ]);
+    ensureScriptMenus(next);
+  }
+
+  /** Ответ в чате, пока ждём название компании */
+  function applyCompanyNameFromChat(rawName: string) {
+    const name = rawName.trim();
+    if (name.length < 2) {
+      pushAssistant("Название слишком короткое — напиши название компании.", true);
+      return;
+    }
+    const patched = { ...brief, companyName: name };
+    const seo = joinSeoPhrases(suggestSeoPhrases(patched));
+    const next: WizardBrief = {
+      ...patched,
+      seoFocus: seo,
+      detailsConfirmed: true,
+      useSettingsContacts: hasProfileContacts
+        ? brief.useSettingsContacts
+        : false,
+    };
+    setBrief(next);
+    pushAssistant(`Записал: «${name}». Дальше — карточка ниже.`, true);
     ensureScriptMenus(next);
   }
 
@@ -1686,10 +1722,16 @@ export function SiteWizard({
                       <button
                         type="button"
                         onClick={confirmDetails}
-                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35"
+                        disabled={brief.companyName.trim().length < 2}
+                        className="mt-4 rounded-xl bg-violet-500/25 px-4 py-2.5 text-[13px] font-medium text-violet-100 ring-1 ring-violet-400/30 transition hover:bg-violet-500/35 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Дальше
                       </button>
+                    ) : null}
+                    {!locked && brief.companyName.trim().length < 2 ? (
+                      <p className="mt-2 text-[12px] text-zinc-500">
+                        Нужно название компании — без него дальше нельзя.
+                      </p>
                     ) : null}
                   </div>
                 );

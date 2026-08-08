@@ -104,7 +104,7 @@ export function emptyWizardBrief(): WizardBrief {
     paletteId: null,
     colors: [...WIZARD_PALETTES[0].colors],
     sections: defaultSections(),
-    sectionsConfirmed: true,
+    sectionsConfirmed: false,
     nicheId: null,
     tier: null,
     photoUrls: [],
