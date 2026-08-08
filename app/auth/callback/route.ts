@@ -1,13 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { publicAppOrigin } from "@/lib/appOrigin";
 import { getOrCreateBillingProfile } from "@/lib/billing";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
+  const origin = publicAppOrigin(request);
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login`);

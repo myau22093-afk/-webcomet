@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { publicAppOrigin } from "@/lib/appOrigin";
 import { authRatelimit, clientIp } from "@/lib/rateLimit";
 
 const bodySchema = z.object({
   email: z.string().email(),
 });
-
-function appOrigin(request: Request): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  return new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -47,7 +42,7 @@ export async function POST(request: Request) {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${appOrigin(request)}/auth/callback?next=/dashboard`,
+        emailRedirectTo: `${publicAppOrigin(request)}/auth/callback?next=/dashboard`,
       },
     });
 

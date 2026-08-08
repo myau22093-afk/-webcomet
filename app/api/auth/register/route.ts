@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { publicAppOrigin } from "@/lib/appOrigin";
 import { authRatelimit, clientIp } from "@/lib/rateLimit";
 
 const bodySchema = z.object({
@@ -9,12 +10,6 @@ const bodySchema = z.object({
   secret: z.string().min(6).optional(),
   password: z.string().min(6).optional(),
 });
-
-function appOrigin(request: Request): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  return new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -50,12 +45,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Anon signUp — Supabase шлёт письмо подтверждения (если включено в Auth → Email)
     const supabase = createClient(url, anon, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const redirectTo = `${appOrigin(request)}/auth/callback?next=/dashboard`;
+    const redirectTo = `${publicAppOrigin(request)}/auth/callback?next=/dashboard`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password: accountSecret,
@@ -82,8 +76,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // Supabase иногда отвечает «успехом» на повторную регистрацию без identities
-    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    if (
+      data.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0
+    ) {
       return NextResponse.json(
         {
           error:
@@ -93,12 +90,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const needsEmailConfirmation = !data.session;
-
     return NextResponse.json({
       ok: true,
       email,
-      needsEmailConfirmation,
+      needsEmailConfirmation: !data.session,
     });
   } catch (error) {
     console.error("register API error:", error);
