@@ -8,7 +8,7 @@ import path from "path";
 export const VIDEO_DEMO_CARS_ENABLED = true;
 export const VIDEO_DEMO_CARS_DELAY_MS = 60_000;
 
-const TRIGGER = "сделаю премиальный для аренды машин";
+const TRIGGER = "сделай премиальный сайт для аренды машин";
 
 function norm(s: string): string {
   return s
@@ -19,22 +19,14 @@ function norm(s: string): string {
     .trim();
 }
 
-/** Срабатывает на фразу для видео (тема / промпт / пожелания). */
+/** Срабатывает только на точную фразу для видео (тема / промпт / пожелания). */
 export function isVideoDemoCarsRequest(
   prompt: string,
   customRequirements = ""
 ): boolean {
   if (!VIDEO_DEMO_CARS_ENABLED) return false;
   const blob = norm(`${prompt}\n${customRequirements}`);
-  if (blob.includes(TRIGGER)) return true;
-  // чуть мягче, если в теме только «премиальный … аренды машин»
-  return (
-    blob.includes("премиальн") &&
-    (blob.includes("аренды машин") ||
-      blob.includes("аренда машин") ||
-      blob.includes("аренды авто") ||
-      blob.includes("аренда авто"))
-  );
+  return blob.includes(TRIGGER);
 }
 
 export type VideoDemoCarsSite = {
