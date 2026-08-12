@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 export const metadata = {
   title: "Реквизиты — WebComet",
@@ -41,12 +42,12 @@ export default function RequisitesPage() {
             </a>
           </p>
           <p>
-            <span className="text-zinc-500">Поддержка:</span>{" "}
+            <span className="text-zinc-500">Техподдержка:</span>{" "}
             <a
-              href="mailto:support@webcomet.app"
+              href={SUPPORT_MAILTO}
               className="text-violet-300 hover:underline"
             >
-              support@webcomet.app
+              {SUPPORT_EMAIL}
             </a>
           </p>
         </div>

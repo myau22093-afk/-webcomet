@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { GenerationCinema } from "@/components/landing/GenerationCinema";
 import { ShowcaseStrip } from "@/components/landing/ShowcaseStrip";
 import { getSupabase } from "@/lib/supabaseClient";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -153,7 +154,13 @@ export default function HomePage() {
           <div>
             <BrandLogo size="sm" />
             <p className="mt-2 text-sm text-zinc-500">
-              support@webcomet.app · AI-платформа генерации
+              Техподдержка:{" "}
+              <a
+                href={SUPPORT_MAILTO}
+                className="text-zinc-400 hover:text-white"
+              >
+                {SUPPORT_EMAIL}
+              </a>
             </p>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
@@ -163,6 +170,9 @@ export default function HomePage() {
             <Link href="/requisites" className="hover:text-white">
               Реквизиты
             </Link>
+            <a href={SUPPORT_MAILTO} className="hover:text-white">
+              Поддержка
+            </a>
             {loggedIn ? (
               <Link href="/dashboard" className="hover:text-white">
                 Дашборд
