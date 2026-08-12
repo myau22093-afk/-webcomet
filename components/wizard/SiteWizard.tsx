@@ -91,6 +91,8 @@ type Props = {
   getAccessToken: () => Promise<string | null>;
   useContacts: boolean;
   settingsContacts?: SettingsContacts;
+  /** Текущий баланс токенов — чтобы не стартовать картинки в минус */
+  tokenBalance?: number;
   onBalanceRefresh: () => void;
   onToggleSidebar?: () => void;
   onSiteReady: (site: {
@@ -239,6 +241,7 @@ export function SiteWizard({
   getAccessToken,
   useContacts,
   settingsContacts,
+  tokenBalance = 0,
   onBalanceRefresh,
   onToggleSidebar,
   onSiteReady,
@@ -1243,6 +1246,8 @@ export function SiteWizard({
   ): Promise<string | null> {
     let lastError = "Модель картинок недоступна";
     for (const modelId of WIZARD_IMAGE_MODEL_IDS) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 90_000);
       try {
         const res = await fetch("/api/generate-image", {
           method: "POST",
@@ -1251,16 +1256,35 @@ export function SiteWizard({
             Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({ prompt, modelId }),
+          signal: controller.signal,
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 402) {
+          throw new Error(
+            (data as { error?: string }).error ??
+              "Недостаточно токенов. Пополните баланс."
+          );
+        }
         if (!res.ok) {
-          lastError = data.error ?? lastError;
+          lastError =
+            (data as { error?: string }).error ?? lastError;
           continue;
         }
-        const url = data.url ?? data.imageUrl;
-        if (url) return url as string;
+        const url =
+          (data as { url?: string; imageUrl?: string }).url ??
+          (data as { imageUrl?: string }).imageUrl;
+        if (url) return url;
       } catch (e) {
+        if (e instanceof Error && e.message.includes("Недостаточно токенов")) {
+          throw e;
+        }
+        if (e instanceof DOMException && e.name === "AbortError") {
+          lastError = "Картинка слишком долго генерируется. Попробуйте ещё раз.";
+          continue;
+        }
         lastError = e instanceof Error ? e.message : lastError;
+      } finally {
+        window.clearTimeout(timer);
       }
     }
     throw new Error(lastError);
@@ -1269,12 +1293,20 @@ export function SiteWizard({
   async function addImages(count: number, base?: WizardResult) {
     const site = base ?? result;
     if (!site || imagesLoading) return;
+    const n = Math.min(8, Math.max(1, count));
+    const totalCost = imageCost * n;
+    if (tokenBalance < totalCost) {
+      const msg = `Не хватает токенов: нужно ${totalCost}, на балансе ${Math.floor(tokenBalance)}. Пополните баланс или выберите меньше фото.`;
+      setError(msg);
+      pushAssistant(msg, true);
+      setImagePickerOpen(false);
+      return;
+    }
     const accessToken = await getAccessToken();
     if (!accessToken) {
       setError("Войдите в аккаунт");
       return;
     }
-    const n = Math.min(8, Math.max(1, count));
     setImagePickerOpen(false);
     setImagesLoading(true);
     setError("");
@@ -1287,6 +1319,7 @@ export function SiteWizard({
       for (const prompt of prompts) {
         const url = await generateOneImage(accessToken, prompt);
         if (url) urls.push(url);
+        onBalanceRefresh();
       }
       if (!urls.length) {
         pushAssistant(
@@ -1338,6 +1371,7 @@ export function SiteWizard({
       const msg = e instanceof Error ? e.message : "Ошибка картинок";
       setError(msg);
       pushAssistant(`Картинки: ${msg}`, true);
+      onBalanceRefresh();
     } finally {
       setImagesLoading(false);
     }
@@ -1345,8 +1379,19 @@ export function SiteWizard({
 
   function openImagePicker() {
     if (!result || imagesLoading || editing) return;
+    onBalanceRefresh();
     const info = countImageSlots(result.html);
-    setImagePickCount(Math.min(info.slots, 4));
+    const maxAffordable = Math.max(
+      0,
+      Math.min(info.slots, Math.floor(tokenBalance / Math.max(1, imageCost)))
+    );
+    if (maxAffordable < 1) {
+      const msg = `Не хватает токенов на картинки (нужно от ${imageCost}, на балансе ${Math.floor(tokenBalance)}). Пополните баланс.`;
+      setError(msg);
+      pushAssistant(msg, true);
+      return;
+    }
+    setImagePickCount(Math.min(info.slots, maxAffordable, 4) || 1);
     setImagePickerOpen(true);
   }
 
@@ -2083,11 +2128,16 @@ export function SiteWizard({
                     className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
                   >
                     {imagesLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Картинки…
+                      </>
                     ) : (
-                      <ImageIcon className="h-4 w-4" />
+                      <>
+                        <ImageIcon className="h-4 w-4" />
+                        Картинки
+                      </>
                     )}
-                    Картинки
                   </button>
                   <button
                     type="button"
@@ -2119,7 +2169,15 @@ export function SiteWizard({
               {(() => {
                 const info = countImageSlots(result.html);
                 const max = info.slots;
+                const maxAffordable = Math.max(
+                  0,
+                  Math.min(
+                    max,
+                    Math.floor(tokenBalance / Math.max(1, imageCost))
+                  )
+                );
                 const cost = imageCost * imagePickCount;
+                const canAfford = tokenBalance >= cost && imagePickCount >= 1;
                 return (
                   <>
                     <p className="text-[13px] text-zinc-300">
@@ -2131,26 +2189,48 @@ export function SiteWizard({
                         : ""}
                       . Сколько сгенерировать?
                     </p>
+                    <p className="mt-1 text-[12px] text-zinc-500">
+                      Баланс: {Math.floor(tokenBalance)} ток. · 1 фото ={" "}
+                      {imageCost} ток.
+                      {maxAffordable < max
+                        ? ` · хватит максимум на ${maxAffordable}`
+                        : ""}
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setImagePickCount(n)}
-                          className={`min-w-9 rounded-lg px-2.5 py-1.5 text-[13px] ${
-                            imagePickCount === n
-                              ? "bg-violet-500/30 text-violet-100 ring-1 ring-violet-400/40"
-                              : "bg-black/30 text-zinc-400 hover:bg-white/5"
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+                        const afford = n <= maxAffordable;
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            disabled={!afford}
+                            onClick={() => setImagePickCount(n)}
+                            title={
+                              afford
+                                ? `${n} × ${imageCost} = ${n * imageCost} ток.`
+                                : `Нужно ${n * imageCost} ток., на балансе ${Math.floor(tokenBalance)}`
+                            }
+                            className={`min-w-9 rounded-lg px-2.5 py-1.5 text-[13px] disabled:cursor-not-allowed disabled:opacity-35 ${
+                              imagePickCount === n
+                                ? "bg-violet-500/30 text-violet-100 ring-1 ring-violet-400/40"
+                                : "bg-black/30 text-zinc-400 hover:bg-white/5"
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        );
+                      })}
                     </div>
+                    {!canAfford ? (
+                      <p className="mt-2 text-[12px] text-rose-300">
+                        Не хватает токенов на {imagePickCount} фото (нужно{" "}
+                        {cost}). Выберите меньше или пополните баланс.
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        disabled={imagesLoading}
+                        disabled={imagesLoading || !canAfford}
                         onClick={() => void addImages(imagePickCount)}
                         className="wc-btn wc-btn-primary px-3 py-2 text-[13px] disabled:opacity-50"
                       >
@@ -2319,6 +2399,8 @@ export function SiteWizard({
                 <iframe
                   title="wizard-preview"
                   srcDoc={previewHtml}
+                  sandbox="allow-scripts allow-forms allow-modals"
+                  referrerPolicy="no-referrer"
                   className="h-full min-h-[420px] w-full border-0 bg-white"
                 />
               </div>

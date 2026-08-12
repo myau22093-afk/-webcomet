@@ -2113,6 +2113,7 @@ export default function DashboardPage() {
           <SiteWizard
             getAccessToken={getFreshAccessToken}
             useContacts={useContactsOnGenerate && showContacts}
+            tokenBalance={status.tokenBalance}
             settingsContacts={{
               phone: contactPhone,
               email: contactEmail,

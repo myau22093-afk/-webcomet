@@ -2,11 +2,13 @@ export function sanitizeSiteHtml(html: string): string {
   return html
     .replace(/\shref\s*=\s*(["'])https?:\/\/[^"']*\1/gi, ' href="#"')
     .replace(/\shref\s*=\s*(["'])\/\/[^"']*\1/gi, ' href="#"')
-    // относительные ссылки иначе уводят iframe на localhost:3000 (наш дашборд)
+    // относительные ссылки иначе уводят iframe на webcomet.ru / dashboard
     .replace(/\shref\s*=\s*(["'])\/(?!uploads\/)[^"']*\1/gi, ' href="#"')
     .replace(/\shref\s*=\s*(["'])\.\.?\/[^"']*\1/gi, ' href="#"')
     .replace(/\saction\s*=\s*(["'])[^"']*\1/gi, ' action="#"')
     .replace(/\starget\s*=\s*(["'])_blank\1/gi, "")
+    .replace(/\starget\s*=\s*(["'])_top\1/gi, "")
+    .replace(/\starget\s*=\s*(["'])_parent\1/gi, "")
     .replace(/\srel\s*=\s*(["'])[^"']*\1/gi, "");
 }
 
@@ -66,6 +68,65 @@ export function absolutizeUploadUrls(content: string, origin: string): string {
     );
 }
 
+/** Блокирует уход из превью на webcomet.ru / другие страницы */
+const PREVIEW_NAV_LOCK = `
+(function () {
+  function isSafeHref(href) {
+    if (href == null || href === '' || href === '#') return true;
+    if (href.charAt(0) === '#') return true;
+    if (/^javascript:/i.test(href)) return false;
+    return false;
+  }
+  document.addEventListener('click', function (event) {
+    var el = event.target && event.target.closest ? event.target.closest('a,[href]') : null;
+    if (!el) return;
+    var href = el.getAttribute('href');
+    if (isSafeHref(href)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+  }, true);
+  document.addEventListener('submit', function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+  try {
+    document.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest('button,[role="button"]') : null;
+      if (!btn) return;
+      // не даём кнопкам уводить через form action / default
+      var form = btn.closest && btn.closest('form');
+      if (form && btn.getAttribute('type') !== 'button') {
+        event.preventDefault();
+      }
+    }, true);
+  } catch (_) {}
+  try {
+    var noop = function () {};
+    if (window.top && window.top !== window) {
+      try {
+        Object.defineProperty(window, 'top', { get: function () { return window; } });
+      } catch (_) {}
+      try {
+        Object.defineProperty(window, 'parent', { get: function () { return window; } });
+      } catch (_) {}
+    }
+    var freezeLoc = function () {
+      try {
+        var loc = window.location;
+        var block = function (url) {
+          if (!url || String(url).charAt(0) === '#') return;
+          return;
+        };
+        loc.assign = function (url) { block(url); };
+        loc.replace = function (url) { block(url); };
+      } catch (_) {}
+    };
+    freezeLoc();
+  } catch (_) {}
+})();
+`;
+
 export function buildPreviewHtml(parts: {
   html: string;
   css?: string;
@@ -83,14 +144,14 @@ export function buildPreviewHtml(parts: {
     origin
   );
   const js = wrapPreviewJs(parts.js ?? "");
-  const baseHref = origin ? `${origin}/` : "about:srcdoc";
+  // НЕ ставим <base href="https://webcomet.ru/"> — из‑за него клики уводили превью на лендинг WebComet
 
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <base href="${baseHref}" target="_self" />
+  <base target="_self" />
   <style>
     html, body {
       margin: 0;
@@ -106,25 +167,7 @@ export function buildPreviewHtml(parts: {
 </head>
 <body>
 ${safeHtml || "<p style=\"padding:24px;font-family:system-ui\">Сайт не сгенерировался</p>"}
-<script>
-  document.addEventListener('click', function (event) {
-    var link = event.target && event.target.closest ? event.target.closest('a') : null;
-    if (!link) return;
-    var href = link.getAttribute('href');
-    if (href == null || href === '') {
-      event.preventDefault();
-      return;
-    }
-    // Только якоря внутри превью
-    if (href.charAt(0) === '#') return;
-    event.preventDefault();
-    event.stopPropagation();
-  }, true);
-  document.addEventListener('submit', function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }, true);
-</script>
+<script>${PREVIEW_NAV_LOCK}</script>
 ${js ? `<script>${js}</script>` : ""}
 </body>
 </html>`;
