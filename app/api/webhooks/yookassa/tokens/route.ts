@@ -5,11 +5,15 @@ import { getPublishPackage } from "@/lib/publishConfig";
 import { clientIp, webhookRatelimit } from "@/lib/rateLimit";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { getTokenPackage } from "@/lib/tokenConfig";
-import { verifyToken, verifyWebhookSecret } from "@/lib/webhookAuth";
+import {
+  fetchYooKassaPayment,
+  isYooKassaIp,
+} from "@/lib/yookassa";
 
 export const runtime = "nodejs";
 
 type YooWebhook = {
+  type?: string;
   event?: string;
   object?: {
     id?: string;
@@ -26,6 +30,11 @@ type YooWebhook = {
   };
 };
 
+/** ЮKassa при сохранении URL шлёт GET — нужен 200. */
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(request: Request) {
   try {
     const ip = clientIp(request);
@@ -35,46 +44,55 @@ export async function POST(request: Request) {
     }
 
     const rawBody = await request.text();
-    const verified = verifyWebhookSecret(request, rawBody);
-    if (!verified.ok) return verified.error;
-
-    const authorization = request.headers.get("authorization");
-    const bearer = authorization?.replace(/^Bearer\s+/i, "") ?? "";
-    const webhookSecret =
-      process.env.YOOKASSA_WEBHOOK_SECRET?.trim() ||
-      process.env.YOOKASSA_SECRET_KEY?.trim() ||
-      "";
-    if (
-      webhookSecret &&
-      process.env.YOOKASSA_STUB !== "1" &&
-      bearer &&
-      !verifyToken(bearer, webhookSecret)
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let body: YooWebhook = {};
+    try {
+      body = JSON.parse(rawBody || "{}") as YooWebhook;
+    } catch {
+      body = {};
     }
 
-    const body = JSON.parse(rawBody || "{}") as YooWebhook;
     const payment = body.object;
     const paymentId = payment?.id ?? "";
-    const status = payment?.status ?? "";
     const event = body.event ?? "";
 
-    console.log(
-      `[yookassa] webhook event=${event} payment=${paymentId} status=${status} product=${payment?.metadata?.product ?? "tokens"}`
-    );
-
+    // Пинг при настройке webhook или пустое тело — отвечаем 200
     if (!paymentId) {
-      return NextResponse.json({ ok: true, skipped: "no payment id" });
+      return NextResponse.json({ ok: true });
     }
+
+    // В проде принимаем только с IP ЮKassa (или localhost для отладки)
+    const fromYoo =
+      isYooKassaIp(ip) ||
+      ip === "127.0.0.1" ||
+      ip === "::1" ||
+      ip.startsWith("172.18.") ||
+      ip.startsWith("172.17.");
+
+    if (!fromYoo && process.env.YOOKASSA_STUB !== "1") {
+      console.warn(`[yookassa] webhook rejected ip=${ip} payment=${paymentId}`);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const verified = await fetchYooKassaPayment(paymentId);
+    const status = verified?.status ?? payment?.status ?? "";
+
+    console.log(
+      `[yookassa] webhook event=${event} payment=${paymentId} status=${status} product=${payment?.metadata?.product ?? verified?.metadata?.product ?? "tokens"} ip=${ip}`
+    );
 
     if (status !== "succeeded" && event !== "payment.succeeded") {
       return NextResponse.json({ ok: true, skipped: "not succeeded" });
     }
 
-    const meta = payment?.metadata ?? {};
+    const meta = {
+      ...(payment?.metadata ?? {}),
+      ...(verified?.metadata ?? {}),
+    };
     const userId = meta.user_id ?? "";
     const packageId = meta.package_id ?? "";
-    const amount = Number(payment?.amount?.value ?? 0);
+    const amount = Number(
+      verified?.amount?.value ?? payment?.amount?.value ?? 0
+    );
     const admin = createAdminClient();
 
     if (meta.product === "publish") {
