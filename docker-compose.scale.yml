@@ -11,17 +11,20 @@
 
 services:
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile.scale:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - webcomet1
       - webcomet2
       - webcomet3
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: 256m
 
   webcomet1: &webcomet
     build:
@@ -54,3 +57,5 @@ services:
 
 volumes:
   webcomet_uploads:
+  caddy_data:
+  caddy_config:
