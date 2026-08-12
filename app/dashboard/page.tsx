@@ -24,6 +24,7 @@ import {
   ImageIcon,
   Loader2,
   LogOut,
+  Mail,
   Menu,
   MessageSquare,
   Mic,
@@ -50,6 +51,7 @@ import {
   IconWizard,
 } from "@/components/icons/WcIcons";
 import { getSupabase } from "@/lib/supabaseClient";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 import {
   buildPreviewHtml,
   type GenerationItem,
@@ -2082,10 +2084,20 @@ export default function DashboardPage() {
                 Пополнить →
               </button>
             </div>
+            <a
+              href={SUPPORT_MAILTO}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Техподдержка
+            </a>
+            <p className="mt-1.5 truncate text-center text-[10px] text-zinc-600">
+              {SUPPORT_EMAIL}
+            </p>
             <button
               type="button"
               onClick={handleLogout}
-              className="wc-btn wc-btn-ghost mt-3 w-full py-2 text-xs"
+              className="wc-btn wc-btn-ghost mt-2 w-full py-2 text-xs"
             >
               <LogOut className="h-3.5 w-3.5" />
               Выйти
