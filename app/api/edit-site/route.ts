@@ -20,7 +20,7 @@ import { getTokenCost } from "@/lib/tokenConfig";
 import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 600;
 
 const EDIT_SYSTEM = `Ты веб-разработчик. Пользователь даёт текущий код сайта и правки.
 ОБЯЗАТЕЛЬНО внеси запрошенные изменения в код. Не возвращай код без изменений.

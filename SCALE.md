@@ -8,7 +8,7 @@
 Single `docker compose` service (host ~**12 vCPU / 11 GB**):
 
 - Online browsing: thousands (UI/API without heavy AI)
-- Parallel AI: `AI_MAX_CONCURRENT` (default **16**) per instance — only site/chat/image generations queue; everyone else uses the app normally
+- Parallel AI: `AI_MAX_CONCURRENT` (default **16**) per instance — rest wait in queue (`AI_QUEUE_WAIT_MS=0` = infinite wait)
 
 ## Target architecture
 
@@ -27,7 +27,7 @@ Users → Cloudflare CDN (/_next/static cached)
 |------|---------------|----------|---------------------|-------|
 | 3k online | 2–3 | 4 GB | 6–8 | + Cloudflare cache |
 | 9k online | 4–6 | 4 GB | 6–8 | or 2× stronger hosts |
-| AI peak | — | — | sum of slots ≈ 20–50 | rest wait / 503 after timeout |
+| AI peak | — | — | sum of slots ≈ 20–50 | rest wait in queue (no drop if AI_QUEUE_WAIT_MS=0) |
 
 ## How to run scaled stack on one stronger host
 
@@ -56,7 +56,7 @@ Env (add to `.env`):
 
 ```bash
 AI_MAX_CONCURRENT=16
-AI_QUEUE_WAIT_MS=120000
+AI_QUEUE_WAIT_MS=0
 NEXT_PUBLIC_APP_URL=https://webcomet.ru
 ```
 

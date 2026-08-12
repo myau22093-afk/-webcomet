@@ -45,15 +45,9 @@ import { stripLikelyOcrScraps } from "@/lib/ocrSanitize";
 import { requireAuth } from "@/lib/requireUser";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
-import {
-  VIDEO_DEMO_CARS_DELAY_MS,
-  isVideoDemoCarsRequest,
-  loadVideoDemoCarsSite,
-  sleep,
-} from "@/lib/videoDemoCars";
 
 export const runtime = "nodejs";
-export const maxDuration = 180;
+export const maxDuration = 600;
 
 const SYSTEM_PROMPT = `Ты — ведущий веб-дизайнер с 20-летним опытом. Твоя задача — создавать уникальные, дорогие, адаптивные лендинги, которые выглядят как работы топовых мировых студий.
 
@@ -560,53 +554,6 @@ export async function POST(request: Request) {
       typeof body.useContacts === "boolean"
         ? body.useContacts
         : profileContacts.show_contacts;
-
-    // ВРЕМЕННО: ролик — готовый сайт «аренда машин» с паузой ~1 мин
-    if (
-      !isEdit &&
-      isVideoDemoCarsRequest(effectivePrompt, customRequirements)
-    ) {
-      console.log(
-        `[video-demo-cars] hit user=${auth.user.id} delayMs=${VIDEO_DEMO_CARS_DELAY_MS}`
-      );
-      await sleep(VIDEO_DEMO_CARS_DELAY_MS);
-      const demo = loadVideoDemoCarsSite();
-      const saved = await saveSite({
-        userId: auth.user.id,
-        prompt: prompt || effectivePrompt || "Премиальная аренда машин",
-        html: demo.html,
-        css: demo.css,
-        js: demo.js,
-        version: 1,
-        rootPrompt: effectivePrompt || prompt,
-      });
-      await logApiUsage({
-        userId: auth.user.id,
-        route: "/api/generate-site",
-        modelId: "video-demo-cars",
-        modelLabel: "video-demo",
-        tokenCost: 0,
-        costUsd: 0,
-        cached: true,
-        kind: "demo",
-        reason: "temporary video demo cars",
-      });
-      const status = buildStatusPayload(profile);
-      return NextResponse.json({
-        html: demo.html,
-        css: demo.css,
-        js: demo.js,
-        id: saved?.id ?? null,
-        created_at: saved?.created_at ?? new Date().toISOString(),
-        cached: true,
-        modelId: "video-demo-cars",
-        modelLabel: "demo",
-        token_cost: 0,
-        token_balance: profile.token_balance ?? status.token_balance,
-        total_tokens_used: profile.total_tokens_used ?? 0,
-        remaining: status.token_balance,
-      });
-    }
 
     let designDataUrl: string | null = null;
 

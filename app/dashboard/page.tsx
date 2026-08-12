@@ -54,6 +54,7 @@ import {
   buildPreviewHtml,
   type GenerationItem,
 } from "@/lib/sitePreview";
+import { fetchWithAiQueue } from "@/lib/fetchWithAiQueue";
 import { hasSavedContacts, parseSocials } from "@/lib/contacts";
 import { SITE_STYLES, type SiteStyleId } from "@/lib/siteStyles";
 import {
@@ -1142,40 +1143,43 @@ export default function DashboardPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/generate-site", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          prompt:
-            prompt.trim() ||
-            (expressMode
-              ? "Придумай и создай законченный современный лендинг"
-              : "Сверстай сайт по скриншоту"),
-          customRequirements: customRequirements.trim(),
-          images,
-          hasImages: images.length > 0,
-          qualityMode: expressMode ? "quality" : qualityMode,
-          modelId: expressMode ? DEFAULT_SITE_MODEL_ID : siteModelId,
-          style: siteStyle,
-          designImage: designImage || undefined,
-          isEdit: isEditMode,
-          brandLogo: brandLogo || undefined,
-          brandColors: normalizeBrandColors(brandColors),
-          sections: selectedSections,
-          expressMode: expressMode && !isEditMode,
-          useContacts: useContactsOnGenerate && showContacts,
-          ...(isEditMode && activeItem
-            ? {
-                existingHtml: activeItem.html,
-                existingCss: activeItem.css,
-                existingJs: activeItem.js,
-              }
-            : {}),
-        }),
-      });
+      const response = await fetchWithAiQueue(
+        "/api/generate-site",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            prompt:
+              prompt.trim() ||
+              (expressMode
+                ? "Придумай и создай законченный современный лендинг"
+                : "Сверстай сайт по скриншоту"),
+            customRequirements: customRequirements.trim(),
+            images,
+            hasImages: images.length > 0,
+            qualityMode: expressMode ? "quality" : qualityMode,
+            modelId: expressMode ? DEFAULT_SITE_MODEL_ID : siteModelId,
+            style: siteStyle,
+            designImage: designImage || undefined,
+            isEdit: isEditMode,
+            brandLogo: brandLogo || undefined,
+            brandColors: normalizeBrandColors(brandColors),
+            sections: selectedSections,
+            expressMode: expressMode && !isEditMode,
+            useContacts: useContactsOnGenerate && showContacts,
+            ...(isEditMode && activeItem
+              ? {
+                  existingHtml: activeItem.html,
+                  existingCss: activeItem.css,
+                  existingJs: activeItem.js,
+                }
+              : {}),
+          }),
+        }
+      );
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 401) {

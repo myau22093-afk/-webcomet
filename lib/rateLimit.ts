@@ -47,7 +47,7 @@ export class Ratelimit {
 }
 
 export const authRatelimit = new Ratelimit({
-  limiter: Ratelimit.slidingWindow(8, "60 s"),
+  limiter: Ratelimit.slidingWindow(20, "60 s"),
 });
 
 export const purchaseRatelimit = new Ratelimit({

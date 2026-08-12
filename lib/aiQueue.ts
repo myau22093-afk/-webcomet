@@ -7,16 +7,26 @@ const maxConcurrent = Math.max(
   1,
   Number.parseInt(process.env.AI_MAX_CONCURRENT || "16", 10) || 16
 );
-const maxWaitMs = Math.max(
-  5_000,
-  Number.parseInt(process.env.AI_QUEUE_WAIT_MS || "120000", 10) || 120_000
-);
+
+/** 0 или infinity = ждать слот без таймаута (бесконечная очередь). */
+function parseMaxWaitMs(): number {
+  const raw = process.env.AI_QUEUE_WAIT_MS?.trim().toLowerCase();
+  if (!raw || raw === "0" || raw === "infinity" || raw === "infinite") {
+    return 0;
+  }
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.max(5_000, n);
+}
+
+const maxWaitMs = parseMaxWaitMs();
+const infiniteWait = maxWaitMs === 0;
 
 let active = 0;
 const waiters: Array<{
   resolve: () => void;
   reject: (err: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | null;
 }> = [];
 
 export class AiQueueTimeoutError extends Error {
@@ -32,7 +42,7 @@ function pump() {
   while (active < maxConcurrent && waiters.length > 0) {
     const next = waiters.shift();
     if (!next) break;
-    clearTimeout(next.timer);
+    if (next.timer) clearTimeout(next.timer);
     active += 1;
     next.resolve();
   }
@@ -45,15 +55,24 @@ function acquire(): Promise<void> {
   }
 
   return new Promise<void>((resolve, reject) => {
-    const entry = {
+    const entry: {
+      resolve: () => void;
+      reject: (err: Error) => void;
+      timer: ReturnType<typeof setTimeout> | null;
+    } = {
       resolve,
       reject,
-      timer: setTimeout(() => {
+      timer: null,
+    };
+
+    if (!infiniteWait) {
+      entry.timer = setTimeout(() => {
         const idx = waiters.indexOf(entry);
         if (idx >= 0) waiters.splice(idx, 1);
         reject(new AiQueueTimeoutError());
-      }, maxWaitMs),
-    };
+      }, maxWaitMs);
+    }
+
     waiters.push(entry);
   });
 }
@@ -68,7 +87,8 @@ export function getAiQueueStats() {
     active,
     waiting: waiters.length,
     maxConcurrent,
-    maxWaitMs,
+    maxWaitMs: infiniteWait ? null : maxWaitMs,
+    infiniteWait,
   };
 }
 
@@ -88,6 +108,7 @@ export function aiQueueErrorResponse(error: unknown) {
       body: {
         error: error.message,
         queue: getAiQueueStats(),
+        retry: true,
       },
     };
   }

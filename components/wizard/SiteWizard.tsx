@@ -22,6 +22,7 @@ import {
   Tablet,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
+import { fetchWithAiQueue } from "@/lib/fetchWithAiQueue";
 import { getTokenCost } from "@/lib/tokenConfig";
 import {
   WIZARD_PALETTES,
@@ -145,7 +146,7 @@ function Typewriter({
   );
 }
 
-function BuildLoader() {
+function BuildLoader({ queued }: { queued?: boolean }) {
   const steps = [
     "Структура страниц",
     "Типографика и цвета",
@@ -182,7 +183,9 @@ function BuildLoader() {
           {steps[idx]}…
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
-          Обычно около минуты. Пока можно поиграть с кометой.
+          {queued
+            ? "Высокая загрузка — вы в очереди. Не закрывайте страницу, генерация начнётся автоматически."
+            : "Обычно около минуты. Пока можно поиграть с кометой."}
         </p>
 
         <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -245,6 +248,7 @@ export function SiteWizard({
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [queueWaiting, setQueueWaiting] = useState(false);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [imagePickCount, setImagePickCount] = useState(3);
@@ -1126,35 +1130,40 @@ export function SiteWizard({
     }
     setShowPreviewPane(true);
     setBuilding(true);
+    setQueueWaiting(false);
     setError("");
     try {
       const built = buildWizardSitePrompt(brief);
       const displayTitle = brief.topic.trim();
-      const res = await fetch("/api/generate-site", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+      const res = await fetchWithAiQueue(
+        "/api/generate-site",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            // Короткий заголовок в историю; полный бриф — в customRequirements
+            prompt: displayTitle,
+            customRequirements: [built.prompt, built.customRequirements]
+              .filter(Boolean)
+              .join("\n\n"),
+            brandColors: built.brandColors,
+            sections: built.sections,
+            modelId: built.modelId,
+            wizardMode: true,
+            templateId: built.templateId,
+            structureLayoutId: brief.structureLayoutId || undefined,
+            expressMode: false,
+            useContacts: brief.useSettingsContacts === true,
+            qualityMode: "quality",
+            images: [],
+            hasImages: false,
+          }),
         },
-        body: JSON.stringify({
-          // Короткий заголовок в историю; полный бриф — в customRequirements
-          prompt: displayTitle,
-          customRequirements: [built.prompt, built.customRequirements]
-            .filter(Boolean)
-            .join("\n\n"),
-          brandColors: built.brandColors,
-          sections: built.sections,
-          modelId: built.modelId,
-          wizardMode: true,
-          templateId: built.templateId,
-          structureLayoutId: brief.structureLayoutId || undefined,
-          expressMode: false,
-          useContacts: brief.useSettingsContacts === true,
-          qualityMode: "quality",
-          images: [],
-          hasImages: false,
-        }),
-      });
+        { onQueued: () => setQueueWaiting(true) }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Ошибка генерации");
       if (!data.html?.trim()) throw new Error("Пустой ответ модели");
@@ -1224,6 +1233,7 @@ export function SiteWizard({
       pushAssistant(`Не удалось собрать сайт: ${msg}`, true);
     } finally {
       setBuilding(false);
+      setQueueWaiting(false);
     }
   }
 
@@ -2286,7 +2296,7 @@ export function SiteWizard({
             {building || editing ? (
               building ? (
                 <div className="absolute inset-3 sm:inset-4">
-                  <BuildLoader />
+                  <BuildLoader queued={queueWaiting} />
                 </div>
               ) : (
                 <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0a0b10] text-[14px] text-zinc-400">
