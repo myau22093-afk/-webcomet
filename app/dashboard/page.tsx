@@ -226,6 +226,7 @@ export default function DashboardPage() {
     email?: string;
     access_token?: string;
   } | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [workMode, setWorkMode] = useState<WorkMode>("wizard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [status, setStatus] = useState<UsageStatus>({
@@ -747,6 +748,7 @@ export default function DashboardPage() {
     const supabase = getSupabase();
 
     getFreshAccessToken().then(async (token) => {
+      setSessionChecked(true);
       if (!token) return;
       await Promise.all([
         loadStatus(token),
@@ -772,8 +774,10 @@ export default function DashboardPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null);
+        setSessionChecked(true);
         return;
       }
+      setSessionChecked(true);
       setUser({
         email: session.user.email,
         access_token: session.access_token,
@@ -2053,55 +2057,92 @@ export default function DashboardPage() {
           </div>
 
           <div className="border-t border-white/10 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-wc-purple to-wc-pink text-sm font-semibold text-white">
-                {(user?.email?.[0] ?? "U").toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-zinc-200">
-                  {user?.email ?? "Загрузка..."}
+            {user ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-wc-purple to-wc-pink text-sm font-semibold text-white">
+                    {(user.email?.[0] ?? "U").toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-zinc-200">
+                      {user.email}
+                    </p>
+                    {status.tierLabel ? (
+                      <p className="text-[11px] text-zinc-500">
+                        {status.tierLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">
+                    Баланс токенов
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-200">
+                    {formatTokens(status.tokenBalance)} ток.
+                  </p>
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Потрачено всего: {formatTokens(status.totalTokensUsed)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTopUpOpen(true)}
+                    className="mt-3 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200"
+                  >
+                    Пополнить →
+                  </button>
+                </div>
+                <a
+                  href={SUPPORT_MAILTO}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Техподдержка
+                </a>
+                <p className="mt-1.5 truncate text-center text-[10px] text-zinc-600">
+                  {SUPPORT_EMAIL}
                 </p>
-                {status.tierLabel ? (
-                  <p className="text-[11px] text-zinc-500">{status.tierLabel}</p>
-                ) : null}
-              </div>
-            </div>
-            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">
-                Баланс токенов
-              </p>
-              <p className="mt-2 text-sm text-zinc-200">
-                {formatTokens(status.tokenBalance)} ток.
-              </p>
-              <p className="mt-1 text-[11px] text-zinc-500">
-                Потрачено всего: {formatTokens(status.totalTokensUsed)}
-              </p>
-              <button
-                type="button"
-                onClick={() => setTopUpOpen(true)}
-                className="mt-3 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200"
-              >
-                Пополнить →
-              </button>
-            </div>
-            <a
-              href={SUPPORT_MAILTO}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Техподдержка
-            </a>
-            <p className="mt-1.5 truncate text-center text-[10px] text-zinc-600">
-              {SUPPORT_EMAIL}
-            </p>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="wc-btn wc-btn-ghost mt-2 w-full py-2 text-xs"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Выйти
-            </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="wc-btn wc-btn-ghost mt-2 w-full py-2 text-xs"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Выйти
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-zinc-300">
+                  {sessionChecked
+                    ? "Гостевой режим"
+                    : "Проверяем сессию…"}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  Можно выбрать тему и палитру. Чтобы собрать сайт —
+                  зарегистрируйтесь: бриф сохранится.
+                </p>
+                <a
+                  href="/register?next=/dashboard"
+                  className="wc-btn wc-btn-primary mt-3 w-full justify-center py-2.5 text-xs"
+                >
+                  Зарегистрироваться
+                </a>
+                <a
+                  href="/login?next=/dashboard"
+                  className="wc-btn wc-btn-ghost mt-2 w-full justify-center py-2 text-xs"
+                >
+                  Войти
+                </a>
+                <a
+                  href={SUPPORT_MAILTO}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Техподдержка
+                </a>
+              </>
+            )}
           </div>
         </div>
       </aside>

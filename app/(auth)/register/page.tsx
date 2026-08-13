@@ -150,7 +150,7 @@ function RegisterContent() {
           <p className="mt-6 text-center text-sm text-zinc-500">
             Уже подтвердили?{" "}
             <Link
-              href="/login"
+              href={`/login?next=${encodeURIComponent(nextPath)}`}
               className="font-medium text-violet-300 hover:text-violet-200"
             >
               Войти
@@ -247,7 +247,10 @@ function RegisterContent() {
 
         <p className="mt-6 text-center text-sm text-zinc-500">
           Уже есть аккаунт?{" "}
-          <Link href="/login" className="font-medium text-violet-300 hover:text-violet-200">
+          <Link
+            href={`/login?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-violet-300 hover:text-violet-200"
+          >
             Войти
           </Link>
         </p>

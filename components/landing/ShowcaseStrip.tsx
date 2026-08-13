@@ -11,7 +11,7 @@ import {
 import { WIZARD_STORAGE_KEY } from "@/lib/wizardBrief";
 
 type Props = {
-  loggedIn: boolean;
+  loggedIn?: boolean;
 };
 
 function DemoThumb({
@@ -156,7 +156,7 @@ function DemoThumb({
   );
 }
 
-function startDemo(demo: LandingDemo, loggedIn: boolean) {
+function startDemo(demo: LandingDemo) {
   try {
     localStorage.removeItem(WIZARD_STORAGE_KEY);
   } catch {
@@ -168,12 +168,10 @@ function startDemo(demo: LandingDemo, loggedIn: boolean) {
     demoId: demo.id,
     structureLayoutId: demo.layoutId,
   });
-  window.location.href = loggedIn
-    ? "/dashboard"
-    : "/register?next=/dashboard";
+  window.location.href = "/dashboard";
 }
 
-export function ShowcaseStrip({ loggedIn }: Props) {
+export function ShowcaseStrip({ loggedIn: _loggedIn }: Props) {
   const railRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<LandingDemo | null>(null);
 
@@ -295,7 +293,7 @@ export function ShowcaseStrip({ loggedIn }: Props) {
                 <button
                   type="button"
                   className="wc-btn wc-btn-glow min-h-12 px-6"
-                  onClick={() => startDemo(active, loggedIn)}
+                  onClick={() => startDemo(active)}
                 >
                   Сделать такой
                   <ArrowRight className="h-4 w-4" />

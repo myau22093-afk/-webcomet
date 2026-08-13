@@ -40,6 +40,13 @@ function LoginContent() {
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [resending, setResending] = useState(false);
 
+  const nextPath = (() => {
+    const raw = searchParams.get("next");
+    if (!raw) return "/dashboard";
+    if (!raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+    return raw;
+  })();
+
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -75,7 +82,7 @@ function LoginContent() {
       toast.success("Вход выполнен");
       // Жёсткий переход: иначе в Яндексе cookie/сессия иногда не успевают
       // и middleware кидает обратно на /login с «красной» ошибкой.
-      window.location.assign("/dashboard");
+      window.location.assign(nextPath);
     } catch (error) {
       toast.error(getAuthErrorMessage(error, "Ошибка входа"));
       setLoading(false);
@@ -110,7 +117,7 @@ function LoginContent() {
 
   return (
     <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
-      <AuthHashHandler redirectTo="/dashboard" />
+      <AuthHashHandler redirectTo={nextPath} />
       <motion.div
         initial={{ opacity: 1, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -193,7 +200,10 @@ function LoginContent() {
 
         <p className="mt-6 text-center text-sm text-zinc-500">
           Нет аккаунта?{" "}
-          <Link href="/register" className="font-medium text-violet-300 hover:text-violet-200">
+          <Link
+            href={`/register?next=${encodeURIComponent(nextPath)}`}
+            className="font-medium text-violet-300 hover:text-violet-200"
+          >
             Зарегистрироваться
           </Link>
         </p>

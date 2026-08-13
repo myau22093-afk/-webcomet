@@ -19,13 +19,15 @@ export async function GET(request: Request) {
   // Нет ?code= — возможно hash-токены в браузере. Нельзя 302 на /login
   // (hash пропадёт). Отдаём страницу, которая сохранит # и уйдёт на /login.
   if (!code && !token_hash) {
+    const loginUrl = `${origin}/login?next=${encodeURIComponent(safeNext)}`;
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"/><title>Вход…</title></head><body style="margin:0;background:#0a0a0f;color:#e4e4e7;font-family:system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center"><p>Подтверждаем вход…</p><script>
 (function(){
   var h=location.hash||"";
+  var next=${JSON.stringify(loginUrl)};
   if(h.indexOf("access_token")!==-1||h.indexOf("refresh_token")!==-1){
-    location.replace(${JSON.stringify(`${origin}/login`)}+h);
+    location.replace(next+h);
   }else{
-    location.replace(${JSON.stringify(`${origin}/login`)});
+    location.replace(next);
   }
 })();
 </script></body></html>`;

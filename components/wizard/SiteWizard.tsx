@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Loader2,
   Send,
@@ -20,6 +21,7 @@ import {
   Monitor,
   Smartphone,
   Tablet,
+  X,
 } from "lucide-react";
 import { buildPreviewHtml } from "@/lib/sitePreview";
 import { fetchWithAiQueue } from "@/lib/fetchWithAiQueue";
@@ -28,6 +30,7 @@ import {
   WIZARD_PALETTES,
   WIZARD_IMAGE_MODEL_IDS,
   WIZARD_STORAGE_KEY,
+  WIZARD_RESUME_KEY,
   buildWizardSitePrompt,
   detectNicheFromTopic,
   emptyWizardBrief,
@@ -274,6 +277,7 @@ export function SiteWizard({
   const [abA, setAbA] = useState("violet");
   const [abB, setAbB] = useState("ocean");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
+  const [authGateOpen, setAuthGateOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const previewStageRef = useRef<HTMLDivElement>(null);
   const menuDelayRef = useRef<number | null>(null);
@@ -406,6 +410,53 @@ export function SiteWizard({
 
   useEffect(() => {
     if (!hydrated) return;
+    try {
+      if (localStorage.getItem(WIZARD_RESUME_KEY) !== "1") return;
+    } catch {
+      return;
+    }
+    void (async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        localStorage.removeItem(WIZARD_RESUME_KEY);
+      } catch {
+        /* ignore */
+      }
+      pushAssistant(
+        "Всё сохранилось — можно жать «Собрать сайт», бриф заново заполнять не нужно.",
+        true
+      );
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  function persistWizardSnapshot() {
+    try {
+      localStorage.setItem(
+        WIZARD_STORAGE_KEY,
+        JSON.stringify({
+          brief,
+          bubbles,
+          result,
+          previewHtml,
+          showPreviewPane,
+        })
+      );
+      localStorage.setItem(WIZARD_RESUME_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function openAuthGate() {
+    persistWizardSnapshot();
+    setError("");
+    setAuthGateOpen(true);
+  }
+
+  useEffect(() => {
+    if (!hydrated) return;
     const step = nextScriptedStep(brief);
     if (
       step === "palette" ||
@@ -517,7 +568,7 @@ export function SiteWizard({
     if (!message || !result || editing) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      openAuthGate();
       return;
     }
 
@@ -667,7 +718,11 @@ export function SiteWizard({
 
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      pushAssistant(
+        "Ок, записал. Продолжай в карточках ниже — сайт соберём после регистрации.",
+        true
+      );
+      ensureScriptMenus(nextBrief);
       return;
     }
 
@@ -1019,7 +1074,7 @@ export function SiteWizard({
     if (!files?.length || brief.photosConfirmed) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      openAuthGate();
       return;
     }
     setUploadingPhotos(true);
@@ -1084,7 +1139,7 @@ export function SiteWizard({
     if (!result || exportingZip) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      openAuthGate();
       return;
     }
     setExportingZip(true);
@@ -1128,7 +1183,7 @@ export function SiteWizard({
     if (!ready || building) return;
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      openAuthGate();
       return;
     }
     setShowPreviewPane(true);
@@ -1304,7 +1359,7 @@ export function SiteWizard({
     }
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      setError("Войдите в аккаунт");
+      openAuthGate();
       return;
     }
     setImagePickerOpen(false);
@@ -1405,6 +1460,7 @@ export function SiteWizard({
     setBubbles([]);
     try {
       localStorage.removeItem(WIZARD_STORAGE_KEY);
+      localStorage.removeItem(WIZARD_RESUME_KEY);
     } catch {
       /* ignore */
     }
@@ -2426,6 +2482,53 @@ export function SiteWizard({
             title: brief.companyName.trim() || brief.topic,
           }}
         />
+      ) : null}
+
+      {authGateOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wc-auth-gate-title"
+        >
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#12131a] p-6 shadow-2xl shadow-black/50">
+            <button
+              type="button"
+              onClick={() => setAuthGateOpen(false)}
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/5 hover:text-zinc-300"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <h2
+              id="wc-auth-gate-title"
+              className="pr-8 font-display text-xl font-semibold text-white"
+            >
+              Зарегистрируйтесь
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Чтобы собрать сайт, нужен аккаунт. Все выборы и текст уже
+              сохранены — после регистрации ничего заново заполнять не
+              придётся.
+            </p>
+            <div className="mt-6 flex flex-col gap-2.5">
+              <Link
+                href="/register?next=/dashboard"
+                className="wc-btn wc-btn-primary w-full justify-center py-3 text-sm"
+                onClick={() => persistWizardSnapshot()}
+              >
+                Зарегистрироваться
+              </Link>
+              <Link
+                href="/login?next=/dashboard"
+                className="wc-btn wc-btn-ghost w-full justify-center py-3 text-sm"
+                onClick={() => persistWizardSnapshot()}
+              >
+                Уже есть аккаунт — войти
+              </Link>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

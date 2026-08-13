@@ -64,9 +64,8 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isProtectedPage =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/pricing") ||
-    pathname.startsWith("/payment");
+    pathname.startsWith("/pricing") || pathname.startsWith("/payment");
+  // /dashboard доступен гостям: мастер до «Собрать сайт», регистрация по запросу
   // /api/upload сам проверяет Bearer — не режем по cookie-сессии
   const hasBearer = Boolean(
     request.headers.get("authorization")?.match(/^Bearer\s+\S+/i)

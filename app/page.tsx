@@ -29,8 +29,8 @@ export default function HomePage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const primaryHref = loggedIn ? "/dashboard" : "/register";
-  const primaryLabel = loggedIn ? "Создать сайт" : "Попробовать бесплатно";
+  const primaryHref = "/dashboard";
+  const primaryLabel = "Создать сайт";
 
   return (
     <div className="wc-landing relative min-h-dvh overflow-x-hidden text-white">
@@ -58,19 +58,19 @@ export default function HomePage() {
         <div className="wc-hero-vignette" />
       </div>
 
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <BrandLogo size="md" />
-        <nav className="flex items-center gap-2 sm:gap-3">
+      <header className="wc-landing-header relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
+        <BrandLogo size="sm" className="wc-landing-logo" />
+        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
           <Link
             href="/pricing"
-            className="wc-btn wc-btn-ghost hidden px-4 py-2 text-sm text-zinc-300 sm:inline-flex"
+            className="wc-btn wc-btn-ghost hidden px-4 py-2 text-sm text-zinc-300 md:inline-flex"
           >
             Тарифы
           </Link>
           {loggedIn ? (
             <Link
               href="/dashboard"
-              className="wc-btn wc-btn-glow px-4 py-2 text-sm"
+              className="wc-btn wc-btn-glow wc-landing-nav-cta"
             >
               Дашборд
             </Link>
@@ -78,13 +78,13 @@ export default function HomePage() {
             <>
               <Link
                 href="/login"
-                className="wc-btn wc-btn-ghost px-4 py-2 text-sm text-zinc-300"
+                className="wc-landing-nav-link"
               >
                 Войти
               </Link>
               <Link
                 href="/register"
-                className="wc-btn wc-btn-glow px-4 py-2 text-sm"
+                className="wc-btn wc-btn-glow wc-landing-nav-cta"
               >
                 Регистрация
               </Link>

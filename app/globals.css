@@ -795,9 +795,9 @@ h3,
   box-shadow: inset 0 0 0 1px rgba(108, 59, 244, 0.35);
 }
 
-/* Touch-friendly mobile controls */
+/* Touch-friendly mobile controls — не трогаем компактную шапку лендинга */
 @media (max-width: 768px) {
-  .wc-btn,
+  .wc-btn:not(.wc-landing-nav-cta),
   .wc-input {
     min-height: 48px;
   }
@@ -869,10 +869,67 @@ h3,
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* cache-bust marker: landing-v5 */
+/* cache-bust marker: landing-v6 */
 
 .wc-landing {
   font-family: "DM Sans", var(--font-sans);
+}
+
+.wc-landing-header {
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.wc-landing-logo {
+  flex-shrink: 0;
+}
+
+.wc-landing-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #d4d4d8;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.wc-landing-nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wc-landing-nav-cta {
+  min-height: 36px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.wc-landing-nav-cta:hover {
+  transform: none;
+}
+
+@media (min-width: 640px) {
+  .wc-landing-logo {
+    font-size: 1.5rem;
+  }
+
+  .wc-landing-nav-link {
+    min-height: 40px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.875rem;
+  }
+
+  .wc-landing-nav-cta {
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
 }
 
 .wc-hero-compose {
@@ -917,6 +974,53 @@ h3,
   color: rgba(228, 228, 231, 0.82);
 }
 
+@media (max-width: 639px) {
+  .wc-hero-brand {
+    display: none;
+  }
+
+  .wc-hero-headline {
+    font-size: clamp(1.55rem, 8vw, 2.05rem);
+  }
+
+  .wc-hero-lead {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .wc-cinema-chrome {
+    gap: 0.3rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .wc-cinema-url {
+    margin-left: 0.35rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .wc-cinema-nav {
+    gap: 0.4rem;
+  }
+
+  .wc-cinema-nav-links {
+    gap: 0.4rem;
+    font-size: 0.62rem;
+    flex-shrink: 0;
+  }
+
+  .wc-showcase-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wc-showcase-nav {
+    align-self: flex-end;
+  }
+}
+
 .wc-hero-cinema-wrap {
   width: 100%;
 }
@@ -940,6 +1044,7 @@ h3,
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
   padding: 0.7rem 0.9rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);

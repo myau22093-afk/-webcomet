@@ -348,6 +348,8 @@ export const WIZARD_IMAGE_MODEL_IDS = [
   "gpt-image-2",
 ] as const;
 export const WIZARD_STORAGE_KEY = "wc-wizard-v3";
+/** После регистрации/входа вернуться и собрать сайт */
+export const WIZARD_RESUME_KEY = "wc-wizard-resume-build";
 
 export function nicheOptions() {
   return SITE_TEMPLATES.map((t) => ({ id: t.id, label: t.name }));
