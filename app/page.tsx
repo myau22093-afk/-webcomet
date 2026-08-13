@@ -150,7 +150,7 @@ export default function HomePage() {
       </main>
 
       <footer className="relative z-10 border-t border-white/10 bg-black/50">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <BrandLogo size="sm" />
             <p className="mt-2 text-sm text-zinc-500">

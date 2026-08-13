@@ -423,10 +423,6 @@ export function SiteWizard({
       } catch {
         /* ignore */
       }
-      pushAssistant(
-        "Всё сохранилось — можно жать «Собрать сайт», бриф заново заполнять не нужно.",
-        true
-      );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
@@ -718,10 +714,6 @@ export function SiteWizard({
 
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      pushAssistant(
-        "Ок, записал. Продолжай в карточках ниже — сайт соберём после регистрации.",
-        true
-      );
       ensureScriptMenus(nextBrief);
       return;
     }
@@ -1469,7 +1461,7 @@ export function SiteWizard({
   const isFreshStart = bubbles.length <= 2 && !brief.topic && !showPreviewPane;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
       <div
         className={`relative flex min-h-0 min-w-0 flex-col border-white/10 ${
           showPreviewPane ? "w-full lg:w-[44%] lg:border-r" : "w-full"
@@ -1479,7 +1471,7 @@ export function SiteWizard({
           <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-violet-600/[0.07] blur-3xl" />
         </div>
 
-        <div className="relative z-[1] flex items-center justify-between border-b border-white/[0.06] px-4 py-2.5 sm:px-5">
+        <div className="relative z-[1] flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-5">
           <div className="flex items-center gap-3">
             {onToggleSidebar ? (
               <button
@@ -1500,7 +1492,7 @@ export function SiteWizard({
               <p className="text-[15px] font-medium tracking-tight text-zinc-100">
                 Студия
               </p>
-              <p className="text-[12px] text-zinc-500">
+              <p className="hidden text-[12px] text-zinc-500 min-[420px]:block">
                 {brief.tier === "premium"
                   ? `Премиум · ${siteCost} ток.`
                   : brief.tier === "simple"
@@ -1521,7 +1513,7 @@ export function SiteWizard({
         </div>
 
         <div
-          className={`relative z-[1] flex-1 overflow-y-auto px-5 ${
+          className={`relative z-[1] flex-1 overflow-y-auto px-3 sm:px-5 ${
             isFreshStart
               ? "flex flex-col justify-center py-6 sm:py-8"
               : "py-3 sm:py-4"
@@ -2154,12 +2146,12 @@ export function SiteWizard({
         </div>
 
         {error ? (
-          <p className="relative z-[1] px-5 pb-1 text-[12px] text-rose-300">
+          <p className="relative z-[1] px-3 pb-1 text-[12px] text-rose-300 sm:px-5">
             {error}
           </p>
         ) : null}
 
-        <div className="relative z-[1] space-y-3 border-t border-white/[0.06] bg-black/20 px-5 py-4 backdrop-blur-md">
+        <div className="relative z-[1] space-y-3 border-t border-white/[0.06] bg-black/20 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-5 sm:py-4">
           {(ready || result) && (
             <div className="flex flex-wrap gap-2">
               <button
@@ -2354,7 +2346,7 @@ export function SiteWizard({
       </div>
 
       {showPreviewPane ? (
-        <div className="flex min-h-[320px] flex-1 flex-col bg-black/25">
+        <div className="flex min-h-[240px] flex-1 flex-col bg-black/25 sm:min-h-[320px]">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-2.5 sm:px-5">
             <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-0.5">
               {(
@@ -2486,12 +2478,12 @@ export function SiteWizard({
 
       {authGateOpen ? (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 sm:items-center sm:px-4 sm:pb-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="wc-auth-gate-title"
         >
-          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#12131a] p-6 shadow-2xl shadow-black/50">
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#12131a] p-5 shadow-2xl shadow-black/50 sm:p-6">
             <button
               type="button"
               onClick={() => setAuthGateOpen(false)}
@@ -2506,10 +2498,8 @@ export function SiteWizard({
             >
               Зарегистрируйтесь
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Чтобы собрать сайт, нужен аккаунт. Все выборы и текст уже
-              сохранены — после регистрации ничего заново заполнять не
-              придётся.
+            <p className="mt-2 text-sm text-zinc-400">
+              Сайт собирается только из аккаунта.
             </p>
             <div className="mt-6 flex flex-col gap-2.5">
               <Link
@@ -2524,7 +2514,7 @@ export function SiteWizard({
                 className="wc-btn wc-btn-ghost w-full justify-center py-3 text-sm"
                 onClick={() => persistWizardSnapshot()}
               >
-                Уже есть аккаунт — войти
+                Войти
               </Link>
             </div>
           </div>

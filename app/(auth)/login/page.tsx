@@ -24,7 +24,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+        <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-8 text-white sm:py-12">
           <p className="text-zinc-400">Загрузка…</p>
         </div>
       }
@@ -116,13 +116,13 @@ function LoginContent() {
   }
 
   return (
-    <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-12 text-white">
+    <div className="wc-atmosphere flex min-h-dvh flex-1 items-center justify-center px-4 py-8 text-white sm:py-12">
       <AuthHashHandler redirectTo={nextPath} />
       <motion.div
         initial={{ opacity: 1, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="glass-card w-full max-w-md p-8"
+        className="glass-card w-full max-w-md p-5 sm:p-8"
       >
         <BrandLogo size="sm" className="mb-6" />
         <h1 className="font-display text-2xl font-semibold">Вход</h1>

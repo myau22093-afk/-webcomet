@@ -226,7 +226,6 @@ export default function DashboardPage() {
     email?: string;
     access_token?: string;
   } | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
   const [workMode, setWorkMode] = useState<WorkMode>("wizard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [status, setStatus] = useState<UsageStatus>({
@@ -748,7 +747,6 @@ export default function DashboardPage() {
     const supabase = getSupabase();
 
     getFreshAccessToken().then(async (token) => {
-      setSessionChecked(true);
       if (!token) return;
       await Promise.all([
         loadStatus(token),
@@ -774,10 +772,8 @@ export default function DashboardPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null);
-        setSessionChecked(true);
         return;
       }
-      setSessionChecked(true);
       setUser({
         email: session.user.email,
         access_token: session.access_token,
@@ -796,7 +792,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
+    const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => setSidebarOpen(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -1800,22 +1796,22 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="wc-atmosphere flex h-dvh overflow-hidden text-zinc-100">
+    <div className="wc-atmosphere flex h-dvh max-h-dvh overflow-hidden text-zinc-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button
           type="button"
           aria-label="Закрыть меню"
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside
         className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-0"
-        } fixed inset-y-0 left-0 z-40 w-72 shrink-0 overflow-hidden border-r border-white/10 glass-panel transition-all duration-300 md:static ${
-          sidebarOpen ? "md:w-72" : "md:w-0"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0"
+        } fixed inset-y-0 left-0 z-40 w-[min(18rem,100vw)] shrink-0 overflow-hidden border-r border-white/10 glass-panel transition-all duration-300 lg:static ${
+          sidebarOpen ? "lg:w-72" : "lg:w-0"
         }`}
       >
         <div className="flex h-full w-72 flex-col">
@@ -1840,7 +1836,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => {
                     setWorkMode(mode.id);
-                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
                       setSidebarOpen(false);
                     }
                   }}
@@ -2113,15 +2109,7 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <p className="text-sm text-zinc-300">
-                  {sessionChecked
-                    ? "Гостевой режим"
-                    : "Проверяем сессию…"}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                  Можно выбрать тему и палитру. Чтобы собрать сайт —
-                  зарегистрируйтесь: бриф сохранится.
-                </p>
+                <p className="text-sm text-zinc-400">Сайт — после регистрации</p>
                 <a
                   href="/register?next=/dashboard"
                   className="wc-btn wc-btn-primary mt-3 w-full justify-center py-2.5 text-xs"

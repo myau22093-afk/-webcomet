@@ -62,7 +62,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="wc-atmosphere min-h-dvh px-4 py-10 text-white sm:px-6 sm:py-14">
+    <div className="wc-atmosphere min-h-dvh px-4 py-8 text-white sm:px-6 sm:py-14">
       <div className="mx-auto w-full max-w-6xl">
         <Link
           href="/dashboard"
@@ -100,7 +100,7 @@ export default function PricingPage() {
           </p>
         </motion.div>
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {TOKEN_PACKAGES.map((pack, index) => (
             <motion.div
               key={pack.id}

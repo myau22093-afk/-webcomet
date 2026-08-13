@@ -42,6 +42,8 @@
 html,
 body {
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -88,6 +90,7 @@ h3,
 
 .wc-input {
   width: 100%;
+  min-width: 0;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(10, 10, 18, 0.85);
@@ -248,6 +251,16 @@ h3,
 
 .wc-btn:hover {
   transform: scale(1.05);
+}
+
+@media (hover: none) {
+  .wc-btn:hover {
+    transform: none;
+  }
+
+  .wc-lift:hover {
+    transform: none;
+  }
 }
 
 .wc-btn:active {
@@ -869,7 +882,7 @@ h3,
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* cache-bust marker: landing-v6 */
+/* cache-bust marker: landing-v7 */
 
 .wc-landing {
   font-family: "DM Sans", var(--font-sans);
@@ -878,6 +891,9 @@ h3,
 .wc-landing-header {
   min-width: 0;
   gap: 0.75rem;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-top: max(1rem, env(safe-area-inset-top));
 }
 
 .wc-landing-logo {
@@ -1018,6 +1034,53 @@ h3,
 
   .wc-showcase-nav {
     align-self: flex-end;
+  }
+
+  .wc-cinema-stage {
+    padding: 0.75rem 0.75rem 0.9rem;
+    min-height: 0;
+  }
+
+  .wc-demo-thumb--modal {
+    height: min(38vh, 260px);
+  }
+
+  .wc-demo-modal-panel {
+    max-height: min(94dvh, 900px);
+    border-radius: 16px;
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 379px) {
+  .wc-landing-nav-cta {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .wc-cinema-nav-links,
+  .wc-cinema-step-label {
+    display: none;
+  }
+
+  .wc-hero-headline {
+    font-size: 1.4rem;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 959px) {
+  .wc-hero-brand {
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+  }
+
+  .wc-hero-compose {
+    gap: 1.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .wc-hero-compose {
+    min-height: min(76vh, 700px);
   }
 }
 
@@ -1941,7 +2004,10 @@ h3,
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: max(0.75rem, env(safe-area-inset-top))
+    max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(8px);
 }

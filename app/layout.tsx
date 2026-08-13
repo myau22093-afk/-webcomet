@@ -1,9 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import "./globals.css";
 
 const SITE_URL = "https://webcomet.ru";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -41,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="h-full antialiased">
+    <html lang="ru" className="h-full overflow-x-clip antialiased">
       <head>
         <link rel="icon" href="/favicon.ico?v=14" sizes="any" />
         <link rel="icon" href="/favicon-32.png?v=14" type="image/png" sizes="32x32" />
