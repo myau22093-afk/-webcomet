@@ -43,7 +43,7 @@ export default function HostingPage() {
                 href="/dashboard"
                 className="mt-4 inline-flex rounded-xl bg-emerald-500/25 px-4 py-2.5 text-[13px] font-medium text-emerald-50 hover:bg-emerald-500/35"
               >
-                Открыть дашборд
+                Создать сайт
               </Link>
             </div>
           </div>
