@@ -55,7 +55,7 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
   }
 
   return (
-    <div className={`grid gap-4 sm:grid-cols-2 ${className}`}>
+    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${className}`}>
       <a
         href={regruDomainUrl()}
         target="_blank"
@@ -69,8 +69,8 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
           <ExternalLink className="h-4 w-4 text-zinc-600 group-hover:text-zinc-300" />
         </div>
         <p className="mt-5 text-lg font-medium text-zinc-50">Домен</p>
-        <p className="mt-1 text-[14px] text-zinc-400">
-          Зарегистрировать .ru или .com — откроется форма на Рег.ру
+        <p className="mt-1 text-[14px] leading-relaxed text-zinc-400">
+          Зарегистрировать .ru или .com на Рег.ру
         </p>
         <p className="mt-4 text-[13px] text-zinc-500">от ~199 ₽/год</p>
       </a>
@@ -88,8 +88,8 @@ export function HostingOffer({ compact = false, className = "" }: Props) {
           <ExternalLink className="h-4 w-4 text-zinc-600 group-hover:text-zinc-300" />
         </div>
         <p className="mt-5 text-lg font-medium text-zinc-50">Хостинг</p>
-        <p className="mt-1 text-[14px] text-zinc-400">
-          Заказать хостинг и залить ZIP с сайтом — сразу каталог тарифов
+        <p className="mt-1 text-[14px] leading-relaxed text-zinc-400">
+          Хостинг и заливка ZIP — каталог тарифов Рег.ру
         </p>
         <p className="mt-4 text-[13px] text-zinc-500">от ~149 ₽/мес</p>
       </a>

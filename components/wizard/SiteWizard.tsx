@@ -1461,9 +1461,9 @@ export function SiteWizard({
   const isFreshStart = bubbles.length <= 2 && !brief.topic && !showPreviewPane;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
       <div
-        className={`relative flex min-h-0 min-w-0 flex-col border-white/10 ${
+        className={`relative flex h-full min-h-0 min-w-0 flex-col border-white/10 ${
           showPreviewPane ? "w-full lg:w-[44%] lg:border-r" : "w-full"
         }`}
       >
@@ -1471,7 +1471,7 @@ export function SiteWizard({
           <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-violet-600/[0.07] blur-3xl" />
         </div>
 
-        <div className="relative z-[1] flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-5">
+        <div className="relative z-[1] flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-5">
           <div className="flex items-center gap-3">
             {onToggleSidebar ? (
               <button
@@ -1505,7 +1505,7 @@ export function SiteWizard({
             type="button"
             onClick={resetWizard}
             title="Сбросить мастер и начать новый сайт"
-            className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12px] text-zinc-500 transition hover:bg-white/5 hover:text-zinc-300"
+            className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12px] text-zinc-300 transition hover:bg-white/5 hover:text-white"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Заново
@@ -1513,9 +1513,9 @@ export function SiteWizard({
         </div>
 
         <div
-          className={`relative z-[1] flex-1 overflow-y-auto px-3 sm:px-5 ${
+          className={`relative z-[1] min-h-0 flex-1 overflow-y-auto px-3 sm:px-5 ${
             isFreshStart
-              ? "flex flex-col justify-center py-6 sm:py-8"
+              ? "flex flex-col justify-start py-5 sm:justify-center sm:py-8"
               : "py-3 sm:py-4"
           }`}
         >
@@ -2151,7 +2151,7 @@ export function SiteWizard({
           </p>
         ) : null}
 
-        <div className="relative z-[1] space-y-3 border-t border-white/[0.06] bg-black/20 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-5 sm:py-4">
+        <div className="relative z-[1] mt-auto shrink-0 space-y-3 border-t border-white/[0.06] bg-[#07080d] px-3 py-3 sm:px-5 sm:py-4">
           {(ready || result) && (
             <div className="flex flex-wrap gap-2">
               <button

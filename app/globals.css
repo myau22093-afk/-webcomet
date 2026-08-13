@@ -48,6 +48,7 @@ body {
 
 body {
   min-height: 100dvh;
+  min-height: 100svh;
   background: var(--wc-bg);
   color: var(--wc-text);
   font-family: var(--font-sans);
@@ -82,11 +83,15 @@ h3,
   -webkit-backdrop-filter: blur(10px);
 }
 
+.wc-app-shell {
+  height: 100vh;
+  height: 100svh;
+  max-height: 100svh;
+}
+
 .glass-panel {
-  background: rgba(14, 14, 28, 0.88);
+  background: #0c0d14;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .wc-input {
@@ -896,6 +901,15 @@ h3,
 
 .wc-inner-page {
   background: #05050a;
+  min-height: 100svh;
+}
+
+.wc-inner-page .wc-landing-footer {
+  margin-top: 0;
+}
+
+.wc-inner-page > main {
+  flex: 0 1 auto;
 }
 
 .wc-landing-header {

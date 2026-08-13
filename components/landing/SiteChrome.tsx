@@ -15,7 +15,7 @@ export function SiteHeader({ loggedIn = false }: Props) {
       <nav className="wc-landing-nav">
         <Link
           href="/pricing"
-          className="wc-btn wc-btn-ghost hidden px-4 py-2 text-sm text-zinc-300 md:inline-flex"
+          className="wc-btn wc-btn-ghost hidden px-4 py-2 text-sm text-zinc-300 lg:inline-flex"
         >
           Тарифы
         </Link>

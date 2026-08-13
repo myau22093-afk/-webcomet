@@ -1796,13 +1796,13 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="wc-atmosphere flex h-dvh max-h-dvh overflow-hidden text-zinc-100">
+    <div className="wc-app-shell wc-atmosphere flex overflow-hidden text-zinc-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button
           type="button"
           aria-label="Закрыть меню"
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -1810,11 +1810,11 @@ export default function DashboardPage() {
       <aside
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0"
-        } fixed inset-y-0 left-0 z-40 w-[min(18rem,100vw)] shrink-0 overflow-hidden border-r border-white/10 glass-panel transition-all duration-300 lg:static ${
+        } fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] shrink-0 overflow-hidden border-r border-white/10 bg-[#0b0c12] transition-all duration-300 lg:static ${
           sidebarOpen ? "lg:w-72" : "lg:w-0"
         }`}
       >
-        <div className="flex h-full w-72 flex-col">
+        <div className="flex h-full min-h-0 w-full flex-col">
           <div className="border-b border-white/10 px-4 py-3">
             <BrandLogo size="sm" />
           </div>
@@ -1873,9 +1873,9 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
             {workMode === "settings" && (
-              <div className="mx-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400">
+              <div className="mx-2 hidden rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400 lg:block">
                 <p className="font-medium text-zinc-200">Контакты</p>
                 <p className="mt-1.5 leading-relaxed">
                   Телефон, email и соцсети подставляются в футер и секцию
@@ -2052,7 +2052,7 @@ export default function DashboardPage() {
               ))}
           </div>
 
-          <div className="border-t border-white/10 p-4">
+          <div className="shrink-0 border-t border-white/10 bg-[#0b0c12] p-3">
             {user ? (
               <>
                 <div className="flex items-center gap-3">
@@ -2077,27 +2077,21 @@ export default function DashboardPage() {
                   <p className="mt-2 text-sm text-zinc-200">
                     {formatTokens(status.tokenBalance)} ток.
                   </p>
-                  <p className="mt-1 text-[11px] text-zinc-500">
-                    Потрачено всего: {formatTokens(status.totalTokensUsed)}
-                  </p>
                   <button
                     type="button"
                     onClick={() => setTopUpOpen(true)}
-                    className="mt-3 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200"
+                    className="mt-2 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200"
                   >
                     Пополнить →
                   </button>
                 </div>
                 <a
                   href={SUPPORT_MAILTO}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
                 >
                   <Mail className="h-3.5 w-3.5" />
                   Техподдержка
                 </a>
-                <p className="mt-1.5 truncate text-center text-[10px] text-zinc-600">
-                  {SUPPORT_EMAIL}
-                </p>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -2135,7 +2129,7 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {workMode !== "wizard" ? (
           <header className="flex items-center border-b border-white/10 px-3 py-2">
             <button

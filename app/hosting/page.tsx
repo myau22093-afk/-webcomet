@@ -26,7 +26,7 @@ export default function HostingPage() {
   return (
     <div className="wc-landing wc-inner-page relative text-white">
       <SiteHeader loggedIn={loggedIn} />
-      <main className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="relative z-10 mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="font-display text-3xl tracking-tight text-zinc-50 sm:text-4xl">
           Вывести сайт в интернет
         </h1>
@@ -49,7 +49,7 @@ export default function HostingPage() {
               </p>
               <Link
                 href="/dashboard"
-                className="wc-btn wc-btn-glow mt-4 px-4 py-2.5 text-[13px]"
+                className="mt-4 inline-flex rounded-xl bg-emerald-500/25 px-4 py-2.5 text-[13px] font-medium text-emerald-50 hover:bg-emerald-500/35"
               >
                 Создать сайт
               </Link>
