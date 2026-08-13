@@ -47,13 +47,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="h-full overflow-x-clip antialiased">
+    <html lang="ru" className="overflow-x-clip antialiased">
       <head>
         <link rel="icon" href="/favicon.ico?v=14" sizes="any" />
         <link rel="icon" href="/favicon-32.png?v=14" type="image/png" sizes="32x32" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=14" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+        />
       </head>
-      <body className="flex min-h-full flex-col font-sans text-foreground">
+      <body className="flex min-h-dvh flex-col font-sans text-foreground">
         <YandexMetrika />
         {children}
         <Toaster position="top-center" richColors theme="dark" />

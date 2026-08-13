@@ -47,6 +47,7 @@ body {
 }
 
 body {
+  min-height: 100dvh;
   background: var(--wc-bg);
   color: var(--wc-text);
   font-family: var(--font-sans);
@@ -882,30 +883,55 @@ h3,
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* cache-bust marker: landing-v7 */
+/* cache-bust marker: landing-v8 */
 
 .wc-landing {
   font-family: "DM Sans", var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-height: 100svh;
+  overflow-x: clip;
+}
+
+.wc-inner-page {
+  background: #05050a;
 }
 
 .wc-landing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
   min-width: 0;
-  gap: 0.75rem;
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
-  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: 0.75rem;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .wc-landing-logo {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.wc-landing-nav {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .wc-landing-nav-link {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  padding: 0.35rem 0.65rem;
+  padding: 0.35rem 0.55rem;
   border-radius: 10px;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -921,7 +947,7 @@ h3,
 
 .wc-landing-nav-cta {
   min-height: 36px;
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.7rem;
   font-size: 0.8125rem;
   white-space: nowrap;
 }
@@ -930,9 +956,36 @@ h3,
   transform: none;
 }
 
+.wc-landing-footer {
+  margin-top: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 400px) {
+  .wc-landing-nav-link {
+    display: inline-flex;
+  }
+
+  .wc-landing-logo {
+    font-size: 1.125rem;
+  }
+}
+
 @media (min-width: 640px) {
+  .wc-landing-header {
+    gap: 0.75rem;
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+    padding-bottom: 1.25rem;
+  }
+
   .wc-landing-logo {
     font-size: 1.5rem;
+  }
+
+  .wc-landing-nav {
+    gap: 0.75rem;
   }
 
   .wc-landing-nav-link {
@@ -958,7 +1011,7 @@ h3,
   .wc-hero-compose {
     grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
     gap: 2.5rem;
-    min-height: min(72vh, 640px);
+    min-height: 520px;
     align-items: center;
   }
 }
@@ -1080,7 +1133,7 @@ h3,
 
 @media (min-width: 1280px) {
   .wc-hero-compose {
-    min-height: min(76vh, 700px);
+    min-height: 560px;
   }
 }
 

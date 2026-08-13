@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { BrandLogo } from "@/components/BrandLogo";
 import { GenerationCinema } from "@/components/landing/GenerationCinema";
 import { ShowcaseStrip } from "@/components/landing/ShowcaseStrip";
+import { SiteFooter, SiteHeader } from "@/components/landing/SiteChrome";
 import { getSupabase } from "@/lib/supabaseClient";
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -29,16 +28,8 @@ export default function HomePage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const primaryHref = "/dashboard";
-  const primaryLabel = "Создать сайт";
-
   return (
-    <div className="wc-landing relative min-h-dvh overflow-x-hidden text-white">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
-      />
-
+    <div className="wc-landing relative text-white">
       <div className="wc-hero-stage" aria-hidden>
         <picture>
           <source srcSet="/hero-bg.webp?v=4" type="image/webp" />
@@ -58,42 +49,9 @@ export default function HomePage() {
         <div className="wc-hero-vignette" />
       </div>
 
-      <header className="wc-landing-header relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
-        <BrandLogo size="sm" className="wc-landing-logo" />
-        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-          <Link
-            href="/pricing"
-            className="wc-btn wc-btn-ghost hidden px-4 py-2 text-sm text-zinc-300 md:inline-flex"
-          >
-            Тарифы
-          </Link>
-          {loggedIn ? (
-            <Link
-              href="/dashboard"
-              className="wc-btn wc-btn-glow wc-landing-nav-cta"
-            >
-              Дашборд
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="wc-landing-nav-link"
-              >
-                Войти
-              </Link>
-              <Link
-                href="/register"
-                className="wc-btn wc-btn-glow wc-landing-nav-cta"
-              >
-                Регистрация
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
+      <SiteHeader loggedIn={loggedIn} />
 
-      <main className="relative z-10">
+      <main className="relative z-10 flex min-w-0 flex-1 flex-col">
         <section className="wc-hero-compose mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6 sm:pb-14 sm:pt-8">
           <motion.div
             className="wc-hero-copy"
@@ -117,10 +75,10 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Link
-                href={primaryHref}
+                href="/dashboard"
                 className="wc-btn wc-btn-glow min-h-12 px-8 text-base"
               >
-                {primaryLabel}
+                Создать сайт
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
@@ -142,54 +100,14 @@ export default function HomePage() {
           </motion.div>
         </section>
 
-        <div id="showcase" className="wc-landing-below">
+        <div id="showcase" className="wc-landing-below flex-1">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <ShowcaseStrip loggedIn={loggedIn} />
           </div>
         </div>
       </main>
 
-      <footer className="relative z-10 border-t border-white/10 bg-black/50">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <BrandLogo size="sm" />
-            <p className="mt-2 text-sm text-zinc-500">
-              Техподдержка:{" "}
-              <a
-                href={SUPPORT_MAILTO}
-                className="text-zinc-400 hover:text-white"
-              >
-                {SUPPORT_EMAIL}
-              </a>
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
-            <Link href="/pricing" className="hover:text-white">
-              Тарифы
-            </Link>
-            <Link href="/requisites" className="hover:text-white">
-              Реквизиты
-            </Link>
-            <a href={SUPPORT_MAILTO} className="hover:text-white">
-              Поддержка
-            </a>
-            {loggedIn ? (
-              <Link href="/dashboard" className="hover:text-white">
-                Дашборд
-              </Link>
-            ) : (
-              <>
-                <Link href="/login" className="hover:text-white">
-                  Вход
-                </Link>
-                <Link href="/register" className="hover:text-white">
-                  Регистрация
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </footer>
+      <SiteFooter loggedIn={loggedIn} />
     </div>
   );
 }
