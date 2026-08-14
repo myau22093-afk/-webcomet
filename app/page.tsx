@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { GenerationCinema } from "@/components/landing/GenerationCinema";
 import { ShowcaseStrip } from "@/components/landing/ShowcaseStrip";
 import { SiteFooter, SiteHeader } from "@/components/landing/SiteChrome";
-import { getSupabase } from "@/lib/supabaseClient";
+import { getSupabase, whenAuthReady } from "@/lib/supabaseClient";
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -15,14 +15,20 @@ export default function HomePage() {
   useEffect(() => {
     const supabase = getSupabase();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setLoggedIn(Boolean(session));
-    });
+    void whenAuthReady().then(() =>
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setLoggedIn(Boolean(session));
+      })
+    );
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(Boolean(session));
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setLoggedIn(false);
+        return;
+      }
+      if (session) setLoggedIn(true);
     });
 
     return () => subscription.unsubscribe();

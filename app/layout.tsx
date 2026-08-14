@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { YandexMetrika } from "@/components/YandexMetrika";
+import { SessionKeepAlive } from "@/components/SessionKeepAlive";
 import "./globals.css";
 
 const SITE_URL = "https://webcomet.ru";
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-dvh flex-col font-sans text-foreground">
         <YandexMetrika />
+        <SessionKeepAlive />
         {children}
         <Toaster position="top-center" richColors theme="dark" />
       </body>

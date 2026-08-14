@@ -5,20 +5,26 @@ import Link from "next/link";
 import { Rocket } from "lucide-react";
 import { HostingOffer } from "@/components/HostingOffer";
 import { SiteFooter, SiteHeader } from "@/components/landing/SiteChrome";
-import { getSupabase } from "@/lib/supabaseClient";
+import { getSupabase, whenAuthReady } from "@/lib/supabaseClient";
 
 export default function HostingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabase();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setLoggedIn(Boolean(session));
-    });
+    void whenAuthReady().then(() =>
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setLoggedIn(Boolean(session));
+      })
+    );
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(Boolean(session));
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setLoggedIn(false);
+        return;
+      }
+      if (session) setLoggedIn(true);
     });
     return () => subscription.unsubscribe();
   }, []);

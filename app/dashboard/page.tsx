@@ -50,7 +50,7 @@ import {
   IconTariffs,
   IconWizard,
 } from "@/components/icons/WcIcons";
-import { getSupabase } from "@/lib/supabaseClient";
+import { getSupabase, whenAuthReady } from "@/lib/supabaseClient";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 import {
   buildPreviewHtml,
@@ -746,7 +746,8 @@ export default function DashboardPage() {
 
     const supabase = getSupabase();
 
-    getFreshAccessToken().then(async (token) => {
+    void whenAuthReady().then(async () => {
+      const token = await getFreshAccessToken();
       if (!token) return;
       await Promise.all([
         loadStatus(token),
@@ -769,11 +770,12 @@ export default function DashboardPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
         setUser(null);
         return;
       }
+      if (!session) return;
       setUser({
         email: session.user.email,
         access_token: session.access_token,

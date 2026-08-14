@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { withAuthCookieOptions } from "@/lib/supabaseCookie";
 
 function publishBaseDomain(): string {
   const fromEnv = process.env.NEXT_PUBLIC_PUBLISH_BASE_DOMAIN?.trim();
@@ -36,6 +37,11 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 400 * 24 * 60 * 60,
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -46,21 +52,29 @@ export async function middleware(request: NextRequest) {
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(
+              name,
+              value,
+              withAuthCookieOptions(options)
+            )
           );
         },
       },
     }
   );
 
-  const {
-    data: { session },
-  } = await Promise.race([
-    supabase.auth.getSession(),
-    new Promise<{ data: { session: null } }>((resolve) =>
-      setTimeout(() => resolve({ data: { session: null } }), 8000)
+  // getUser обновляет JWT и cookie. getSession этого не делает —
+  // через час access token протухает и человек выглядит как гость.
+  await Promise.race([
+    supabase.auth.getUser(),
+    new Promise<{ data: { user: null }; error: null }>((resolve) =>
+      setTimeout(() => resolve({ data: { user: null }, error: null }), 8000)
     ),
   ]);
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const pathname = request.nextUrl.pathname;
   const isProtectedPage =

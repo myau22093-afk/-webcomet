@@ -5,6 +5,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { publicAppOrigin } from "@/lib/appOrigin";
 import { getOrCreateBillingProfile } from "@/lib/billing";
 import { createAdminClient } from "@/lib/supabaseAdmin";
+import { withAuthCookieOptions } from "@/lib/supabaseCookie";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -42,13 +43,18 @@ export async function GET(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 400 * 24 * 60 * 60,
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, withAuthCookieOptions(options));
           });
         },
       },
