@@ -216,17 +216,44 @@ export function LandingChat({
   }
 
   const ready = useMemo(() => isBriefReady(brief), [brief]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const briefRef = useRef(brief);
+  briefRef.current = brief;
+
+  function applyRestoredPhase(b: WizardBrief) {
+    setPalettePanel(false);
+    setPaletteStream(false);
+    setTierPanel(false);
+    setPendingPanel(null);
+    if (isBriefReady(b)) {
+      setPhase("ready");
+      return;
+    }
+    if (!b.topic) {
+      setPhase("idle");
+      return;
+    }
+    if (b.companyName.trim().length < 2) {
+      setPhase("company");
+      return;
+    }
+    if (!b.paletteId) {
+      setPhase("palette");
+      setPaletteStream(false);
+      setPalettePanel(true);
+      return;
+    }
+    if (!b.tier) {
+      setPhase("tier");
+      setTierPanel(true);
+      return;
+    }
+    setPhase("ready");
+  }
 
   useEffect(() => {
     try {
-      // Гостям не восстанавливаем старый чат — только чистый старт.
-      // Залогиненным можно продолжить незавершённый бриф.
-      if (!loggedIn) {
-        setBrief(emptyWizardBrief());
-        setMessages([]);
-        setPhase("idle");
-        return;
-      }
       const raw = localStorage.getItem(LANDING_CHAT_KEY);
       if (raw) {
         const data = JSON.parse(raw) as {
@@ -239,27 +266,23 @@ export function LandingChat({
             : loadBrief();
           setBrief(b);
           setMessages(data.messages.map((m) => ({ ...m, animate: false })));
-          if (isBriefReady(b)) setPhase("ready");
-          else if (!b.topic) setPhase("idle");
-          else if (b.companyName.trim().length < 2) setPhase("company");
-          else if (!b.paletteId) {
-            setPhase("palette");
-            setPaletteStream(false);
-            setPalettePanel(true);
-          } else if (!b.tier) {
-            setPhase("tier");
-            setTierPanel(true);
-          } else setPhase("ready");
+          applyRestoredPhase(b);
           return;
         }
       }
       setBrief(emptyWizardBrief());
       setMessages([]);
       setPhase("idle");
+      setPalettePanel(false);
+      setPaletteStream(false);
+      setTierPanel(false);
+      setPendingPanel(null);
     } catch {
       /* ignore */
     }
-  }, [loggedIn]);
+    // Один раз при монтировании — иначе сброс гостя убивает чат на каждом refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     scrollChatEnd();
@@ -272,9 +295,13 @@ export function LandingChat({
   }
 
   function finishAnimate(id: string) {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, animate: false } : m))
-    );
+    setMessages((prev) => {
+      const next = prev.map((m) =>
+        m.id === id ? { ...m, animate: false } : m
+      );
+      saveBrief(briefRef.current, next);
+      return next;
+    });
     setPendingPanel((panel) => {
       if (panel === "palette") {
         setPaletteStream(true);
@@ -323,14 +350,16 @@ export function LandingChat({
       paletteId: pal.id,
       colors: [...pal.colors],
     };
+    const baseMessages = messagesRef.current;
     setBrief(nextBrief);
+    saveBrief(nextBrief, baseMessages);
     setPalettePanel(false);
     setPaletteStream(false);
     setBusy(true);
     window.setTimeout(() => {
       pushAssistant(
         nextBrief,
-        messages,
+        messagesRef.current,
         `Отлично, берём «${pal.label}». Выбери уровень сайта.`,
         "tier"
       );
@@ -344,12 +373,15 @@ export function LandingChat({
       tier,
       photosConfirmed: true,
     };
+    const baseMessages = messagesRef.current;
+    setBrief(nextBrief);
+    saveBrief(nextBrief, baseMessages);
     setTierPanel(false);
     setBusy(true);
     window.setTimeout(() => {
       pushAssistant(
         nextBrief,
-        messages,
+        messagesRef.current,
         "Готово. Жми «Создать сайт».",
         "ready"
       );
@@ -378,11 +410,18 @@ export function LandingChat({
     setBusy(true);
     setInput("");
     const userMsg: Msg = { id: uid(), role: "user", content: message };
-    const withUser = [...messages, userMsg];
+    const withUser = [...messagesRef.current, userMsg];
+    const currentBrief = briefRef.current;
+    const currentPhase = phase;
     setMessages(withUser);
+    saveBrief(currentBrief, withUser);
 
     await new Promise((r) => setTimeout(r, 420));
-    const { next, phase: nextPhase, reply } = replyFor(phase, message, brief);
+    const { next, phase: nextPhase, reply } = replyFor(
+      currentPhase,
+      message,
+      currentBrief
+    );
     pushAssistant(next, withUser, reply, nextPhase);
   }
 
