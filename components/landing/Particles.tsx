@@ -80,8 +80,11 @@ const fragment = /* glsl */ `
       }
       gl_FragColor = vec4(vColor + 0.2 * sin(uv.yxx + uTime + vRandom.y * 6.28), 1.0);
     } else {
-      float circle = smoothstep(0.5, 0.4, d) * 0.8;
-      gl_FragColor = vec4(vColor + 0.2 * sin(uv.yxx + uTime + vRandom.y * 6.28), circle);
+      float circle = smoothstep(0.5, 0.28, d);
+      float core = smoothstep(0.22, 0.0, d) * 0.85;
+      float alpha = clamp(circle * 0.95 + core, 0.0, 1.0);
+      vec3 bright = vColor * 1.15 + vec3(0.12);
+      gl_FragColor = vec4(bright, alpha);
     }
   }
 `;
