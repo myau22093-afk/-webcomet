@@ -152,7 +152,7 @@ export function LandingPalettePicker({
   return (
     <div className="wc-space-pal">
       <p className="wc-space-pal-lead">
-        Выбери палитру. Превью покажет, как цвета лягут на сайт
+        Выбери палитру
       </p>
 
       <div className="wc-space-pal-grid">

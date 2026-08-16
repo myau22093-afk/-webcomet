@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/BrandLogo";
 import { CodeBlock } from "@/components/CodeBlock";
 import { WcSelect } from "@/components/WcSelect";
+import { SpaceParticlesBg } from "@/components/landing/SpaceParticlesBg";
 import { SiteWizard } from "@/components/wizard/SiteWizard";
 import { StudioIconRail } from "@/components/studio/StudioIconRail";
 import { HostingOffer } from "@/components/HostingOffer";
@@ -1807,7 +1808,12 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="wc-app-shell wc-atmosphere flex overflow-hidden text-zinc-100">
+    <div
+      className={`wc-app-shell wc-atmosphere relative flex overflow-hidden text-zinc-100 ${
+        user ? "has-studio-rail" : ""
+      } ${user && sidebarOpen ? "is-rail-expanded" : ""}`}
+    >
+      {user ? <SpaceParticlesBg /> : null}
       {user && sidebarOpen ? (
         <button
           type="button"

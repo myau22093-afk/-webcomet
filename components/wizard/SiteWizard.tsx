@@ -121,9 +121,8 @@ function Typewriter({
     setShown("");
     doneRef.current = false;
     let i = 0;
-    const step = Math.max(1, Math.ceil(text.length / 80));
     const id = window.setInterval(() => {
-      i = Math.min(text.length, i + step);
+      i = Math.min(text.length, i + 1);
       setShown(text.slice(0, i));
       if (i >= text.length) {
         window.clearInterval(id);
@@ -132,9 +131,10 @@ function Typewriter({
           onDone?.();
         }
       }
-    }, 16);
+    }, 22);
     return () => window.clearInterval(id);
-  }, [text, onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
 
   return (
     <span>
@@ -1521,7 +1521,18 @@ export function SiteWizard({
                     }`}
                   >
                     {b.role === "assistant" && b.animate ? (
-                      <Typewriter text={b.content} />
+                      <Typewriter
+                        text={b.content}
+                        onDone={() => {
+                          setBubbles((prev) =>
+                            prev.map((x) =>
+                              x.id === b.id && x.kind === "text"
+                                ? { ...x, animate: false }
+                                : x
+                            )
+                          );
+                        }}
+                      />
                     ) : (
                       b.content
                     )}

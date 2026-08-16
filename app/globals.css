@@ -901,18 +901,21 @@ h3,
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* cache-bust marker: landing-v22 */
+/* cache-bust marker: landing-v23 */
 
-/* Lovable-style studio icon rail */
+/* Lovable-style studio icon rail — всегда в viewport, не уезжает со скроллом */
 .wc-studio-rail {
-  position: relative;
-  z-index: 30;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
   flex-shrink: 0;
   height: 100dvh;
   height: 100svh;
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 9, 18, 0.92);
+  background: rgba(8, 9, 18, 0.94);
   backdrop-filter: blur(16px);
   transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease,
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
@@ -1322,8 +1325,96 @@ h3,
 }
 
 .wc-lovable-shell-main.has-rail {
+  margin-left: 4.25rem;
   border-top-left-radius: 1.25rem;
   overflow: hidden;
+}
+
+.wc-lovable-shell.has-rail-expanded .wc-lovable-shell-main.has-rail {
+  margin-left: min(15.5rem, 82vw);
+}
+
+.wc-app-shell.has-studio-rail {
+  padding-left: 4.25rem;
+}
+
+.wc-app-shell.has-studio-rail.is-rail-expanded {
+  padding-left: min(15.5rem, 82vw);
+}
+
+@media (max-width: 639px) {
+  .wc-lovable-shell.has-rail-expanded .wc-lovable-shell-main.has-rail {
+    margin-left: 4.25rem;
+  }
+  .wc-app-shell.has-studio-rail.is-rail-expanded {
+    padding-left: 4.25rem;
+  }
+}
+
+.wc-landing-tier {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(160deg, rgba(124, 58, 237, 0.12), transparent 45%),
+    rgba(12, 14, 28, 0.82);
+  backdrop-filter: blur(14px);
+  animation: wcFadeIn 0.4s ease;
+}
+
+.wc-landing-tier-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #f4f4f8;
+}
+
+.wc-landing-tier-btn {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-top: 0.55rem;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.wc-landing-tier-btn:hover:not(:disabled) {
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.wc-landing-tier-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wc-landing-tier-btn.is-premium {
+  border-color: rgba(139, 92, 246, 0.35);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.wc-landing-tier-ico {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e4e4f0;
+}
+
+.wc-landing-tier-btn.is-premium .wc-landing-tier-ico {
+  background: rgba(124, 58, 237, 0.25);
+  color: #ddd6fe;
 }
 
 .wc-inline-auth-input {

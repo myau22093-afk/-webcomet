@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, Check, Loader2, Mic, MicOff } from "lucide-react";
+import { ArrowUp, Check, Crown, Loader2, Mic, MicOff, Zap } from "lucide-react";
 import { SpaceParticlesBg } from "@/components/landing/SpaceParticlesBg";
 import StrokeText from "@/components/landing/StrokeText";
 import {
@@ -12,6 +12,7 @@ import {
 import { StudioIconRail } from "@/components/studio/StudioIconRail";
 import { InlineAuthModal } from "@/components/studio/InlineAuthModal";
 import { getSupabase } from "@/lib/supabaseClient";
+import { getTokenCost } from "@/lib/tokenConfig";
 import {
   WIZARD_PALETTES,
   WIZARD_RESUME_KEY,
@@ -24,6 +25,7 @@ import {
   suggestSeoPhrases,
   type WizardBrief,
   type WizardPalette,
+  type WizardTier,
 } from "@/lib/wizardBrief";
 
 type Msg = {
@@ -135,7 +137,7 @@ function replyFor(
     return {
       next,
       phase: "palette",
-      reply: "Выбери палитру ниже. Сразу видно, как цвета лягут на сайт.",
+      reply: "Выбери палитру ниже.",
     };
   }
 
@@ -200,6 +202,10 @@ export function LandingChat({
   const [authTab, setAuthTab] = useState<"login" | "register">("register");
   const [listening, setListening] = useState(false);
   const [palettePanel, setPalettePanel] = useState(false);
+  const [tierPanel, setTierPanel] = useState(false);
+  const [pendingPanel, setPendingPanel] = useState<"palette" | "tier" | null>(
+    null
+  );
   const [railExpanded, setRailExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
@@ -208,11 +214,24 @@ export function LandingChat({
 
   useEffect(() => {
     try {
+      // Гостям не восстанавливаем старый чат — только чистый старт.
+      // Залогиненным можно продолжить незавершённый бриф.
+      if (!loggedIn) {
+        setBrief(emptyWizardBrief());
+        setMessages([]);
+        setPhase("idle");
+        return;
+      }
       const raw = localStorage.getItem(LANDING_CHAT_KEY);
       if (raw) {
-        const data = JSON.parse(raw) as { messages?: Msg[] };
+        const data = JSON.parse(raw) as {
+          messages?: Msg[];
+          brief?: WizardBrief;
+        };
         if (Array.isArray(data.messages) && data.messages.length) {
-          const b = loadBrief();
+          const b = data.brief
+            ? { ...emptyWizardBrief(), ...data.brief }
+            : loadBrief();
           setBrief(b);
           setMessages(data.messages.map((m) => ({ ...m, animate: false })));
           if (isBriefReady(b)) setPhase("ready");
@@ -221,23 +240,24 @@ export function LandingChat({
           else if (!b.paletteId) {
             setPhase("palette");
             setPalettePanel(true);
-          } else if (!b.tier) setPhase("tier");
-          else setPhase("ready");
+          } else if (!b.tier) {
+            setPhase("tier");
+            setTierPanel(true);
+          } else setPhase("ready");
           return;
         }
       }
-      // Нет сообщений лендинга — не тянем готовый бриф из студии
       setBrief(emptyWizardBrief());
       setMessages([]);
       setPhase("idle");
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [loggedIn]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy, phase, brief.paletteId]);
+  }, [messages, busy, phase, brief.paletteId, palettePanel, tierPanel]);
 
   function persist(nextBrief: WizardBrief, nextMessages: Msg[]) {
     setBrief(nextBrief);
@@ -249,6 +269,11 @@ export function LandingChat({
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, animate: false } : m))
     );
+    setPendingPanel((panel) => {
+      if (panel === "palette") setPalettePanel(true);
+      if (panel === "tier") setTierPanel(true);
+      return null;
+    });
   }
 
   function pushAssistant(
@@ -265,6 +290,17 @@ export function LandingChat({
     };
     const nextMessages = [...baseMessages, botMsg];
     setPhase(nextPhase);
+    if (nextPhase === "palette") {
+      setPalettePanel(false);
+      setTierPanel(false);
+      setPendingPanel("palette");
+    } else if (nextPhase === "tier") {
+      setPalettePanel(false);
+      setTierPanel(false);
+      setPendingPanel("tier");
+    } else {
+      setPendingPanel(null);
+    }
     persist(nextBrief, nextMessages);
     setBusy(false);
   }
@@ -279,17 +315,35 @@ export function LandingChat({
       colors: [...pal.colors],
     };
     setBrief(nextBrief);
-    setPalettePanel(true);
+    setPalettePanel(false);
     setBusy(true);
     window.setTimeout(() => {
-      setPalettePanel(false);
       pushAssistant(
         nextBrief,
         messages,
-        `Отлично, берём «${pal.label}». Какой уровень: простой или премиум?`,
+        `Отлично, берём «${pal.label}». Выбери уровень сайта.`,
         "tier"
       );
-    }, 900);
+    }, 350);
+  }
+
+  function pickTier(tier: WizardTier) {
+    if (busy || brief.tier) return;
+    const nextBrief: WizardBrief = {
+      ...brief,
+      tier,
+      photosConfirmed: true,
+    };
+    setTierPanel(false);
+    setBusy(true);
+    window.setTimeout(() => {
+      pushAssistant(
+        nextBrief,
+        messages,
+        "Готово. Жми «Создать сайт».",
+        "ready"
+      );
+    }, 280);
   }
 
   function onCreate() {
@@ -309,6 +363,8 @@ export function LandingChat({
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
+    if (phase === "tier" && !brief.tier) return;
+    if (phase === "palette" && !brief.paletteId) return;
     setBusy(true);
     setInput("");
     const userMsg: Msg = { id: uid(), role: "user", content: message };
@@ -317,7 +373,6 @@ export function LandingChat({
 
     await new Promise((r) => setTimeout(r, 420));
     const { next, phase: nextPhase, reply } = replyFor(phase, message, brief);
-    setPalettePanel(nextPhase === "palette");
     pushAssistant(next, withUser, reply, nextPhase);
   }
 
@@ -376,10 +431,14 @@ export function LandingChat({
   }
 
   const empty = messages.length === 0;
-  const showRail = messages.length > 0;
+  const showRail = messages.length > 0 || loggedIn;
 
   return (
-    <div className="wc-lovable wc-lovable-shell relative">
+    <div
+      className={`wc-lovable wc-lovable-shell relative ${
+        showRail && railExpanded ? "has-rail-expanded" : ""
+      }`}
+    >
       <SpaceParticlesBg />
 
       {railExpanded && showRail ? (
@@ -398,14 +457,7 @@ export function LandingChat({
         loggedIn={loggedIn}
         userEmail={userEmail}
         activeId="studio"
-        onSelectStudio={() => {
-          if (loggedIn) {
-            window.location.assign("/dashboard");
-            return;
-          }
-          setAuthTab("login");
-          setAuthOpen(true);
-        }}
+        onSelectStudio={() => setRailExpanded(false)}
         onSelectSettings={() => {
           if (!loggedIn) {
             setAuthTab("login");
@@ -449,17 +501,11 @@ export function LandingChat({
           </Link>
         ) : (
           <span className="wc-lovable-mark-text text-white/90">
-            <span className="wc-lovable-mark-name">Чат</span>
+            <span className="wc-lovable-mark-name">Студия</span>
           </span>
         )}
         <nav className="flex items-center gap-2">
-          {loggedIn ? (
-            showRail ? null : (
-              <Link href="/dashboard" className="wc-lovable-btn-dark">
-                Студия
-              </Link>
-            )
-          ) : (
+          {loggedIn ? null : (
             <>
               <button
                 type="button"
@@ -511,7 +557,7 @@ export function LandingChat({
               />
             </h1>
             <p className="wc-lovable-lead">
-              Опиши идею. Дальше уточним детали и соберём лендинг.
+              Опиши идею — уточним детали и соберём лендинг.
             </p>
           </div>
         ) : (
@@ -539,7 +585,7 @@ export function LandingChat({
                 </div>
               </div>
             ))}
-            {busy && !messages.some((m) => m.animate) && !palettePanel ? (
+            {busy && !messages.some((m) => m.animate) && !palettePanel && !tierPanel ? (
               <div className="inline-flex items-center gap-2 text-sm text-zinc-400">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Печатаю…
@@ -558,6 +604,47 @@ export function LandingChat({
                   })
                 }
               />
+            ) : null}
+            {tierPanel && !brief.tier ? (
+              <div className="wc-landing-tier">
+                <p className="wc-landing-tier-title">Какой уровень сайта?</p>
+                <button
+                  type="button"
+                  className="wc-landing-tier-btn"
+                  disabled={busy}
+                  onClick={() => pickTier("simple")}
+                >
+                  <span className="wc-landing-tier-ico">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                  <span>
+                    <span className="block text-[14px] text-zinc-100">
+                      Простой · −{getTokenCost("gpt-5.6-sol")} ток.
+                    </span>
+                    <span className="mt-1 block text-[12px] leading-relaxed text-zinc-500">
+                      Чистый современный лендинг. Быстрее и дешевле.
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="wc-landing-tier-btn is-premium"
+                  disabled={busy}
+                  onClick={() => pickTier("premium")}
+                >
+                  <span className="wc-landing-tier-ico">
+                    <Crown className="h-4 w-4" />
+                  </span>
+                  <span>
+                    <span className="block text-[14px] text-violet-50">
+                      Премиум · −{getTokenCost("claude-fable-5")} ток.
+                    </span>
+                    <span className="mt-1 block text-[12px] leading-relaxed text-violet-200/70">
+                      Сильнее дизайн и анимации.
+                    </span>
+                  </span>
+                </button>
+              </div>
             ) : null}
             {brief.paletteId && !palettePanel ? (
               <div className="wc-space-pal-chosen">
@@ -582,13 +669,17 @@ export function LandingChat({
                   : phase === "company"
                     ? "Название компании…"
                     : phase === "palette"
-                      ? "Или напиши цвет текстом…"
+                      ? "Выбери палитру выше…"
                       : phase === "tier"
-                        ? "Простой или премиум…"
+                        ? "Выбери уровень выше…"
                         : "Напиши сообщение…"
               }
               className="wc-lovable-input"
-              disabled={busy}
+              disabled={
+                busy ||
+                (phase === "palette" && !brief.paletteId) ||
+                (phase === "tier" && !brief.tier)
+              }
             />
             <div className="flex items-center gap-1.5 pr-1.5">
               <button
@@ -638,6 +729,8 @@ export function LandingChat({
                     setBrief(emptyWizardBrief());
                     setPhase("idle");
                     setPalettePanel(false);
+                    setTierPanel(false);
+                    setPendingPanel(null);
                     setRailExpanded(false);
                     setInput("");
                     setBusy(false);
