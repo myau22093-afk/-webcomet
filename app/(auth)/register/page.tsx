@@ -81,7 +81,7 @@ function RegisterContent() {
 
       if (payload.needsEmailConfirmation !== false) {
         setPendingEmail(payload.email ?? data.email);
-        toast.success("Письмо отправлено — подтвердите email");
+        toast.success("Письмо отправлено. Подтвердите email");
         return;
       }
 
@@ -133,7 +133,7 @@ function RegisterContent() {
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             Мы отправили ссылку на{" "}
             <span className="font-medium text-zinc-200">{pendingEmail}</span>.
-            Откройте письмо и нажмите кнопку подтверждения — после этого можно
+            Откройте письмо и нажмите кнопку подтверждения. После этого можно
             войти.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
@@ -172,7 +172,7 @@ function RegisterContent() {
         <BrandLogo size="sm" className="mb-6" />
         <h1 className="font-display text-2xl font-semibold">Регистрация</h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Укажите реальный email — на него придёт ссылка подтверждения
+          Укажите реальный email. На него придёт ссылка подтверждения
         </p>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-4">

@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { CodeBlock } from "@/components/CodeBlock";
 import { WcSelect } from "@/components/WcSelect";
 import { SiteWizard } from "@/components/wizard/SiteWizard";
+import { StudioIconRail } from "@/components/studio/StudioIconRail";
 import { HostingOffer } from "@/components/HostingOffer";
 import {
   PublishModal,
@@ -794,12 +795,16 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setSidebarOpen(false);
+      return;
+    }
     const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => setSidebarOpen(mq.matches);
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1799,340 +1804,99 @@ export default function DashboardPage() {
 
   return (
     <div className="wc-app-shell wc-atmosphere flex overflow-hidden text-zinc-100">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
+      {user && sidebarOpen ? (
         <button
           type="button"
           aria-label="Закрыть меню"
-          className="fixed inset-0 z-40 bg-black/75 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 sm:hidden"
           onClick={() => setSidebarOpen(false)}
         />
-      )}
+      ) : null}
 
-      <aside
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0"
-        } fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] shrink-0 overflow-hidden border-r border-white/10 bg-[#0b0c12] transition-all duration-300 lg:static ${
-          sidebarOpen ? "lg:w-72" : "lg:w-0"
-        }`}
-      >
-        <div className="flex h-full min-h-0 w-full flex-col">
-          <div className="border-b border-white/10 px-4 py-3">
-            <BrandLogo size="sm" />
-          </div>
-
-          <div className="space-y-1 p-3">
-            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
-              Дашборд
-            </p>
-            {(
-              [
-                { id: "wizard" as const, label: "Студия", icon: IconWizard },
-                { id: "settings" as const, label: "Настройки", icon: IconGear },
-              ] as const
-            ).map((mode) => {
-              const Icon = mode.icon;
-              return (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => {
-                    setWorkMode(mode.id);
-                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }}
-                  className={`wc-nav-item ${
-                    workMode === mode.id ? "wc-nav-item-active" : ""
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {mode.label}
-                </button>
-              );
-            })}
-            <Link href="/hosting" className="wc-nav-item mt-1">
-              <IconHost className="h-5 w-5" />
-              Хостинг
-            </Link>
-            <Link href="/pricing" className="wc-nav-item mt-1">
-              <IconTariffs className="h-5 w-5" />
-              Тарифы
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2 px-4 py-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-            {workMode === "settings" ? (
-              <>
-                <Settings className="h-3.5 w-3.5" />
-                Профиль
-              </>
-            ) : (
-              <>
-                <History className="h-3.5 w-3.5" />
-                История
-              </>
-            )}
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
-            {workMode === "settings" && (
-              <div className="mx-2 hidden rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-zinc-400 lg:block">
-                <p className="font-medium text-zinc-200">Контакты</p>
-                <p className="mt-1.5 leading-relaxed">
-                  Телефон, email и соцсети подставляются в футер и секцию
-                  «Контакты» на генерируемых сайтах.
+      {user ? (
+        <StudioIconRail
+          visible
+          expanded={sidebarOpen}
+          onExpandedChange={setSidebarOpen}
+          loggedIn
+          userEmail={user.email}
+          activeId={workMode === "settings" ? "settings" : "studio"}
+          onSelectStudio={() => {
+            setWorkMode("wizard");
+            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+              setSidebarOpen(false);
+            }
+          }}
+          onSelectSettings={() => {
+            setWorkMode("settings");
+            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+              setSidebarOpen(false);
+            }
+          }}
+          onSignOut={() => void handleLogout()}
+          expandedExtra={
+            <div className="space-y-1 px-0.5 pb-2">
+              <div className="mb-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+                  Токены
                 </p>
-                {contactsReady ? (
-                  <p className="mt-2 text-violet-300">
-                    {contactsPreview.phone || "—"}
-                    {contactsPreview.email
-                      ? ` · ${contactsPreview.email}`
-                      : ""}
-                  </p>
-                ) : (
-                  <p className="mt-2 text-amber-300/90">Ещё не заполнены</p>
-                )}
+                <p className="mt-1 text-sm text-zinc-200">
+                  {formatTokens(status.tokenBalance)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTopUpOpen(true)}
+                  className="mt-1.5 text-[11px] font-medium text-violet-300 hover:text-violet-200"
+                >
+                  Пополнить
+                </button>
               </div>
-            )}
-            {workMode === "wizard" &&
-              (siteHistoryGroups.length === 0 ? (
-                <p className="px-3 py-4 text-[13px] text-zinc-500">
+              {siteHistoryGroups.length === 0 ? (
+                <p className="px-1 py-2 text-[12px] text-zinc-500">
                   Пока нет сайтов
                 </p>
               ) : (
-                siteHistoryGroups.map((group) => {
+                siteHistoryGroups.slice(0, 12).map((group) => {
                   const title = shortSiteTitle(group.rootPrompt);
+                  const item = group.items[0];
+                  if (!item) return null;
                   return (
-                    <div key={group.rootPrompt} className="mb-0.5">
-                      {group.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`group flex items-start gap-1 rounded-xl ${
-                            activeId === item.id
-                              ? "bg-wc-purple/20 text-white"
-                              : "text-zinc-400 hover:bg-white/5"
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveId(item.id);
-                              setMainTab("preview");
-                              void getFreshAccessToken().then((token) => {
-                                if (token)
-                                  void ensureSiteLoaded(token, item.id);
-                              });
-                            }}
-                            className="min-w-0 flex-1 px-3 py-2.5 text-left"
-                          >
-                            <p className="truncate text-[13px] leading-snug text-zinc-200">
-                              {group.items.length > 1 ? (
-                                <span className="mr-1.5 text-[11px] text-violet-300/90">
-                                  v{item.version}
-                                </span>
-                              ) : null}
-                              {title}
-                            </p>
-                            <p className="mt-1 text-[11px] text-zinc-600">
-                              {new Date(item.createdAt).toLocaleString("ru-RU", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </button>
-                          <button
-                            type="button"
-                            title="Удалить"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void deleteHistoryRecord("sites", item.id);
-                            }}
-                            className="mr-2 mt-2 rounded-lg p-1.5 text-zinc-600 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                    <button
+                      key={group.rootPrompt}
+                      type="button"
+                      onClick={() => {
+                        setActiveId(item.id);
+                        setMainTab("preview");
+                        setWorkMode("wizard");
+                        void getFreshAccessToken().then((token) => {
+                          if (token) void ensureSiteLoaded(token, item.id);
+                        });
+                        if (
+                          typeof window !== "undefined" &&
+                          window.innerWidth < 1024
+                        ) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={
+                        "w-full rounded-xl px-2.5 py-2 text-left text-[12px] transition " +
+                        (activeId === item.id
+                          ? "bg-violet-500/20 text-violet-100"
+                          : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200")
+                      }
+                    >
+                      <span className="line-clamp-2">{title}</span>
+                    </button>
                   );
                 })
-              ))}
-
-            {workMode === "image" &&
-              (imageHistory.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-zinc-500">Пока нет картинок</p>
-              ) : (
-                imageHistory.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`group flex items-start gap-1 rounded-xl ${
-                      generatedImageUrl === item.url
-                        ? "bg-wc-purple/20 text-white"
-                        : "text-zinc-400 hover:bg-white/5"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setGeneratedImageUrl(item.url)}
-                      className="min-w-0 flex-1 px-3 py-3 text-left text-sm"
-                    >
-                      <p className="line-clamp-2">{item.prompt}</p>
-                      <p className="mt-1 text-[10px] text-zinc-600">
-                        {new Date(item.createdAt).toLocaleString("ru-RU")}
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      title="Удалить"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void deleteHistoryRecord("images", item.id);
-                      }}
-                      className="mr-2 mt-3 rounded-lg p-1.5 text-zinc-600 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))
-              ))}
-
-            {workMode === "chat" &&
-              (chatConversations.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-zinc-500">Пока нет чатов</p>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveConversationId(null);
-                      setChatMessages([]);
-                    }}
-                    className="mb-1 w-full rounded-xl px-3 py-2 text-left text-xs text-violet-300 hover:bg-white/5"
-                  >
-                    + Новый чат
-                  </button>
-                  {chatConversations.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`group flex items-start gap-1 rounded-xl ${
-                        activeConversationId === item.id
-                          ? "bg-wc-purple/20 text-white"
-                          : "text-zinc-400 hover:bg-white/5"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveConversationId(item.id);
-                          setChatMessages(item.messages);
-                        }}
-                        className="min-w-0 flex-1 px-3 py-3 text-left text-sm"
-                      >
-                        <p className="line-clamp-2">{item.title}</p>
-                        <p className="mt-1 text-[10px] text-zinc-600">
-                          {item.messages.length} сообщ. ·{" "}
-                          {new Date(item.updatedAt).toLocaleString("ru-RU")}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        title="Удалить чат"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void deleteHistoryRecord("chats", item.id);
-                        }}
-                        className="mr-2 mt-3 rounded-lg p-1.5 text-zinc-600 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </>
-              ))}
-          </div>
-
-          <div className="shrink-0 border-t border-white/10 bg-[#0b0c12] p-3">
-            {user ? (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-wc-purple to-wc-pink text-sm font-semibold text-white">
-                    {(user.email?.[0] ?? "U").toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-zinc-200">
-                      {user.email}
-                    </p>
-                    {status.tierLabel ? (
-                      <p className="text-[11px] text-zinc-500">
-                        {status.tierLabel}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
-                    Баланс токенов
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-200">
-                    {formatTokens(status.tokenBalance)} ток.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setTopUpOpen(true)}
-                    className="mt-2 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200"
-                  >
-                    Пополнить →
-                  </button>
-                </div>
-                <a
-                  href={SUPPORT_MAILTO}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  Техподдержка
-                </a>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="wc-btn wc-btn-ghost mt-2 w-full py-2 text-xs"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Выйти
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-zinc-400">Сайт — после регистрации</p>
-                <a
-                  href="/register?next=/dashboard"
-                  className="wc-btn wc-btn-primary mt-3 w-full justify-center py-2.5 text-xs"
-                >
-                  Зарегистрироваться
-                </a>
-                <a
-                  href="/login?next=/dashboard"
-                  className="wc-btn wc-btn-ghost mt-2 w-full justify-center py-2 text-xs"
-                >
-                  Войти
-                </a>
-                <a
-                  href={SUPPORT_MAILTO}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  Техподдержка
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </aside>
+              )}
+            </div>
+          }
+        />
+      ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {workMode !== "wizard" ? (
+        {user && workMode !== "wizard" ? (
           <header className="flex items-center border-b border-white/10 px-3 py-2">
             <button
               type="button"
@@ -2156,7 +1920,9 @@ export default function DashboardPage() {
               email: contactEmail,
               socials: contactSocials,
             }}
-            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            onToggleSidebar={
+              user ? () => setSidebarOpen((v) => !v) : undefined
+            }
             onBalanceRefresh={() => {
               void (async () => {
                 const t = await getFreshAccessToken();

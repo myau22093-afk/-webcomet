@@ -20,21 +20,34 @@ export function BrandLogo({
   size = "md",
   markOnly = false,
 }: BrandLogoProps) {
+  const mark = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className="wc-brand-mark-img"
+      src="/wc-mark.png?v=4"
+      alt=""
+      width={36}
+      height={36}
+      decoding="async"
+    />
+  );
+
   const inner = (
     <span
       className={`wc-brand-logo ${sizeClass[size]} ${className}`.trim()}
       aria-label="WebComet.ru"
     >
       {markOnly ? (
-        <span className="wc-brand-wordmark">
-          <span className="wc-brand-comet">W</span>
-        </span>
+        mark
       ) : (
-        <span className="wc-brand-wordmark">
-          <span className="wc-brand-web">Web</span>
-          <span className="wc-brand-comet">Comet</span>
-          <span className="wc-brand-tld">.ru</span>
-        </span>
+        <>
+          {mark}
+          <span className="wc-brand-wordmark">
+            <span className="wc-brand-web">Web</span>
+            <span className="wc-brand-comet">Comet</span>
+            <span className="wc-brand-tld">.ru</span>
+          </span>
+        </>
       )}
     </span>
   );
