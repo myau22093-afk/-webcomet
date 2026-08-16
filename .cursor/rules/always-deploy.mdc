@@ -1,16 +1,16 @@
 ---
-description: After WebComet changes, always commit, push, and deploy to VPS
+description: After WebComet changes, always commit, push, and deploy to webcomet.ru
 alwaysApply: true
 ---
 
-# Always deploy WebComet
+# Always deploy to webcomet.ru
 
 When you finish code changes for WebComet:
 
 1. Commit (unless the user forbade commits for that change).
 2. Push to `origin/main`.
-3. Deploy immediately via SSH:
-   `ssh -i ~/.ssh/id_ed25519 root@92.242.61.24 "cd /opt/webcomet && bash scripts/deploy-vps.sh"`
+3. Deploy immediately via SSH (scale stack):
+   `ssh -o BatchMode=yes root@92.242.61.24 "cd /opt/webcomet && git fetch origin main && git reset --hard origin/main && docker compose -f docker-compose.scale.yml up -d --build && docker compose -f docker-compose.scale.yml ps"`
 4. Do not wait for the user to ask «задеплой».
 
-Prod: https://webcomet.ru · VPS path `/opt/webcomet`.
+Prod: https://webcomet.ru · VPS `/opt/webcomet` · compose: `docker-compose.scale.yml`.
