@@ -5,13 +5,9 @@ import Link from "next/link";
 import {
   Loader2,
   Send,
-  Sparkles,
   ImageIcon,
-  RotateCcw,
   Crown,
   Zap,
-  Wand2,
-  Menu,
   Mic,
   MicOff,
   Plus,
@@ -97,7 +93,6 @@ type Props = {
   /** Текущий баланс токенов — чтобы не стартовать картинки в минус */
   tokenBalance?: number;
   onBalanceRefresh: () => void;
-  onToggleSidebar?: () => void;
   onSiteReady: (site: {
     id: string;
     prompt: string;
@@ -246,7 +241,6 @@ export function SiteWizard({
   settingsContacts,
   tokenBalance = 0,
   onBalanceRefresh,
-  onToggleSidebar,
   onSiteReady,
 }: Props) {
   const [brief, setBrief] = useState<WizardBrief>(() => emptyWizardBrief());
@@ -1471,47 +1465,6 @@ export function SiteWizard({
           <div className="absolute -left-16 top-8 h-48 w-48 rounded-full bg-violet-600/[0.07] blur-3xl" />
         </div>
 
-        <div className="relative z-[1] flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-5">
-          <div className="flex items-center gap-3">
-            {onToggleSidebar ? (
-              <button
-                type="button"
-                onClick={onToggleSidebar}
-                title="Меню"
-                aria-label="Меню"
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/20 transition hover:bg-violet-500/25"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-400/20">
-                <Wand2 className="h-5 w-5 text-violet-200" />
-              </span>
-            )}
-            <div>
-              <p className="text-[15px] font-medium tracking-tight text-zinc-100">
-                Студия
-              </p>
-              <p className="hidden text-[12px] text-zinc-500 min-[420px]:block">
-                {brief.tier === "premium"
-                  ? `Премиум · ${siteCost} ток.`
-                  : brief.tier === "simple"
-                    ? `Простой · ${siteCost} ток.`
-                    : "Собери сайт и правь в одном месте"}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={resetWizard}
-            title="Сбросить мастер и начать новый сайт"
-            className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12px] text-zinc-300 transition hover:bg-white/5 hover:text-white"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Заново
-          </button>
-        </div>
-
         <div
           className={`relative z-[1] min-h-0 flex-1 overflow-y-auto px-3 sm:px-5 ${
             isFreshStart
@@ -2152,66 +2105,76 @@ export function SiteWizard({
         ) : null}
 
         <div className="relative z-[1] mt-auto shrink-0 space-y-3 border-t border-white/[0.06] bg-[#07080d] px-3 py-3 sm:px-5 sm:py-4">
-          {(ready || result) && (
-            <div className="flex flex-wrap gap-2">
+          {!isFreshStart || ready || result ? (
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                disabled={!ready || building || imagesLoading}
-                onClick={() => void buildSite()}
-                className="wc-btn wc-btn-primary px-4 py-2.5 text-[13px] disabled:opacity-50"
+                onClick={resetWizard}
+                title="Сбросить мастер и начать новый сайт"
+                className="wc-lovable-link"
               >
-                {building ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                Собрать сайт (−{siteCost})
+                Заново
               </button>
-              {result ? (
+              {(ready || result) && (
                 <>
                   <button
                     type="button"
-                    disabled={imagesLoading || editing}
-                    onClick={() => openImagePicker()}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                    disabled={!ready || building || imagesLoading}
+                    onClick={() => void buildSite()}
+                    className="wc-lovable-build gap-2 disabled:opacity-50"
                   >
-                    {imagesLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Картинки…
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="h-4 w-4" />
-                        Картинки
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={exportingZip || editing || imagesLoading}
-                    onClick={() => void downloadZip()}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
-                  >
-                    {exportingZip ? (
+                    {building ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Archive className="h-4 w-4" />
-                    )}
-                    ZIP
+                    ) : null}
+                    Собрать сайт (−{siteCost})
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPublishOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-500/15 px-4 py-2.5 text-[13px] text-violet-100 transition hover:bg-violet-500/25"
-                  >
-                    <Rocket className="h-4 w-4" />
-                    Опубликовать
-                  </button>
+                  {result ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={imagesLoading || editing}
+                        onClick={() => openImagePicker()}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                      >
+                        {imagesLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Картинки…
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="h-4 w-4" />
+                            Картинки
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={exportingZip || editing || imagesLoading}
+                        onClick={() => void downloadZip()}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-[13px] text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
+                      >
+                        {exportingZip ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                        ZIP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPublishOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-500/15 px-4 py-2.5 text-[13px] text-violet-100 transition hover:bg-violet-500/25"
+                      >
+                        <Rocket className="h-4 w-4" />
+                        Опубликовать
+                      </button>
+                    </>
+                  ) : null}
                 </>
-              ) : null}
+              )}
             </div>
-          )}
+          ) : null}
           {imagePickerOpen && result ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
               {(() => {

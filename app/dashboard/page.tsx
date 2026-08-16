@@ -1920,9 +1920,6 @@ export default function DashboardPage() {
               email: contactEmail,
               socials: contactSocials,
             }}
-            onToggleSidebar={
-              user ? () => setSidebarOpen((v) => !v) : undefined
-            }
             onBalanceRefresh={() => {
               void (async () => {
                 const t = await getFreshAccessToken();

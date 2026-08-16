@@ -432,37 +432,12 @@ export function LandingChat({
           </span>
         )}
         <nav className="flex items-center gap-2">
-          {!empty ? (
-            <button
-              type="button"
-              className="wc-lovable-link"
-              onClick={() => {
-                try {
-                  localStorage.removeItem(LANDING_CHAT_KEY);
-                  localStorage.removeItem(WIZARD_STORAGE_KEY);
-                  localStorage.removeItem(WIZARD_RESUME_KEY);
-                } catch {
-                  /* ignore */
-                }
-                setMessages([]);
-                setBrief(emptyWizardBrief());
-                setPhase("idle");
-                setPalettePanel(false);
-                setRailExpanded(false);
-                setInput("");
-                setBusy(false);
-                setAuthOpen(false);
-                setListening(false);
-                speechRef.current?.stop();
-              }}
-            >
-              Заново
-            </button>
-          ) : null}
           {loggedIn ? (
-            <Link href="/dashboard" className="wc-lovable-btn-dark">
-              Студия
-            </Link>
+            showRail ? null : (
+              <Link href="/dashboard" className="wc-lovable-btn-dark">
+                Студия
+              </Link>
+            )
           ) : (
             <>
               <button
@@ -608,6 +583,33 @@ export function LandingChat({
                   <Mic className="h-4 w-4" />
                 )}
               </button>
+              {!empty ? (
+                <button
+                  type="button"
+                  className="wc-lovable-link"
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem(LANDING_CHAT_KEY);
+                      localStorage.removeItem(WIZARD_STORAGE_KEY);
+                      localStorage.removeItem(WIZARD_RESUME_KEY);
+                    } catch {
+                      /* ignore */
+                    }
+                    setMessages([]);
+                    setBrief(emptyWizardBrief());
+                    setPhase("idle");
+                    setPalettePanel(false);
+                    setRailExpanded(false);
+                    setInput("");
+                    setBusy(false);
+                    setAuthOpen(false);
+                    setListening(false);
+                    speechRef.current?.stop();
+                  }}
+                >
+                  Заново
+                </button>
+              ) : null}
               {ready ? (
                 <button
                   type="button"
