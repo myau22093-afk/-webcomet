@@ -1700,11 +1700,54 @@ h3,
   animation: wcFadeIn 0.45s ease;
 }
 
+/* Стрим: сначала компактный блок, карточки докидываются по одной */
+.wc-space-pal.is-stream {
+  animation: wcPalShellIn 0.4s ease both;
+}
+
+.wc-space-pal.is-streaming .wc-space-pal-grid {
+  min-height: 0;
+}
+
+.wc-space-pal-card.is-enter {
+  animation: wcPalCardIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wcPalShellIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wcPalCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-space-pal.is-stream,
+  .wc-space-pal-card.is-enter {
+    animation: none;
+  }
+}
+
 .wc-space-pal-lead {
   margin: 0 0 1rem;
   font-size: 0.875rem;
   line-height: 1.45;
   color: #b4b4c8;
+  min-height: 1.45em;
 }
 
 .wc-space-pal-grid {

@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { WIZARD_PALETTES, type WizardPalette } from "@/lib/wizardBrief";
 
+const PALETTE_CARD_TOTAL = WIZARD_PALETTES.length + 1; // + «Свои цвета»
+const PALETTE_STREAM_STEP_MS = 165;
+
 type Props = {
   selectedId: string | null;
   locked?: boolean;
+  /** Постепенно раскрывать карточки (как стрим), а не вываливать всё сразу */
+  streamIn?: boolean;
   onPick: (palette: WizardPalette) => void;
   onPickCustom: (colors: [string, string, string]) => void;
+  /** Вызов при каждом шаге стрима — чтобы чат мог доскроллить */
+  onStreamTick?: () => void;
 };
 
 function MiniSitePreview({
@@ -139,8 +146,10 @@ function MiniSitePreview({
 export function LandingPalettePicker({
   selectedId,
   locked = false,
+  streamIn = false,
   onPick,
   onPickCustom,
+  onStreamTick,
 }: Props) {
   const [showCustom, setShowCustom] = useState(false);
   const [customColors, setCustomColors] = useState<[string, string, string]>([
@@ -148,15 +157,55 @@ export function LandingPalettePicker({
     "#ede9fe",
     "#0b1024",
   ]);
+  const [leadDone, setLeadDone] = useState(!streamIn);
+  const [visibleCards, setVisibleCards] = useState(
+    streamIn ? 0 : PALETTE_CARD_TOTAL
+  );
+  const tickRef = useRef(onStreamTick);
+  tickRef.current = onStreamTick;
+
+  useEffect(() => {
+    if (!streamIn || !leadDone) return;
+    if (visibleCards >= PALETTE_CARD_TOTAL) return;
+
+    const id = window.setTimeout(() => {
+      setVisibleCards((n) => Math.min(PALETTE_CARD_TOTAL, n + 1));
+      tickRef.current?.();
+    }, PALETTE_STREAM_STEP_MS);
+
+    return () => window.clearTimeout(id);
+  }, [streamIn, leadDone, visibleCards]);
+
+  useEffect(() => {
+    if (!streamIn) return;
+    tickRef.current?.();
+  }, [streamIn]);
+
+  const streaming = streamIn && visibleCards < PALETTE_CARD_TOTAL;
 
   return (
-    <div className="wc-space-pal">
+    <div
+      className={`wc-space-pal ${streamIn ? "is-stream" : ""} ${
+        streaming ? "is-streaming" : ""
+      }`}
+    >
       <p className="wc-space-pal-lead">
-        Выбери палитру
+        {streamIn && !leadDone ? (
+          <LandingTypewriter
+            text="Выбери палитру"
+            onDone={() => {
+              setLeadDone(true);
+              tickRef.current?.();
+            }}
+          />
+        ) : (
+          "Выбери палитру"
+        )}
       </p>
 
       <div className="wc-space-pal-grid">
-        {WIZARD_PALETTES.map((p) => {
+        {WIZARD_PALETTES.map((p, index) => {
+          if (index >= visibleCards) return null;
           const selected = selectedId === p.id;
           return (
             <button
@@ -164,7 +213,9 @@ export function LandingPalettePicker({
               type="button"
               disabled={locked && !selected}
               onClick={() => onPick(p)}
-              className={`wc-space-pal-card ${selected ? "is-selected" : ""}`}
+              className={`wc-space-pal-card ${selected ? "is-selected" : ""} ${
+                streamIn ? "is-enter" : ""
+              }`}
               aria-pressed={selected}
             >
               <MiniSitePreview
@@ -194,37 +245,39 @@ export function LandingPalettePicker({
           );
         })}
 
-        <button
-          type="button"
-          disabled={locked && selectedId !== "custom"}
-          onClick={() => {
-            if (locked) return;
-            setShowCustom((v) => !v);
-          }}
-          className={`wc-space-pal-card wc-space-pal-card-custom ${
-            selectedId === "custom" || showCustom ? "is-selected" : ""
-          }`}
-          aria-pressed={selectedId === "custom"}
-        >
-          <div className="wc-space-pal-custom-mock">
-            <span className="wc-space-pal-custom-plus">
-              <Plus className="h-5 w-5" />
-            </span>
-            <span className="wc-space-pal-custom-title">Свои цвета</span>
-            <span className="wc-space-pal-custom-sub">
-              Акцент · светлый · тёмный
-            </span>
-          </div>
-          <span className="wc-space-pal-meta">
-            <span className="wc-space-pal-name">Свой вариант</span>
-            {selectedId === "custom" ? (
-              <span className="wc-space-pal-badge">
-                <Check className="h-3.5 w-3.5" aria-hidden />
-                Выбрано
+        {visibleCards > WIZARD_PALETTES.length ? (
+          <button
+            type="button"
+            disabled={locked && selectedId !== "custom"}
+            onClick={() => {
+              if (locked) return;
+              setShowCustom((v) => !v);
+            }}
+            className={`wc-space-pal-card wc-space-pal-card-custom ${
+              selectedId === "custom" || showCustom ? "is-selected" : ""
+            } ${streamIn ? "is-enter" : ""}`}
+            aria-pressed={selectedId === "custom"}
+          >
+            <div className="wc-space-pal-custom-mock">
+              <span className="wc-space-pal-custom-plus">
+                <Plus className="h-5 w-5" />
               </span>
-            ) : null}
-          </span>
-        </button>
+              <span className="wc-space-pal-custom-title">Свои цвета</span>
+              <span className="wc-space-pal-custom-sub">
+                Акцент · светлый · тёмный
+              </span>
+            </div>
+            <span className="wc-space-pal-meta">
+              <span className="wc-space-pal-name">Свой вариант</span>
+              {selectedId === "custom" ? (
+                <span className="wc-space-pal-badge">
+                  <Check className="h-3.5 w-3.5" aria-hidden />
+                  Выбрано
+                </span>
+              ) : null}
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {showCustom && !locked ? (

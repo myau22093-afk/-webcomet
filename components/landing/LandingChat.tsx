@@ -202,6 +202,7 @@ export function LandingChat({
   const [authTab, setAuthTab] = useState<"login" | "register">("register");
   const [listening, setListening] = useState(false);
   const [palettePanel, setPalettePanel] = useState(false);
+  const [paletteStream, setPaletteStream] = useState(false);
   const [tierPanel, setTierPanel] = useState(false);
   const [pendingPanel, setPendingPanel] = useState<"palette" | "tier" | null>(
     null
@@ -209,6 +210,10 @@ export function LandingChat({
   const [railExpanded, setRailExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
+
+  function scrollChatEnd() {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
 
   const ready = useMemo(() => isBriefReady(brief), [brief]);
 
@@ -239,6 +244,7 @@ export function LandingChat({
           else if (b.companyName.trim().length < 2) setPhase("company");
           else if (!b.paletteId) {
             setPhase("palette");
+            setPaletteStream(false);
             setPalettePanel(true);
           } else if (!b.tier) {
             setPhase("tier");
@@ -256,7 +262,7 @@ export function LandingChat({
   }, [loggedIn]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollChatEnd();
   }, [messages, busy, phase, brief.paletteId, palettePanel, tierPanel]);
 
   function persist(nextBrief: WizardBrief, nextMessages: Msg[]) {
@@ -270,7 +276,10 @@ export function LandingChat({
       prev.map((m) => (m.id === id ? { ...m, animate: false } : m))
     );
     setPendingPanel((panel) => {
-      if (panel === "palette") setPalettePanel(true);
+      if (panel === "palette") {
+        setPaletteStream(true);
+        setPalettePanel(true);
+      }
       if (panel === "tier") setTierPanel(true);
       return null;
     });
@@ -316,6 +325,7 @@ export function LandingChat({
     };
     setBrief(nextBrief);
     setPalettePanel(false);
+    setPaletteStream(false);
     setBusy(true);
     window.setTimeout(() => {
       pushAssistant(
@@ -595,6 +605,8 @@ export function LandingChat({
               <LandingPalettePicker
                 selectedId={brief.paletteId}
                 locked={Boolean(brief.paletteId)}
+                streamIn={paletteStream}
+                onStreamTick={scrollChatEnd}
                 onPick={(p) => applyPalette(p)}
                 onPickCustom={(colors) =>
                   applyPalette({
@@ -729,6 +741,7 @@ export function LandingChat({
                     setBrief(emptyWizardBrief());
                     setPhase("idle");
                     setPalettePanel(false);
+                    setPaletteStream(false);
                     setTierPanel(false);
                     setPendingPanel(null);
                     setRailExpanded(false);
