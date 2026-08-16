@@ -180,10 +180,18 @@ export function StudioIconRail({
         <div className="wc-studio-rail-bottom">
           {loggedIn ? (
             <>
-              <div className="wc-studio-rail-user" title={userEmail ?? ""}>
-                <span className="wc-studio-rail-avatar">
+              <div className="wc-studio-rail-user">
+                <button
+                  type="button"
+                  className="wc-studio-rail-avatar"
+                  title={userEmail ?? "Аккаунт"}
+                  aria-label="Аккаунт"
+                  onClick={() => {
+                    /* placeholder: клик без действия */
+                  }}
+                >
                   {(userEmail?.[0] ?? "U").toUpperCase()}
-                </span>
+                </button>
                 <span className="wc-studio-rail-label wc-studio-rail-email">
                   {userEmail ?? "Аккаунт"}
                 </span>

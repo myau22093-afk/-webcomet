@@ -2107,14 +2107,6 @@ export function SiteWizard({
         <div className="relative z-[1] mt-auto shrink-0 space-y-3 border-t border-white/[0.06] bg-[#07080d] px-3 py-3 sm:px-5 sm:py-4">
           {!isFreshStart || ready || result ? (
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={resetWizard}
-                title="Сбросить мастер и начать новый сайт"
-                className="wc-lovable-link"
-              >
-                Заново
-              </button>
               {(ready || result) && (
                 <>
                   <button
@@ -2173,6 +2165,14 @@ export function SiteWizard({
                   ) : null}
                 </>
               )}
+              <button
+                type="button"
+                onClick={resetWizard}
+                title="Сбросить мастер и начать новый сайт"
+                className="wc-lovable-link"
+              >
+                Заново
+              </button>
             </div>
           ) : null}
           {imagePickerOpen && result ? (

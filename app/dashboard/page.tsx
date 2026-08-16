@@ -37,7 +37,6 @@ import {
   Send,
   Settings,
   Smartphone,
-  Sparkles,
   Tablet,
   Trash2,
   Wand2,
@@ -1776,6 +1775,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const mode = params.get("mode");
+    if (mode === "settings") {
+      setWorkMode("settings");
+      window.history.replaceState({}, "", "/dashboard?mode=settings");
+    }
     const tokens = params.get("tokens");
     const publish = params.get("publish");
     if (tokens === "credited" || tokens === "success" || tokens === "already") {
@@ -1823,72 +1827,74 @@ export default function DashboardPage() {
           activeId={workMode === "settings" ? "settings" : "studio"}
           onSelectStudio={() => {
             setWorkMode("wizard");
+            window.history.replaceState({}, "", "/dashboard");
             if (typeof window !== "undefined" && window.innerWidth < 1024) {
               setSidebarOpen(false);
             }
           }}
           onSelectSettings={() => {
             setWorkMode("settings");
+            window.history.replaceState({}, "", "/dashboard?mode=settings");
             if (typeof window !== "undefined" && window.innerWidth < 1024) {
               setSidebarOpen(false);
             }
           }}
           onSignOut={() => void handleLogout()}
           expandedExtra={
-            <div className="space-y-1 px-0.5 pb-2">
-              <div className="mb-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
-                <p className="text-[10px] uppercase tracking-wide text-zinc-500">
-                  Токены
-                </p>
-                <p className="mt-1 text-sm text-zinc-200">
+            <div className="wc-studio-history">
+              <div className="wc-studio-history-balance">
+                <p className="wc-studio-history-balance-label">Токены</p>
+                <p className="wc-studio-history-balance-value">
                   {formatTokens(status.tokenBalance)}
                 </p>
                 <button
                   type="button"
                   onClick={() => setTopUpOpen(true)}
-                  className="mt-1.5 text-[11px] font-medium text-violet-300 hover:text-violet-200"
+                  className="wc-studio-history-topup"
                 >
                   Пополнить
                 </button>
               </div>
               {siteHistoryGroups.length === 0 ? (
-                <p className="px-1 py-2 text-[12px] text-zinc-500">
-                  Пока нет сайтов
-                </p>
+                <p className="wc-studio-history-empty">Пока нет сайтов</p>
               ) : (
-                siteHistoryGroups.slice(0, 12).map((group) => {
-                  const title = shortSiteTitle(group.rootPrompt);
-                  const item = group.items[0];
-                  if (!item) return null;
-                  return (
-                    <button
-                      key={group.rootPrompt}
-                      type="button"
-                      onClick={() => {
-                        setActiveId(item.id);
-                        setMainTab("preview");
-                        setWorkMode("wizard");
-                        void getFreshAccessToken().then((token) => {
-                          if (token) void ensureSiteLoaded(token, item.id);
-                        });
-                        if (
-                          typeof window !== "undefined" &&
-                          window.innerWidth < 1024
-                        ) {
-                          setSidebarOpen(false);
-                        }
-                      }}
-                      className={
-                        "w-full rounded-xl px-2.5 py-2 text-left text-[12px] transition " +
-                        (activeId === item.id
-                          ? "bg-violet-500/20 text-violet-100"
-                          : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200")
-                      }
-                    >
-                      <span className="line-clamp-2">{title}</span>
-                    </button>
-                  );
-                })
+                <ul className="wc-studio-history-list">
+                  {siteHistoryGroups.slice(0, 12).map((group) => {
+                    const title = shortSiteTitle(group.rootPrompt);
+                    const item = group.items[0];
+                    if (!item) return null;
+                    return (
+                      <li key={group.rootPrompt}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveId(item.id);
+                            setMainTab("preview");
+                            setWorkMode("wizard");
+                            window.history.replaceState({}, "", "/dashboard");
+                            void getFreshAccessToken().then((token) => {
+                              if (token) void ensureSiteLoaded(token, item.id);
+                            });
+                            if (
+                              typeof window !== "undefined" &&
+                              window.innerWidth < 1024
+                            ) {
+                              setSidebarOpen(false);
+                            }
+                          }}
+                          className={
+                            "wc-studio-history-item" +
+                            (activeId === item.id ? " is-active" : "")
+                          }
+                        >
+                          <span className="wc-studio-history-item-title">
+                            {title}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
             </div>
           }

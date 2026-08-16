@@ -148,8 +148,7 @@ function replyFor(
     return {
       next,
       phase: "ready",
-      reply:
-        "Готово. Жми «Создать сайт». После входа соберём по этим ответам.",
+      reply: "Готово. Жми «Создать сайт».",
     };
   }
 
@@ -157,7 +156,7 @@ function replyFor(
   return {
     next,
     phase: "ready",
-    reply: "Записал. Можно жать «Создать сайт».",
+    reply: "Ок.",
   };
 }
 
@@ -189,13 +188,13 @@ export function LandingChat({
 
   useEffect(() => {
     try {
-      const b = loadBrief();
-      setBrief(b);
       const raw = localStorage.getItem(LANDING_CHAT_KEY);
       if (raw) {
         const data = JSON.parse(raw) as { messages?: Msg[] };
         if (Array.isArray(data.messages) && data.messages.length) {
-          setMessages(data.messages);
+          const b = loadBrief();
+          setBrief(b);
+          setMessages(data.messages.map((m) => ({ ...m, animate: false })));
           if (isBriefReady(b)) setPhase("ready");
           else if (!b.topic) setPhase("idle");
           else if (b.companyName.trim().length < 2) setPhase("company");
@@ -207,15 +206,10 @@ export function LandingChat({
           return;
         }
       }
-      if (b.topic) {
-        if (isBriefReady(b)) setPhase("ready");
-        else if (b.companyName.trim().length < 2) setPhase("company");
-        else if (!b.paletteId) {
-          setPhase("palette");
-          setPalettePanel(true);
-        } else if (!b.tier) setPhase("tier");
-        else setPhase("ready");
-      }
+      // Нет сообщений лендинга — не тянем готовый бриф из студии
+      setBrief(emptyWizardBrief());
+      setMessages([]);
+      setPhase("idle");
     } catch {
       /* ignore */
     }
@@ -391,7 +385,7 @@ export function LandingChat({
             setAuthOpen(true);
             return;
           }
-          window.location.assign("/dashboard");
+          window.location.assign("/dashboard?mode=settings");
         }}
         onAuthClick={() => {
           setAuthTab("login");
@@ -583,6 +577,24 @@ export function LandingChat({
                   <Mic className="h-4 w-4" />
                 )}
               </button>
+              {ready ? (
+                <button
+                  type="button"
+                  onClick={onCreate}
+                  className="wc-lovable-build"
+                >
+                  Создать сайт
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={busy || !input.trim()}
+                  className="wc-lovable-send"
+                  aria-label="Отправить"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+              )}
               {!empty ? (
                 <button
                   type="button"
@@ -610,49 +622,8 @@ export function LandingChat({
                   Заново
                 </button>
               ) : null}
-              {ready ? (
-                <button
-                  type="button"
-                  onClick={onCreate}
-                  className="wc-lovable-build"
-                >
-                  Создать сайт
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={busy || !input.trim()}
-                  className="wc-lovable-send"
-                  aria-label="Отправить"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </button>
-              )}
             </div>
           </form>
-          {ready && !empty ? (
-            <div className="wc-lovable-ready-stroke mt-4">
-              <StrokeText
-                key="ready-stroke"
-                text="Готово, создаём сайт"
-                strokeColor="#7DD3FC"
-                fillColor="#E0F2FE"
-                strokeWidth={1.6}
-                drawDuration={1.1}
-                fillDelay={0.1}
-                stagger={0.035}
-                fillMode="wipe"
-                trigger="mount"
-                fontSize={36}
-                fontWeight={700}
-                letterSpacing={-1.2}
-                fontFamily="Plus Jakarta Sans, Syne, sans-serif"
-              />
-              <p className="mt-2 text-center text-[12px] text-zinc-400/90">
-                Ответы сохранены. После регистрации заполнять заново не нужно.
-              </p>
-            </div>
-          ) : null}
         </div>
       </main>
       </div>

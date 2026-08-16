@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabaseClient";
 import {
   FREE_TOKENS,
@@ -78,11 +79,11 @@ export default function PricingPage() {
           transition={{ duration: 0.35 }}
           className="mb-10 text-center"
         >
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-wc-purple/25 text-violet-200 shadow-[0_0_30px_rgba(108,59,244,0.35)]">
-            <Sparkles className="h-6 w-6" />
+          <div className="mb-5 flex justify-center">
+            <BrandLogo href="" size="lg" />
           </div>
-          <h1 className="font-display text-3xl font-semibold sm:text-4xl">
-            Токены WebComet
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            Токены
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-zinc-400">
             Платите только за запросы. После регистрации — {FREE_TOKENS}{" "}

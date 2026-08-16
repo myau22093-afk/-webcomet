@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, ArrowLeft, Sparkles } from "lucide-react";
+import { CreditCard, ArrowLeft } from "lucide-react";
 import { getSupabase } from "@/lib/supabaseClient";
 import {
   formatTokens,
@@ -77,7 +77,7 @@ function PaymentContent() {
           onClick={() => void startPayment()}
           className="wc-btn wc-btn-primary w-full py-3 text-sm disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" />
+          <CreditCard className="h-4 w-4" />
           {loading ? "Создаём платёж…" : "Перейти к оплате"}
         </button>
         <Link
