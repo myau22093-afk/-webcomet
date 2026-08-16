@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabaseAdmin";
-import { getPublishedBySlug, isPublishActive } from "@/lib/publish";
+import {
+  getPublishedBySlug,
+  isPublishActive,
+  removeHostedIndex,
+} from "@/lib/publish";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -40,15 +44,19 @@ export async function GET(
     }
 
     if (!isPublishActive(row)) {
-      if (row.status === "active" && row.expires_at) {
+      if (row.status === "active") {
         await admin
           .from("published_sites")
           .update({ status: "expired", updated_at: new Date().toISOString() })
           .eq("id", row.id);
+        await removeHostedIndex(slug);
       }
       return new NextResponse(expiredHtml(), {
         status: 410,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
       });
     }
 

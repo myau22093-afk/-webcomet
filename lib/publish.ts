@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildStandaloneHtml } from "@/lib/siteExport";
@@ -67,6 +67,14 @@ export async function writeHostedIndex(
   const dir = hostedDir(slug);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "index.html"), html, "utf8");
+}
+
+export async function removeHostedIndex(slug: string): Promise<void> {
+  try {
+    await rm(hostedDir(slug), { recursive: true, force: true });
+  } catch (e) {
+    console.error("removeHostedIndex failed:", e);
+  }
 }
 
 export async function reservePublishSlug(
@@ -249,9 +257,10 @@ export async function syncPublishedSiteContent(
 
   let query = admin
     .from("published_sites")
-    .select("id, slug")
+    .select("id, slug, expires_at, status")
     .eq("user_id", opts.userId)
-    .eq("status", "active");
+    .eq("status", "active")
+    .gt("expires_at", new Date().toISOString());
 
   if (opts.siteId) {
     query = query.eq("site_id", opts.siteId);

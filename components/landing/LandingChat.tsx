@@ -49,10 +49,13 @@ function uid() {
 
 function loadBrief(): WizardBrief {
   try {
-    const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
-    if (!raw) return emptyWizardBrief();
-    const data = JSON.parse(raw) as { brief?: WizardBrief };
-    if (data.brief) return { ...emptyWizardBrief(), ...data.brief };
+    const landing = localStorage.getItem(LANDING_CHAT_KEY);
+    if (landing) {
+      const data = JSON.parse(landing) as { brief?: WizardBrief; messages?: Msg[] };
+      if (data.brief && Array.isArray(data.messages) && data.messages.length) {
+        return { ...emptyWizardBrief(), ...data.brief };
+      }
+    }
   } catch {
     /* ignore */
   }
@@ -61,9 +64,29 @@ function loadBrief(): WizardBrief {
 
 function saveBrief(brief: WizardBrief, messages: Msg[]) {
   try {
+    // Только лендинг-чат. Не затираем result/preview студии в wc-wizard-v3.
+    localStorage.setItem(
+      LANDING_CHAT_KEY,
+      JSON.stringify({ messages, brief, phaseHint: brief.topic ? "topic" : "idle" })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+function saveWizardForStudio(brief: WizardBrief, messages: Msg[]) {
+  try {
+    let prev: Record<string, unknown> = {};
+    try {
+      const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
+      if (raw) prev = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      prev = {};
+    }
     localStorage.setItem(
       WIZARD_STORAGE_KEY,
       JSON.stringify({
+        ...prev,
         brief,
         bubbles: messages.map((m) => ({
           id: m.id,
@@ -71,14 +94,11 @@ function saveBrief(brief: WizardBrief, messages: Msg[]) {
           role: m.role,
           content: m.content,
         })),
-        result: null,
-        previewHtml: "",
-        showPreviewPane: false,
       })
     );
     localStorage.setItem(
       LANDING_CHAT_KEY,
-      JSON.stringify({ messages, phaseHint: brief.topic ? "topic" : "idle" })
+      JSON.stringify({ messages, brief, phaseHint: brief.topic ? "topic" : "idle" })
     );
   } catch {
     /* ignore */
@@ -273,7 +293,7 @@ export function LandingChat({
   }
 
   function onCreate() {
-    saveBrief(brief, messages);
+    saveWizardForStudio(brief, messages);
     try {
       localStorage.setItem(WIZARD_RESUME_KEY, "1");
     } catch {
@@ -378,7 +398,14 @@ export function LandingChat({
         loggedIn={loggedIn}
         userEmail={userEmail}
         activeId="studio"
-        onSelectStudio={() => setRailExpanded(false)}
+        onSelectStudio={() => {
+          if (loggedIn) {
+            window.location.assign("/dashboard");
+            return;
+          }
+          setAuthTab("login");
+          setAuthOpen(true);
+        }}
         onSelectSettings={() => {
           if (!loggedIn) {
             setAuthTab("login");
@@ -633,13 +660,14 @@ export function LandingChat({
         initialTab={authTab}
         onClose={() => setAuthOpen(false)}
         onSuccess={() => {
-          saveBrief(brief, messages);
+          saveWizardForStudio(brief, messages);
           try {
             localStorage.setItem(WIZARD_RESUME_KEY, "1");
           } catch {
             /* ignore */
           }
           onAuthSuccess?.();
+          window.location.assign("/dashboard");
         }}
       />
     </div>

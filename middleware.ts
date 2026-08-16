@@ -16,6 +16,15 @@ function publishBaseDomain(): string {
 export async function middleware(request: NextRequest) {
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase();
   const base = publishBaseDomain();
+  const pathname = request.nextUrl.pathname;
+
+  // Статика /hosted/{slug} обходила проверку оплаты — всегда через /s/{slug}
+  const hostedMatch = pathname.match(/^\/hosted\/([a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?)\/?(?:index\.html)?$/i);
+  if (hostedMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/s/${hostedMatch[1].toLowerCase()}`;
+    return NextResponse.rewrite(url);
+  }
 
   // *.webcomet.ru → /s/{slug}
   if (
@@ -76,7 +85,6 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const pathname = request.nextUrl.pathname;
   const isProtectedPage =
     pathname.startsWith("/pricing") || pathname.startsWith("/payment");
   // /dashboard доступен гостям: мастер до «Собрать сайт», регистрация по запросу
@@ -88,6 +96,8 @@ export async function middleware(request: NextRequest) {
   if (!session && isProtectedPage && !hasBearer) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    const next = `${pathname}${request.nextUrl.search}`;
+    url.searchParams.set("next", next);
     return NextResponse.redirect(url);
   }
 
@@ -96,6 +106,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|uploads/|hosted/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|uploads/).*)",
   ],
 };

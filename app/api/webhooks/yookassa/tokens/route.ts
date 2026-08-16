@@ -74,25 +74,30 @@ export async function POST(request: Request) {
     }
 
     const verified = await fetchYooKassaPayment(paymentId);
-    const status = verified?.status ?? payment?.status ?? "";
+    if (!verified) {
+      console.error(`[yookassa] cannot verify payment=${paymentId}`);
+      return NextResponse.json(
+        { error: "Payment verification failed" },
+        { status: 502 }
+      );
+    }
+    const status = verified.status ?? "";
 
     console.log(
-      `[yookassa] webhook event=${event} payment=${paymentId} status=${status} product=${payment?.metadata?.product ?? verified?.metadata?.product ?? "tokens"} ip=${ip}`
+      `[yookassa] webhook event=${event} payment=${paymentId} status=${status} product=${verified.metadata?.product ?? payment?.metadata?.product ?? "tokens"} ip=${ip}`
     );
 
-    if (status !== "succeeded" && event !== "payment.succeeded") {
+    if (status !== "succeeded") {
       return NextResponse.json({ ok: true, skipped: "not succeeded" });
     }
 
     const meta = {
       ...(payment?.metadata ?? {}),
-      ...(verified?.metadata ?? {}),
+      ...(verified.metadata ?? {}),
     };
     const userId = meta.user_id ?? "";
     const packageId = meta.package_id ?? "";
-    const amount = Number(
-      verified?.amount?.value ?? payment?.amount?.value ?? 0
-    );
+    const amount = Number(verified.amount?.value ?? payment?.amount?.value ?? 0);
     const admin = createAdminClient();
 
     if (meta.product === "publish") {

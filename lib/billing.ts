@@ -220,42 +220,76 @@ export async function chargeTokens(
     };
   }
 
-  assertHasTokens(profile, cost);
+  // Optimistic lock: не уходим в минус при параллельных списаниях
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data: row, error: readError } = await admin
+      .from("profiles")
+      .select("token_balance, total_tokens_used")
+      .eq("id", profile.id)
+      .maybeSingle();
 
-  const nextBalance = (profile.token_balance ?? 0) - cost;
-  const nextUsed = (profile.total_tokens_used ?? 0) + cost;
-
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      token_balance: nextBalance,
-      total_tokens_used: nextUsed,
-    })
-    .eq("id", profile.id);
-
-  if (error) {
-    if (isMissingColumnError(error)) {
-      throw new Error(
-        "Выполните supabase/migrate-tokens.sql в Supabase (колонки токенов)"
-      );
+    if (readError) {
+      if (isMissingColumnError(readError)) {
+        throw new Error(
+          "Выполните supabase/migrate-tokens.sql в Supabase (колонки токенов)"
+        );
+      }
+      throw readError;
     }
-    throw error;
+
+    const balance = Number(row?.token_balance ?? 0);
+    const used = Number(row?.total_tokens_used ?? 0);
+    if (balance < cost) {
+      const err = new Error("Недостаточно токенов. Пополните баланс.");
+      (err as Error & { status?: number }).status = 402;
+      throw err;
+    }
+
+    const nextBalance = balance - cost;
+    const nextUsed = used + cost;
+    const { data: updated, error } = await admin
+      .from("profiles")
+      .update({
+        token_balance: nextBalance,
+        total_tokens_used: nextUsed,
+      })
+      .eq("id", profile.id)
+      .eq("token_balance", balance)
+      .select("token_balance, total_tokens_used")
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingColumnError(error)) {
+        throw new Error(
+          "Выполните supabase/migrate-tokens.sql в Supabase (колонки токенов)"
+        );
+      }
+      throw error;
+    }
+    if (!updated) continue;
+
+    const { error: txError } = await admin.from("transactions").insert({
+      user_id: profile.id,
+      amount: 0,
+      tokens: -cost,
+      type: "spend",
+      model_id: meta?.modelId ?? null,
+      description: meta?.description ?? `Списание ${cost} ток.`,
+    });
+    if (txError && !isMissingColumnError(txError)) {
+      console.error("transaction spend log error:", txError);
+    }
+
+    return {
+      balance: Number(updated.token_balance ?? nextBalance),
+      totalUsed: Number(updated.total_tokens_used ?? nextUsed),
+      charged: cost,
+    };
   }
 
-  const { error: txError } = await admin.from("transactions").insert({
-    user_id: profile.id,
-    amount: 0,
-    tokens: -cost,
-    type: "spend",
-    model_id: meta?.modelId ?? null,
-    description: meta?.description ?? `Списание ${cost} ток.`,
-  });
-
-  if (txError && !isMissingColumnError(txError)) {
-    console.error("transaction spend log error:", txError);
-  }
-
-  return { balance: nextBalance, totalUsed: nextUsed, charged: cost };
+  const err = new Error("Недостаточно токенов. Пополните баланс.");
+  (err as Error & { status?: number }).status = 402;
+  throw err;
 }
 
 export async function creditTokens(
@@ -278,34 +312,71 @@ export async function creditTokens(
     return Number(data?.token_balance ?? 0);
   }
 
-  const { data: row, error: readError } = await admin
-    .from("profiles")
-    .select("token_balance")
-    .eq("id", userId)
-    .maybeSingle();
+  // Ledger first + unique(yookassa_payment_id) → идемпотентность webhook
+  if (meta?.yookassaPaymentId) {
+    const { error: txIns } = await admin.from("transactions").insert({
+      user_id: userId,
+      amount: meta.amount ?? 0,
+      tokens,
+      type: meta.type ?? "purchase",
+      description: meta.description ?? `Пополнение +${tokens}`,
+      yookassa_payment_id: meta.yookassaPaymentId,
+    });
+    if (txIns) {
+      const msg = String(txIns.message || txIns.code || "").toLowerCase();
+      if (
+        msg.includes("unique") ||
+        msg.includes("duplicate") ||
+        txIns.code === "23505"
+      ) {
+        const { data } = await admin
+          .from("profiles")
+          .select("token_balance")
+          .eq("id", userId)
+          .maybeSingle();
+        return Number(data?.token_balance ?? 0);
+      }
+      if (!isMissingColumnError(txIns)) {
+        console.error("credit ledger insert:", txIns);
+      }
+    }
+  }
 
-  if (readError) throw readError;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data: row, error: readError } = await admin
+      .from("profiles")
+      .select("token_balance")
+      .eq("id", userId)
+      .maybeSingle();
+    if (readError) throw readError;
 
-  const current = Number(row?.token_balance ?? 0);
-  const next = current + tokens;
+    const current = Number(row?.token_balance ?? 0);
+    const next = current + tokens;
+    const { data: updated, error } = await admin
+      .from("profiles")
+      .update({ token_balance: next })
+      .eq("id", userId)
+      .eq("token_balance", current)
+      .select("token_balance")
+      .maybeSingle();
+    if (error) throw error;
+    if (!updated) continue;
 
-  const { error } = await admin
-    .from("profiles")
-    .update({ token_balance: next })
-    .eq("id", userId);
+    if (!meta?.yookassaPaymentId) {
+      await admin.from("transactions").insert({
+        user_id: userId,
+        amount: meta?.amount ?? 0,
+        tokens,
+        type: meta?.type ?? "purchase",
+        description: meta?.description ?? `Пополнение +${tokens}`,
+        yookassa_payment_id: null,
+      });
+    }
 
-  if (error) throw error;
+    return Number(updated.token_balance ?? next);
+  }
 
-  await admin.from("transactions").insert({
-    user_id: userId,
-    amount: meta?.amount ?? 0,
-    tokens,
-    type: meta?.type ?? "purchase",
-    description: meta?.description ?? `Пополнение +${tokens}`,
-    yookassa_payment_id: meta?.yookassaPaymentId ?? null,
-  });
-
-  return next;
+  throw new Error("Не удалось начислить токены");
 }
 
 /** Начислить FREE_TOKENS один раз */
