@@ -30,7 +30,7 @@ export function SpaceParticlesBg() {
           particleHoverFactor={0.4}
           alphaParticles
           disableRotation={false}
-          pixelRatio={typeof window !== "undefined" ? Math.min(2, window.devicePixelRatio || 1) : 1.5}
+          pixelRatio={1.75}
           sizeRandomness={1.1}
           cameraDistance={18}
         />
