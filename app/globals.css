@@ -1401,6 +1401,103 @@ h3,
   background: rgba(124, 58, 237, 0.12);
 }
 
+.wc-landing-tier-btn.is-selected {
+  border-color: rgba(167, 139, 250, 0.85);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.3);
+}
+
+.wc-landing-details {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 1.05rem 1.05rem 1.1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(160deg, rgba(124, 58, 237, 0.12), transparent 45%),
+    rgba(12, 14, 28, 0.82);
+  backdrop-filter: blur(14px);
+  animation: wcPalShellIn 0.4s ease both;
+}
+
+.wc-landing-details-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: #f4f4f8;
+}
+
+.wc-landing-details-sub {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #b4b4c8;
+}
+
+.wc-landing-details-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.wc-landing-details-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 520px) {
+  .wc-landing-details-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.wc-landing-details-input {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.7rem 0.85rem;
+  color: #f4f4f8;
+  font-size: 0.9rem;
+}
+
+.wc-landing-details-input:disabled {
+  opacity: 0.72;
+}
+
+.wc-landing-details-area {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.wc-landing-details-go {
+  margin-top: 0.85rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 1.05rem;
+  border-radius: 999px;
+  border: 0;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.wc-landing-details-go:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.wc-landing-details-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #c4b5fd;
+}
+
 .wc-landing-tier-ico {
   display: grid;
   place-items: center;

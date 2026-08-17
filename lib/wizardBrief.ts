@@ -51,6 +51,7 @@ export type WizardBrief = {
   companyName: string;
   city: string;
   phone: string;
+  email: string;
   seoFocus: string;
   detailsConfirmed: boolean;
   /** null = ещё не спросили; true = брать из Настроек */
@@ -93,6 +94,7 @@ export function emptyWizardBrief(): WizardBrief {
     companyName: "",
     city: "",
     phone: "",
+    email: "",
     seoFocus: "",
     detailsConfirmed: false,
     useSettingsContacts: null,
@@ -292,6 +294,7 @@ export function buildWizardSitePrompt(brief: WizardBrief): {
       : null,
     brief.city.trim() ? `Город / гео: ${brief.city.trim()}` : null,
     brief.phone.trim() ? `Телефон на сайте: ${brief.phone.trim()}` : null,
+    brief.email.trim() ? `Email на сайте: ${brief.email.trim()}` : null,
     niche ? `Ниша: ${niche.name}` : null,
     `Уровень: ${brief.tier === "premium" ? "премиум" : "простой"}`,
     `Секции сайта: ${sectionLabels}`,

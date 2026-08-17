@@ -798,6 +798,7 @@ export function SiteWizard({
       ...brief,
       seoFocus: seo,
       detailsConfirmed: true,
+      assetsConfirmed: true,
       // нет контактов в профиле — шаг пропускаем
       useSettingsContacts: hasProfileContacts
         ? brief.useSettingsContacts
@@ -814,6 +815,8 @@ export function SiteWizard({
           `Компания: ${brief.companyName.trim()}`,
           brief.city.trim() ? `Город: ${brief.city.trim()}` : null,
           brief.phone.trim() ? `Тел: ${brief.phone.trim()}` : null,
+          brief.email.trim() ? `Email: ${brief.email.trim()}` : null,
+          brief.notes.trim() ? `Пожелания: ${brief.notes.trim().slice(0, 160)}` : null,
         ]
           .filter(Boolean)
           .join(" · "),
@@ -1751,7 +1754,7 @@ export function SiteWizard({
                       {b.title}
                     </p>
                     <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
-                      Как назвать компанию и куда звонить клиентам.
+                      Название, контакты и пожелания — можно сразу всё.
                     </p>
                     <div className="space-y-3">
                       <input
@@ -1768,18 +1771,6 @@ export function SiteWizard({
                       />
                       <div className="grid gap-3 sm:grid-cols-2">
                         <input
-                          value={brief.city}
-                          disabled={locked}
-                          onChange={(e) =>
-                            setBrief((prev) => ({
-                              ...prev,
-                              city: e.target.value,
-                            }))
-                          }
-                          placeholder="Город (если нужен)"
-                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
-                        />
-                        <input
                           value={brief.phone}
                           disabled={locked}
                           onChange={(e) =>
@@ -1791,7 +1782,45 @@ export function SiteWizard({
                           placeholder="Телефон"
                           className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
                         />
+                        <input
+                          type="email"
+                          value={brief.email}
+                          disabled={locked}
+                          onChange={(e) =>
+                            setBrief((prev) => ({
+                              ...prev,
+                              email: e.target.value,
+                            }))
+                          }
+                          placeholder="Почта"
+                          className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                        />
                       </div>
+                      <input
+                        value={brief.city}
+                        disabled={locked}
+                        onChange={(e) =>
+                          setBrief((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }))
+                        }
+                        placeholder="Город (если нужен)"
+                        className="wc-input w-full py-2.5 text-[14px] disabled:opacity-50"
+                      />
+                      <textarea
+                        value={brief.notes}
+                        disabled={locked}
+                        onChange={(e) =>
+                          setBrief((prev) => ({
+                            ...prev,
+                            notes: e.target.value.slice(0, 2000),
+                          }))
+                        }
+                        placeholder="Пожелания…"
+                        rows={3}
+                        className="wc-input w-full resize-y py-2.5 text-[14px] disabled:opacity-50"
+                      />
                     </div>
                     {!locked ? (
                       <button

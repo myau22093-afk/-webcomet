@@ -38,7 +38,7 @@ type Msg = {
 type Phase =
   | "idle"
   | "topic"
-  | "company"
+  | "details"
   | "palette"
   | "tier"
   | "ready";
@@ -64,12 +64,15 @@ function loadBrief(): WizardBrief {
   return emptyWizardBrief();
 }
 
-function saveBrief(brief: WizardBrief, messages: Msg[]) {
+function saveBrief(brief: WizardBrief, messages: Msg[], phase?: Phase) {
   try {
-    // Только лендинг-чат. Не затираем result/preview студии в wc-wizard-v3.
     localStorage.setItem(
       LANDING_CHAT_KEY,
-      JSON.stringify({ messages, brief, phaseHint: brief.topic ? "topic" : "idle" })
+      JSON.stringify({
+        messages,
+        brief,
+        phaseHint: phase ?? (brief.topic ? "topic" : "idle"),
+      })
     );
   } catch {
     /* ignore */
@@ -123,12 +126,12 @@ function replyFor(
     next.seoFocus = joinSeoPhrases(suggestSeoPhrases(next));
     return {
       next,
-      phase: "company",
-      reply: "Ок. Как называется компания или бренд?",
+      phase: "details",
+      reply: "Заполни данные ниже — название, телефон, почту и пожелания.",
     };
   }
 
-  if (phase === "company" || next.companyName.trim().length < 2) {
+  if (phase === "details" || !next.detailsConfirmed) {
     next.companyName = t.slice(0, 80);
     next.detailsConfirmed = true;
     next.sectionsConfirmed = true;
@@ -203,10 +206,12 @@ export function LandingChat({
   const [listening, setListening] = useState(false);
   const [palettePanel, setPalettePanel] = useState(false);
   const [paletteStream, setPaletteStream] = useState(false);
+  const [detailsPanel, setDetailsPanel] = useState(false);
   const [tierPanel, setTierPanel] = useState(false);
-  const [pendingPanel, setPendingPanel] = useState<"palette" | "tier" | null>(
-    null
-  );
+  const [pendingPanel, setPendingPanel] = useState<
+    "details" | "palette" | "tier" | null
+  >(null);
+  const [hydrated, setHydrated] = useState(false);
   const [railExpanded, setRailExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
@@ -222,33 +227,34 @@ export function LandingChat({
   briefRef.current = brief;
 
   function applyRestoredPhase(b: WizardBrief) {
+    setDetailsPanel(false);
     setPalettePanel(false);
     setPaletteStream(false);
     setTierPanel(false);
     setPendingPanel(null);
-    if (isBriefReady(b)) {
-      setPhase("ready");
-      return;
-    }
     if (!b.topic) {
       setPhase("idle");
       return;
     }
-    if (b.companyName.trim().length < 2) {
-      setPhase("company");
+    if (!b.detailsConfirmed || b.companyName.trim().length < 2) {
+      setPhase("details");
+      setDetailsPanel(true);
       return;
     }
+    setDetailsPanel(true);
     if (!b.paletteId) {
       setPhase("palette");
       setPaletteStream(false);
       setPalettePanel(true);
       return;
     }
+    setPalettePanel(true);
     if (!b.tier) {
       setPhase("tier");
       setTierPanel(true);
       return;
     }
+    setTierPanel(true);
     setPhase("ready");
   }
 
@@ -267,12 +273,14 @@ export function LandingChat({
           setBrief(b);
           setMessages(data.messages.map((m) => ({ ...m, animate: false })));
           applyRestoredPhase(b);
+          setHydrated(true);
           return;
         }
       }
       setBrief(emptyWizardBrief());
       setMessages([]);
       setPhase("idle");
+      setDetailsPanel(false);
       setPalettePanel(false);
       setPaletteStream(false);
       setTierPanel(false);
@@ -280,18 +288,23 @@ export function LandingChat({
     } catch {
       /* ignore */
     }
-    // Один раз при монтировании — иначе сброс гостя убивает чат на каждом refresh.
+    setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    scrollChatEnd();
-  }, [messages, busy, phase, brief.paletteId, palettePanel, tierPanel]);
+    if (!hydrated) return;
+    saveBrief(brief, messages, phase);
+  }, [hydrated, brief, messages, phase]);
 
-  function persist(nextBrief: WizardBrief, nextMessages: Msg[]) {
+  useEffect(() => {
+    scrollChatEnd();
+  }, [messages, busy, phase, brief.paletteId, detailsPanel, palettePanel, tierPanel]);
+
+  function persist(nextBrief: WizardBrief, nextMessages: Msg[], nextPhase?: Phase) {
     setBrief(nextBrief);
     setMessages(nextMessages);
-    saveBrief(nextBrief, nextMessages);
+    saveBrief(nextBrief, nextMessages, nextPhase ?? phase);
   }
 
   function finishAnimate(id: string) {
@@ -299,10 +312,11 @@ export function LandingChat({
       const next = prev.map((m) =>
         m.id === id ? { ...m, animate: false } : m
       );
-      saveBrief(briefRef.current, next);
+      saveBrief(briefRef.current, next, phase);
       return next;
     });
     setPendingPanel((panel) => {
+      if (panel === "details") setDetailsPanel(true);
       if (panel === "palette") {
         setPaletteStream(true);
         setPalettePanel(true);
@@ -326,19 +340,51 @@ export function LandingChat({
     };
     const nextMessages = [...baseMessages, botMsg];
     setPhase(nextPhase);
-    if (nextPhase === "palette") {
-      setPalettePanel(false);
-      setTierPanel(false);
+    if (nextPhase === "details") {
+      setPendingPanel("details");
+    } else if (nextPhase === "palette") {
       setPendingPanel("palette");
     } else if (nextPhase === "tier") {
-      setPalettePanel(false);
-      setTierPanel(false);
       setPendingPanel("tier");
     } else {
       setPendingPanel(null);
     }
-    persist(nextBrief, nextMessages);
+    persist(nextBrief, nextMessages, nextPhase);
     setBusy(false);
+  }
+
+  function patchBrief(patch: Partial<WizardBrief>) {
+    const next = { ...briefRef.current, ...patch };
+    setBrief(next);
+    saveBrief(next, messagesRef.current, phase);
+  }
+
+  function confirmDetails() {
+    if (busy || brief.detailsConfirmed) return;
+    if (brief.companyName.trim().length < 2) return;
+    const nextBrief: WizardBrief = {
+      ...brief,
+      companyName: brief.companyName.trim(),
+      phone: brief.phone.trim(),
+      email: brief.email.trim(),
+      notes: brief.notes.trim(),
+      detailsConfirmed: true,
+      sectionsConfirmed: true,
+      assetsConfirmed: true,
+      useSettingsContacts: false,
+      seoFocus: joinSeoPhrases(suggestSeoPhrases(brief)),
+    };
+    setBrief(nextBrief);
+    saveBrief(nextBrief, messagesRef.current, "palette");
+    setBusy(true);
+    window.setTimeout(() => {
+      pushAssistant(
+        nextBrief,
+        messagesRef.current,
+        "Выбери палитру ниже.",
+        "palette"
+      );
+    }, 280);
   }
 
   function applyPalette(
@@ -350,10 +396,8 @@ export function LandingChat({
       paletteId: pal.id,
       colors: [...pal.colors],
     };
-    const baseMessages = messagesRef.current;
     setBrief(nextBrief);
-    saveBrief(nextBrief, baseMessages);
-    setPalettePanel(false);
+    saveBrief(nextBrief, messagesRef.current, "tier");
     setPaletteStream(false);
     setBusy(true);
     window.setTimeout(() => {
@@ -373,10 +417,8 @@ export function LandingChat({
       tier,
       photosConfirmed: true,
     };
-    const baseMessages = messagesRef.current;
     setBrief(nextBrief);
-    saveBrief(nextBrief, baseMessages);
-    setTierPanel(false);
+    saveBrief(nextBrief, messagesRef.current, "ready");
     setBusy(true);
     window.setTimeout(() => {
       pushAssistant(
@@ -407,6 +449,7 @@ export function LandingChat({
     if (!message || busy) return;
     if (phase === "tier" && !brief.tier) return;
     if (phase === "palette" && !brief.paletteId) return;
+    if (phase === "details" && !brief.detailsConfirmed) return;
     setBusy(true);
     setInput("");
     const userMsg: Msg = { id: uid(), role: "user", content: message };
@@ -634,10 +677,69 @@ export function LandingChat({
                 </div>
               </div>
             ))}
-            {busy && !messages.some((m) => m.animate) && !palettePanel && !tierPanel ? (
+            {busy && !messages.some((m) => m.animate) && !detailsPanel && !palettePanel && !tierPanel ? (
               <div className="inline-flex items-center gap-2 text-sm text-zinc-400">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Печатаю…
+              </div>
+            ) : null}
+            {detailsPanel ? (
+              <div className={`wc-landing-details ${brief.detailsConfirmed ? "is-locked" : ""}`}>
+                <p className="wc-landing-details-title">Данные компании</p>
+                <p className="wc-landing-details-sub">
+                  Название, телефон, почта и пожелания — сразу.
+                </p>
+                <div className="wc-landing-details-fields">
+                  <input
+                    value={brief.companyName}
+                    disabled={brief.detailsConfirmed}
+                    onChange={(e) => patchBrief({ companyName: e.target.value })}
+                    placeholder="Название компании *"
+                    className="wc-landing-details-input"
+                  />
+                  <div className="wc-landing-details-row">
+                    <input
+                      value={brief.phone}
+                      disabled={brief.detailsConfirmed}
+                      onChange={(e) => patchBrief({ phone: e.target.value })}
+                      placeholder="Телефон"
+                      className="wc-landing-details-input"
+                    />
+                    <input
+                      type="email"
+                      value={brief.email}
+                      disabled={brief.detailsConfirmed}
+                      onChange={(e) => patchBrief({ email: e.target.value })}
+                      placeholder="Почта"
+                      className="wc-landing-details-input"
+                    />
+                  </div>
+                  <textarea
+                    value={brief.notes}
+                    disabled={brief.detailsConfirmed}
+                    onChange={(e) =>
+                      patchBrief({ notes: e.target.value.slice(0, 2000) })
+                    }
+                    placeholder="Пожелания"
+                    rows={3}
+                    className="wc-landing-details-input wc-landing-details-area"
+                  />
+                </div>
+                {!brief.detailsConfirmed ? (
+                  <button
+                    type="button"
+                    className="wc-landing-details-go"
+                    disabled={busy || brief.companyName.trim().length < 2}
+                    onClick={confirmDetails}
+                  >
+                    Дальше
+                  </button>
+                ) : (
+                  <p className="wc-landing-details-done">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    Сохранено
+                  </p>
+                )}
               </div>
             ) : null}
             {palettePanel ? (
@@ -656,13 +758,13 @@ export function LandingChat({
                 }
               />
             ) : null}
-            {tierPanel && !brief.tier ? (
+            {tierPanel ? (
               <div className="wc-landing-tier">
                 <p className="wc-landing-tier-title">Какой уровень сайта?</p>
                 <button
                   type="button"
-                  className="wc-landing-tier-btn"
-                  disabled={busy}
+                  className={`wc-landing-tier-btn ${brief.tier === "simple" ? "is-selected" : ""}`}
+                  disabled={busy || Boolean(brief.tier)}
                   onClick={() => pickTier("simple")}
                 >
                   <span className="wc-landing-tier-ico">
@@ -679,8 +781,8 @@ export function LandingChat({
                 </button>
                 <button
                   type="button"
-                  className="wc-landing-tier-btn is-premium"
-                  disabled={busy}
+                  className={`wc-landing-tier-btn is-premium ${brief.tier === "premium" ? "is-selected" : ""}`}
+                  disabled={busy || Boolean(brief.tier)}
                   onClick={() => pickTier("premium")}
                 >
                   <span className="wc-landing-tier-ico">
@@ -717,8 +819,8 @@ export function LandingChat({
               placeholder={
                 empty
                   ? "Например: кофейня в центре Москвы…"
-                  : phase === "company"
-                    ? "Название компании…"
+                  : phase === "details"
+                    ? "Заполни данные выше…"
                     : phase === "palette"
                       ? "Выбери палитру выше…"
                       : phase === "tier"
@@ -728,6 +830,7 @@ export function LandingChat({
               className="wc-lovable-input"
               disabled={
                 busy ||
+                (phase === "details" && !brief.detailsConfirmed) ||
                 (phase === "palette" && !brief.paletteId) ||
                 (phase === "tier" && !brief.tier)
               }
@@ -779,6 +882,7 @@ export function LandingChat({
                     setMessages([]);
                     setBrief(emptyWizardBrief());
                     setPhase("idle");
+                    setDetailsPanel(false);
                     setPalettePanel(false);
                     setPaletteStream(false);
                     setTierPanel(false);
