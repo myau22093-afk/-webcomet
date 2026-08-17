@@ -569,7 +569,7 @@ export async function POST(request: Request) {
       const demo = loadAdDemoKabutSite();
       const saved = await saveSite({
         userId: auth.user.id,
-        prompt: prompt || effectivePrompt || "Сайт для парикмахерской Кабут",
+        prompt: prompt || effectivePrompt || "Сайт для парикмахерской",
         html: demo.html,
         css: demo.css,
         js: demo.js,
@@ -585,7 +585,7 @@ export async function POST(request: Request) {
         costUsd: 0,
         cached: true,
         kind: "demo",
-        reason: "ad demo kabut salon",
+        reason: "ad demo salon",
       });
       const status = buildStatusPayload(profile);
       return NextResponse.json({

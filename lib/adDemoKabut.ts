@@ -1,12 +1,12 @@
 import fs from "fs";
 import path from "path";
 
-/** Рекламный подставной сайт: парикмахерская «Кабут». */
+/** Рекламный подставной сайт парикмахерской. */
 export const AD_DEMO_KABUT_ENABLED = true;
 export const AD_DEMO_KABUT_DELAY_MS = 60_000;
 export const AD_DEMO_KABUT_PUBLIC = "/ad-demo-kabut";
 
-const TRIGGER = "сделай сайт для парикмахерской кабут";
+const TRIGGER = "сделай сайт для парикмахерской";
 
 function norm(s: string): string {
   return s
@@ -24,8 +24,7 @@ export function isAdDemoKabutRequest(
 ): boolean {
   if (!AD_DEMO_KABUT_ENABLED) return false;
   const blob = norm(`${prompt}\n${customRequirements}`);
-  if (blob.includes(TRIGGER)) return true;
-  return blob.includes("кабут") && blob.includes("парикмахер");
+  return blob.includes(TRIGGER);
 }
 
 export type AdDemoKabutSite = {
