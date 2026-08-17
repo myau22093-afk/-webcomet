@@ -45,6 +45,12 @@ import { stripLikelyOcrScraps } from "@/lib/ocrSanitize";
 import { requireAuth } from "@/lib/requireUser";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { aiQueueErrorResponse, withAiSlot } from "@/lib/aiQueue";
+import {
+  AD_DEMO_KABUT_DELAY_MS,
+  isAdDemoKabutRequest,
+  loadAdDemoKabutSite,
+  sleep,
+} from "@/lib/adDemoKabut";
 
 export const runtime = "nodejs";
 export const maxDuration = 600;
@@ -554,6 +560,49 @@ export async function POST(request: Request) {
       typeof body.useContacts === "boolean"
         ? body.useContacts
         : profileContacts.show_contacts;
+
+    if (!isEdit && isAdDemoKabutRequest(effectivePrompt, customRequirements)) {
+      console.log(
+        `[ad-demo-kabut] hit user=${auth.user.id} delayMs=${AD_DEMO_KABUT_DELAY_MS}`
+      );
+      await sleep(AD_DEMO_KABUT_DELAY_MS);
+      const demo = loadAdDemoKabutSite();
+      const saved = await saveSite({
+        userId: auth.user.id,
+        prompt: prompt || effectivePrompt || "Сайт для парикмахерской Кабут",
+        html: demo.html,
+        css: demo.css,
+        js: demo.js,
+        version: 1,
+        rootPrompt: effectivePrompt || prompt,
+      });
+      await logApiUsage({
+        userId: auth.user.id,
+        route: "/api/generate-site",
+        modelId: "ad-demo-kabut",
+        modelLabel: "demo",
+        tokenCost: 0,
+        costUsd: 0,
+        cached: true,
+        kind: "demo",
+        reason: "ad demo kabut salon",
+      });
+      const status = buildStatusPayload(profile);
+      return NextResponse.json({
+        html: demo.html,
+        css: demo.css,
+        js: demo.js,
+        id: saved?.id ?? null,
+        created_at: saved?.created_at ?? new Date().toISOString(),
+        cached: true,
+        modelId: "ad-demo-kabut",
+        modelLabel: "demo",
+        token_cost: 0,
+        token_balance: profile.token_balance ?? status.token_balance,
+        total_tokens_used: profile.total_tokens_used ?? 0,
+        remaining: status.token_balance,
+      });
+    }
 
     let designDataUrl: string | null = null;
 
