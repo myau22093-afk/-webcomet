@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, Check, Crown, Loader2, Mic, MicOff, Zap } from "lucide-react";
+import { ArrowUp, Check, Crown, ImagePlus, Loader2, Mic, MicOff, Zap } from "lucide-react";
 import { SpaceParticlesBg } from "@/components/landing/SpaceParticlesBg";
 import StrokeText from "@/components/landing/StrokeText";
 import {
@@ -27,6 +27,12 @@ import {
   type WizardPalette,
   type WizardTier,
 } from "@/lib/wizardBrief";
+import { getTemplateById } from "@/lib/siteTemplates";
+import {
+  AD_NICHE_IDS,
+  LANDING_AD_FLOW_ENABLED,
+  LANDING_CHAT_STORAGE_KEY,
+} from "@/lib/landingAdFlow";
 
 type Msg = {
   id: string;
@@ -37,13 +43,15 @@ type Msg = {
 
 type Phase =
   | "idle"
+  | "niche"
   | "topic"
   | "details"
   | "palette"
   | "tier"
+  | "photos"
   | "ready";
 
-const LANDING_CHAT_KEY = "wc-landing-chat-v1";
+const LANDING_CHAT_KEY = LANDING_CHAT_STORAGE_KEY;
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -208,13 +216,25 @@ export function LandingChat({
   const [paletteStream, setPaletteStream] = useState(false);
   const [detailsPanel, setDetailsPanel] = useState(false);
   const [tierPanel, setTierPanel] = useState(false);
+  const [nichePanel, setNichePanel] = useState(false);
+  const [photosPanel, setPhotosPanel] = useState(false);
   const [pendingPanel, setPendingPanel] = useState<
-    "details" | "palette" | "tier" | null
+    "niche" | "details" | "palette" | "tier" | "photos" | null
   >(null);
   const [hydrated, setHydrated] = useState(false);
   const [railExpanded, setRailExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<{ stop: () => void } | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const adNiches = useMemo(
+    () =>
+      AD_NICHE_IDS.map((id) => {
+        const t = getTemplateById(id);
+        return { id, label: t?.name ?? id };
+      }),
+    []
+  );
 
   function scrollChatEnd() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -227,11 +247,48 @@ export function LandingChat({
   briefRef.current = brief;
 
   function applyRestoredPhase(b: WizardBrief) {
+    setNichePanel(false);
     setDetailsPanel(false);
     setPalettePanel(false);
     setPaletteStream(false);
     setTierPanel(false);
+    setPhotosPanel(false);
     setPendingPanel(null);
+
+    if (LANDING_AD_FLOW_ENABLED) {
+      if (!b.nicheId || !b.topic) {
+        setPhase("niche");
+        return;
+      }
+      setNichePanel(true);
+      if (!b.detailsConfirmed || b.companyName.trim().length < 2) {
+        setPhase("details");
+        setDetailsPanel(true);
+        return;
+      }
+      setDetailsPanel(true);
+      if (!b.paletteId) {
+        setPhase("palette");
+        setPalettePanel(true);
+        return;
+      }
+      setPalettePanel(true);
+      if (!b.tier) {
+        setPhase("tier");
+        setTierPanel(true);
+        return;
+      }
+      setTierPanel(true);
+      if (!b.photosConfirmed) {
+        setPhase("photos");
+        setPhotosPanel(true);
+        return;
+      }
+      setPhotosPanel(true);
+      setPhase("ready");
+      return;
+    }
+
     if (!b.topic) {
       setPhase("idle");
       return;
@@ -279,11 +336,13 @@ export function LandingChat({
       }
       setBrief(emptyWizardBrief());
       setMessages([]);
-      setPhase("idle");
+      setPhase(LANDING_AD_FLOW_ENABLED ? "niche" : "idle");
+      setNichePanel(false);
       setDetailsPanel(false);
       setPalettePanel(false);
       setPaletteStream(false);
       setTierPanel(false);
+      setPhotosPanel(false);
       setPendingPanel(null);
     } catch {
       /* ignore */
@@ -299,7 +358,7 @@ export function LandingChat({
 
   useEffect(() => {
     scrollChatEnd();
-  }, [messages, busy, phase, brief.paletteId, detailsPanel, palettePanel, tierPanel]);
+  }, [messages, busy, phase, brief.paletteId, detailsPanel, palettePanel, tierPanel, photosPanel, nichePanel]);
 
   function persist(nextBrief: WizardBrief, nextMessages: Msg[], nextPhase?: Phase) {
     setBrief(nextBrief);
@@ -316,12 +375,14 @@ export function LandingChat({
       return next;
     });
     setPendingPanel((panel) => {
+      if (panel === "niche") setNichePanel(true);
       if (panel === "details") setDetailsPanel(true);
       if (panel === "palette") {
         setPaletteStream(true);
         setPalettePanel(true);
       }
       if (panel === "tier") setTierPanel(true);
+      if (panel === "photos") setPhotosPanel(true);
       return null;
     });
   }
@@ -340,12 +401,16 @@ export function LandingChat({
     };
     const nextMessages = [...baseMessages, botMsg];
     setPhase(nextPhase);
-    if (nextPhase === "details") {
+    if (nextPhase === "niche") {
+      setPendingPanel("niche");
+    } else if (nextPhase === "details") {
       setPendingPanel("details");
     } else if (nextPhase === "palette") {
       setPendingPanel("palette");
     } else if (nextPhase === "tier") {
       setPendingPanel("tier");
+    } else if (nextPhase === "photos") {
+      setPendingPanel("photos");
     } else {
       setPendingPanel(null);
     }
@@ -357,6 +422,39 @@ export function LandingChat({
     const next = { ...briefRef.current, ...patch };
     setBrief(next);
     saveBrief(next, messagesRef.current, phase);
+  }
+
+  function pickNiche(nicheId: string) {
+    if (busy || brief.nicheId) return;
+    const tpl = getTemplateById(nicheId);
+    if (!tpl) return;
+    const topic = tpl.name;
+    const nextBrief: WizardBrief = {
+      ...brief,
+      nicheId,
+      topic,
+      seoFocus: joinSeoPhrases(
+        suggestSeoPhrases({ topic, companyName: "", city: "" })
+      ),
+      sectionsConfirmed: true,
+      assetsConfirmed: true,
+    };
+    setBrief(nextBrief);
+    setBusy(true);
+    const userMsg: Msg = { id: uid(), role: "user", content: tpl.name };
+    const withUser = [...messagesRef.current, userMsg];
+    setMessages(withUser);
+    saveBrief(nextBrief, withUser, "details");
+    window.setTimeout(() => {
+      pushAssistant(
+        nextBrief,
+        withUser,
+        LANDING_AD_FLOW_ENABLED
+          ? "Заполни данные ниже — название, номер для записи и пожелания."
+          : "Заполни данные ниже — название, телефон, почту и пожелания.",
+        "details"
+      );
+    }, 280);
   }
 
   function confirmDetails() {
@@ -415,8 +513,51 @@ export function LandingChat({
     const nextBrief: WizardBrief = {
       ...brief,
       tier,
-      photosConfirmed: true,
+      photosConfirmed: LANDING_AD_FLOW_ENABLED ? false : true,
     };
+    setBrief(nextBrief);
+    const nextPhase: Phase = LANDING_AD_FLOW_ENABLED ? "photos" : "ready";
+    saveBrief(nextBrief, messagesRef.current, nextPhase);
+    setBusy(true);
+    window.setTimeout(() => {
+      pushAssistant(
+        nextBrief,
+        messagesRef.current,
+        LANDING_AD_FLOW_ENABLED
+          ? "Добавь фото или пропусти — ниже."
+          : "Готово. Жми «Создать сайт».",
+        nextPhase
+      );
+    }, 280);
+  }
+
+  function addLocalPhotos(files: FileList | null) {
+    if (!files?.length || brief.photosConfirmed) return;
+    const slots = 8 - brief.photoUrls.length;
+    if (slots <= 0) return;
+    const fileArr = Array.from(files).slice(0, slots);
+    void Promise.all(
+      fileArr.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("read"));
+            reader.readAsDataURL(f);
+          })
+      )
+    ).then((urls) => {
+      const valid = urls.filter(Boolean);
+      if (!valid.length) return;
+      patchBrief({
+        photoUrls: [...briefRef.current.photoUrls, ...valid].slice(0, 8),
+      });
+    });
+  }
+
+  function confirmPhotos() {
+    if (busy || brief.photosConfirmed) return;
+    const nextBrief: WizardBrief = { ...brief, photosConfirmed: true };
     setBrief(nextBrief);
     saveBrief(nextBrief, messagesRef.current, "ready");
     setBusy(true);
@@ -447,9 +588,11 @@ export function LandingChat({
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
+    if (LANDING_AD_FLOW_ENABLED && phase !== "ready") return;
     if (phase === "tier" && !brief.tier) return;
     if (phase === "palette" && !brief.paletteId) return;
     if (phase === "details" && !brief.detailsConfirmed) return;
+    if (phase === "photos" && !brief.photosConfirmed) return;
     setBusy(true);
     setInput("");
     const userMsg: Msg = { id: uid(), role: "user", content: message };
@@ -649,8 +792,28 @@ export function LandingChat({
               />
             </h1>
             <p className="wc-lovable-lead">
-              Опиши идею — уточним детали и соберём лендинг.
+              {LANDING_AD_FLOW_ENABLED
+                ? "Выбери нишу — уточним детали и соберём лендинг."
+                : "Опиши идею — уточним детали и соберём лендинг."}
             </p>
+            {LANDING_AD_FLOW_ENABLED ? (
+              <div className="wc-landing-niche-hero">
+                <p className="wc-landing-niche-hero-label">Выбери нишу</p>
+                <div className="wc-landing-niche-grid">
+                  {adNiches.map((n, i) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      className={`wc-landing-niche-btn ${i === 0 ? "is-featured" : ""}`}
+                      disabled={busy}
+                      onClick={() => pickNiche(n.id)}
+                    >
+                      {n.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="mb-3 min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
@@ -677,17 +840,26 @@ export function LandingChat({
                 </div>
               </div>
             ))}
-            {busy && !messages.some((m) => m.animate) && !detailsPanel && !palettePanel && !tierPanel ? (
+            {busy && !messages.some((m) => m.animate) && !detailsPanel && !palettePanel && !tierPanel && !photosPanel ? (
               <div className="inline-flex items-center gap-2 text-sm text-zinc-400">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Печатаю…
+              </div>
+            ) : null}
+            {nichePanel && LANDING_AD_FLOW_ENABLED && brief.nicheId ? (
+              <div className="wc-landing-niche-done">
+                <Check className="h-3.5 w-3.5" aria-hidden />
+                Ниша:{" "}
+                {getTemplateById(brief.nicheId)?.name ?? brief.nicheId}
               </div>
             ) : null}
             {detailsPanel ? (
               <div className={`wc-landing-details ${brief.detailsConfirmed ? "is-locked" : ""}`}>
                 <p className="wc-landing-details-title">Данные компании</p>
                 <p className="wc-landing-details-sub">
-                  Название, телефон, почта и пожелания — сразу.
+                  {LANDING_AD_FLOW_ENABLED
+                    ? "Название, номер для записи и пожелания — сразу."
+                    : "Название, телефон, почта и пожелания — сразу."}
                 </p>
                 <div className="wc-landing-details-fields">
                   <input
@@ -697,23 +869,33 @@ export function LandingChat({
                     placeholder="Название компании *"
                     className="wc-landing-details-input"
                   />
-                  <div className="wc-landing-details-row">
+                  {LANDING_AD_FLOW_ENABLED ? (
                     <input
                       value={brief.phone}
                       disabled={brief.detailsConfirmed}
                       onChange={(e) => patchBrief({ phone: e.target.value })}
-                      placeholder="Телефон"
+                      placeholder="Номер для записи"
                       className="wc-landing-details-input"
                     />
-                    <input
-                      type="email"
-                      value={brief.email}
-                      disabled={brief.detailsConfirmed}
-                      onChange={(e) => patchBrief({ email: e.target.value })}
-                      placeholder="Почта"
-                      className="wc-landing-details-input"
-                    />
-                  </div>
+                  ) : (
+                    <div className="wc-landing-details-row">
+                      <input
+                        value={brief.phone}
+                        disabled={brief.detailsConfirmed}
+                        onChange={(e) => patchBrief({ phone: e.target.value })}
+                        placeholder="Телефон"
+                        className="wc-landing-details-input"
+                      />
+                      <input
+                        type="email"
+                        value={brief.email}
+                        disabled={brief.detailsConfirmed}
+                        onChange={(e) => patchBrief({ email: e.target.value })}
+                        placeholder="Почта"
+                        className="wc-landing-details-input"
+                      />
+                    </div>
+                  )}
                   <textarea
                     value={brief.notes}
                     disabled={brief.detailsConfirmed}
@@ -799,6 +981,87 @@ export function LandingChat({
                 </button>
               </div>
             ) : null}
+            {photosPanel ? (
+              <div
+                className={`wc-landing-photos ${brief.photosConfirmed ? "is-locked" : ""}`}
+              >
+                <p className="wc-landing-photos-title">Добавить фото</p>
+                <p className="wc-landing-photos-sub">
+                  Загрузи реальные фото — врачи, зал, товары, работы. Можно
+                  пропустить.
+                </p>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    addLocalPhotos(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                {!brief.photosConfirmed ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => photoInputRef.current?.click()}
+                    className="wc-landing-photos-add"
+                  >
+                    <ImagePlus className="h-4 w-4" aria-hidden />
+                    Добавить фото
+                    <span className="wc-landing-photos-count">
+                      {brief.photoUrls.length
+                        ? `${brief.photoUrls.length} шт.`
+                        : "+"}
+                    </span>
+                  </button>
+                ) : null}
+                {brief.photoUrls.length > 0 ? (
+                  <div className="wc-landing-photos-grid">
+                    {brief.photoUrls.map((url) => (
+                      <div key={url} className="wc-landing-photos-thumb">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Фото" />
+                        {!brief.photosConfirmed ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              patchBrief({
+                                photoUrls: brief.photoUrls.filter(
+                                  (u) => u !== url
+                                ),
+                              })
+                            }
+                            className="wc-landing-photos-remove"
+                            aria-label="Удалить"
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {!brief.photosConfirmed ? (
+                  <button
+                    type="button"
+                    className="wc-landing-photos-go"
+                    disabled={busy}
+                    onClick={confirmPhotos}
+                  >
+                    {brief.photoUrls.length ? "Дальше" : "Пропустить"}
+                  </button>
+                ) : (
+                  <p className="wc-landing-details-done">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    {brief.photoUrls.length
+                      ? `Фото: ${brief.photoUrls.length} шт.`
+                      : "Без фото"}
+                  </p>
+                )}
+              </div>
+            ) : null}
             {brief.paletteId && !palettePanel ? (
               <div className="wc-space-pal-chosen">
                 <Check className="h-3.5 w-3.5" aria-hidden />
@@ -818,21 +1081,27 @@ export function LandingChat({
               onChange={(e) => setInput(e.target.value)}
               placeholder={
                 empty
-                  ? "Например: кофейня в центре Москвы…"
+                  ? LANDING_AD_FLOW_ENABLED
+                    ? "Выбери нишу выше…"
+                    : "Например: кофейня в центре Москвы…"
                   : phase === "details"
                     ? "Заполни данные выше…"
                     : phase === "palette"
                       ? "Выбери палитру выше…"
                       : phase === "tier"
                         ? "Выбери уровень выше…"
-                        : "Напиши сообщение…"
+                        : phase === "photos"
+                          ? "Добавь фото выше…"
+                          : "Напиши сообщение…"
               }
               className="wc-lovable-input"
               disabled={
                 busy ||
+                (LANDING_AD_FLOW_ENABLED && (empty || phase === "niche")) ||
                 (phase === "details" && !brief.detailsConfirmed) ||
                 (phase === "palette" && !brief.paletteId) ||
-                (phase === "tier" && !brief.tier)
+                (phase === "tier" && !brief.tier) ||
+                (phase === "photos" && !brief.photosConfirmed)
               }
             />
             <div className="flex items-center gap-1.5 pr-1.5">
@@ -881,11 +1150,13 @@ export function LandingChat({
                     }
                     setMessages([]);
                     setBrief(emptyWizardBrief());
-                    setPhase("idle");
+                    setPhase(LANDING_AD_FLOW_ENABLED ? "niche" : "idle");
+                    setNichePanel(false);
                     setDetailsPanel(false);
                     setPalettePanel(false);
                     setPaletteStream(false);
                     setTierPanel(false);
+                    setPhotosPanel(false);
                     setPendingPanel(null);
                     setRailExpanded(false);
                     setInput("");
