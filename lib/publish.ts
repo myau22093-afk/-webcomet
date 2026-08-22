@@ -1,7 +1,7 @@
 import { mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildStandaloneHtml } from "@/lib/siteExport";
+import { buildStandaloneHtml, findMissingUploadPaths } from "@/lib/siteExport";
 import {
   getPublishPackage,
   publishBaseDomain,
@@ -246,7 +246,20 @@ export async function syncPublishedSiteContent(
     title?: string;
     formEmail?: string;
   }
-): Promise<{ updated: number; slugs: string[] }> {
+): Promise<{ updated: number; slugs: string[]; skipped?: boolean }> {
+  const missing = await findMissingUploadPaths(
+    opts.html,
+    opts.css,
+    opts.js
+  );
+  if (missing.length) {
+    console.warn(
+      "[syncPublishedSiteContent] skip — upload files missing:",
+      missing
+    );
+    return { updated: 0, slugs: [], skipped: true };
+  }
+
   const standalone = await buildPublishHtml({
     html: opts.html,
     css: opts.css,

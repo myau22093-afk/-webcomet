@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabaseAdmin";
+import { embedUploadsInSite } from "@/lib/siteExport";
 
 export type HistoryKind = "sites" | "images" | "chats";
 
@@ -97,13 +98,22 @@ export async function saveSite(input: {
   version?: number;
   rootPrompt?: string;
 }): Promise<SiteRow | null> {
+  const embedded = await embedUploadsInSite({
+    html: input.html,
+    css: input.css,
+    js: input.js,
+  });
+  if (embedded.missing.length) {
+    console.warn("[saveSite] missing uploads (saved without them):", embedded.missing);
+  }
+
   const admin = createAdminClient();
   const payload: Record<string, unknown> = {
     user_id: input.userId,
     prompt: input.prompt,
-    html: input.html,
-    css: input.css,
-    js: input.js,
+    html: embedded.html,
+    css: embedded.css,
+    js: embedded.js,
   };
   if (input.promptHash) payload.prompt_hash = input.promptHash;
   if (typeof input.version === "number") payload.version = input.version;
@@ -125,9 +135,9 @@ export async function saveSite(input: {
       const minimal = {
         user_id: input.userId,
         prompt: input.prompt,
-        html: input.html,
-        css: input.css,
-        js: input.js,
+        html: embedded.html,
+        css: embedded.css,
+        js: embedded.js,
         ...(input.promptHash ? { prompt_hash: input.promptHash } : {}),
       };
       const retry = await admin.from("sites").insert(minimal).select("*").single();

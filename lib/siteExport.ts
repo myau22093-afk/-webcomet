@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import path from "path";
+import { buildFontLinkTags, prepareCssForHtml } from "@/lib/siteCss";
 
 export type ExportSiteInput = {
   html: string;
@@ -156,11 +157,42 @@ export async function loadUploadAssets(
         contentType: guessContentType(fileName),
       });
     } catch {
-      // файл мог быть удалён — пропускаем
+      console.warn(`[siteExport] missing upload file: ${sourcePath}`);
     }
   }
 
   return assets;
+}
+
+/** Пути /uploads/ из кода, для которых нет файла на диске */
+export async function findMissingUploadPaths(
+  html: string,
+  css: string,
+  js: string
+): Promise<string[]> {
+  const paths = collectUploadPaths(html, css, js);
+  const assets = await loadUploadAssets(paths);
+  const loaded = new Set(assets.map((a) => a.sourcePath));
+  return paths.filter((p) => !loaded.has(p));
+}
+
+/** Вшивает /uploads/ в data: URL — сайт не ломается, если файл на VPS пропадёт */
+export async function embedUploadsInSite(parts: {
+  html: string;
+  css: string;
+  js: string;
+}): Promise<{ html: string; css: string; js: string; missing: string[] }> {
+  const paths = collectUploadPaths(parts.html, parts.css, parts.js);
+  const assets = await loadUploadAssets(paths);
+  const loaded = new Set(assets.map((a) => a.sourcePath));
+  const missing = paths.filter((p) => !loaded.has(p));
+
+  return {
+    html: rewriteUploadsToDataUrls(parts.html || "", assets),
+    css: rewriteUploadsToDataUrls(parts.css || "", assets),
+    js: rewriteUploadsToDataUrls(parts.js || "", assets),
+    missing,
+  };
 }
 
 export function rewriteUploadPaths(
@@ -317,6 +349,7 @@ export function buildProductionIndexHtml(parts: {
   inline?: boolean;
   css?: string;
   js?: string;
+  headLinks?: string[];
 }): string {
   const title = escapeHtml(parts.title || "Сайт");
   const description = escapeHtml(
@@ -326,10 +359,16 @@ export function buildProductionIndexHtml(parts: {
     parts.htmlBody?.trim() ||
     "<p style=\"padding:24px;font-family:system-ui\">Пустой сайт</p>";
 
+  const prepared = prepareCssForHtml(parts.css ?? "");
+  const fontLinks = buildFontLinkTags([
+    ...(parts.headLinks ?? []),
+    ...prepared.headLinks,
+  ]);
+
   const headAssets = parts.inline
     ? `<style>
     html, body { margin: 0; min-height: 100%; }
-    ${escapeScriptContent(parts.css ?? "")}
+    ${escapeScriptContent(prepared.css)}
   </style>`
     : `<link rel="stylesheet" href="styles.css" />`;
 
@@ -348,7 +387,7 @@ export function buildProductionIndexHtml(parts: {
   <meta name="generator" content="WebComet" />
   <title>${title}</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%237c3aed'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='white' font-family='system-ui'%3EW%3C/text%3E%3C/svg%3E" />
-  ${headAssets}
+  ${fontLinks ? `  ${fontLinks}\n  ` : ""}${headAssets}
 </head>
 <body>
 ${body}
@@ -362,17 +401,23 @@ ${footerScripts}
 export async function buildStandaloneHtml(
   input: ExportSiteInput
 ): Promise<string> {
-  const uploadPaths = collectUploadPaths(input.html, input.css, input.js);
-  const assets = await loadUploadAssets(uploadPaths);
+  const embedded = await embedUploadsInSite({
+    html: input.html,
+    css: input.css,
+    js: input.js,
+  });
+  if (embedded.missing.length) {
+    console.warn(
+      "[buildStandaloneHtml] missing uploads (styles may break):",
+      embedded.missing
+    );
+  }
 
-  const htmlBody = rewriteUploadsToDataUrls(
-    ensureFormsHaveMailto(input.html || "", input.formEmail || ""),
-    assets
+  const htmlBody = ensureFormsHaveMailto(
+    embedded.html || "",
+    input.formEmail || ""
   );
-  const css = rewriteUploadsToDataUrls(input.css || "", assets);
-  const userJs = prepareUserJs(
-    rewriteUploadsToDataUrls(input.js || "", assets)
-  );
+  const userJs = prepareUserJs(embedded.js || "");
   const js = [userJs.trim(), buildFormHandlerJs(input.formEmail || "")]
     .filter(Boolean)
     .join("\n\n");
@@ -384,7 +429,7 @@ export async function buildStandaloneHtml(
       extractDescriptionFromHtml(htmlBody, ""),
     htmlBody,
     inline: true,
-    css,
+    css: embedded.css,
     js,
   });
 }

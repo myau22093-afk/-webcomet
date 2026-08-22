@@ -1,7 +1,12 @@
+import { buildFontLinkTags, prepareCssForHtml } from "@/lib/siteCss";
+
 export function sanitizeSiteHtml(html: string): string {
   return html
-    .replace(/\shref\s*=\s*(["'])https?:\/\/[^"']*\1/gi, ' href="#"')
-    .replace(/\shref\s*=\s*(["'])\/\/[^"']*\1/gi, ' href="#"')
+    .replace(
+      /\shref\s*=\s*(["'])https?:\/\/(?!(?:fonts\.googleapis\.com|fonts\.gstatic\.com))[^"']*\1/gi,
+      ' href="#"'
+    )
+    .replace(/\shref\s*=\s*(["'])\/\/(?!(?:fonts\.googleapis\.com|fonts\.gstatic\.com))[^"']*\1/gi, ' href="#"')
     // относительные ссылки иначе уводят iframe на webcomet.ru / dashboard
     .replace(/\shref\s*=\s*(["'])\/(?!uploads\/)[^"']*\1/gi, ' href="#"')
     .replace(/\shref\s*=\s*(["'])\.\.?\/[^"']*\1/gi, ' href="#"')
@@ -139,10 +144,10 @@ export function buildPreviewHtml(parts: {
     sanitizeSiteHtml(parts.html || ""),
     origin
   );
-  const css = absolutizeUploadUrls(
-    escapeScriptContent(parts.css ?? ""),
-    origin
-  );
+  const rawCss = escapeScriptContent(parts.css ?? "");
+  const { css: preparedCss, headLinks } = prepareCssForHtml(rawCss);
+  const css = absolutizeUploadUrls(preparedCss, origin);
+  const fontLinks = buildFontLinkTags(headLinks);
   const js = wrapPreviewJs(parts.js ?? "");
   // НЕ ставим <base href="https://webcomet.ru/"> — из‑за него клики уводили превью на лендинг WebComet
 
@@ -152,7 +157,7 @@ export function buildPreviewHtml(parts: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base target="_self" />
-  <style>
+  ${fontLinks ? `  ${fontLinks}\n  ` : ""}<style>
     html, body {
       margin: 0;
       min-height: 100%;
