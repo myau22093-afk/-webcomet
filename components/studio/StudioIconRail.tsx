@@ -106,12 +106,12 @@ export function StudioIconRail({
             type="button"
             className={`wc-studio-rail-item ${activeId === "studio" ? "is-active" : ""}`}
             onClick={() => onSelectStudio?.()}
-            title="Студия"
+            title="Главная"
           >
             <span className="wc-studio-rail-ico">
               <IconWizard className="h-6 w-6" />
             </span>
-            <span className="wc-studio-rail-label">Студия</span>
+            <span className="wc-studio-rail-label">Главная</span>
           </button>
 
           <button

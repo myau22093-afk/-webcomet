@@ -203,7 +203,7 @@ export function ShowcaseStrip({ loggedIn: _loggedIn }: Props) {
             Выбери стиль — соберём похожий
           </h2>
           <p className="wc-showcase-sub">
-            Живые примеры ниш. «Сделать такой» — Студия берёт эту тему и тот же
+            Живые примеры ниш. «Сделать такой» — WebComet берёт эту тему и тот же
             каркас layout, что на превью.
           </p>
         </div>
