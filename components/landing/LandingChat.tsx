@@ -738,21 +738,25 @@ export function LandingChat({
         className={`wc-lovable-shell-main relative z-10 ${showRail ? "has-rail" : ""}`}
       >
       <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
-        <Link href="/" className="wc-lovable-mark" aria-label="WebComet.ru">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="wc-lovable-mark-badge"
-            src="/wc-mark.png?v=4"
-            alt=""
-            width={40}
-            height={40}
-            decoding="async"
-          />
-          <span className="wc-lovable-mark-text">
-            <span className="wc-lovable-mark-name">WebComet</span>
-            <span className="wc-lovable-mark-tld">.ru</span>
-          </span>
-        </Link>
+        {!showRail ? (
+          <Link href="/" className="wc-lovable-mark" aria-label="WebComet.ru">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="wc-lovable-mark-badge"
+              src="/wc-mark.png?v=4"
+              alt=""
+              width={40}
+              height={40}
+              decoding="async"
+            />
+            <span className="wc-lovable-mark-text">
+              <span className="wc-lovable-mark-name">WebComet</span>
+              <span className="wc-lovable-mark-tld">.ru</span>
+            </span>
+          </Link>
+        ) : (
+          <span className="wc-lovable-mark-spacer" aria-hidden="true" />
+        )}
         <nav className="flex items-center gap-2">
           {loggedIn ? null : (
             <>
