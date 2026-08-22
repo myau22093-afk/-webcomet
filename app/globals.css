@@ -1308,6 +1308,10 @@ h3,
 
 .wc-lovable-shell {
   display: flex;
+  height: 100dvh;
+  height: 100svh;
+  max-height: 100dvh;
+  max-height: 100svh;
   min-height: 100dvh;
   min-height: 100svh;
   overflow: hidden;
@@ -1319,8 +1323,9 @@ h3,
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  min-height: 100dvh;
-  min-height: 100svh;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1805,9 +1810,11 @@ h3,
 
 .wc-space {
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -1922,6 +1929,8 @@ h3,
 
 .wc-lovable-stage-chat {
   justify-content: flex-end;
+  min-height: 0;
+  overflow: hidden;
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
   padding-top: 0.5rem;
 }
@@ -2041,6 +2050,55 @@ h3,
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
+}
+
+/* Палитра в чате — компактнее, со скроллом, без «раздувания» экрана */
+.wc-lovable-stage-chat .wc-space-pal {
+  margin-top: 0.35rem;
+  padding: 0.75rem 0.8rem 0.85rem;
+  max-height: min(52vh, 28rem);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-lead {
+  margin-bottom: 0.65rem;
+  font-size: 0.8125rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-right: 0.1rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-card {
+  padding: 0.45rem;
+  gap: 0.4rem;
+  border-radius: 0.85rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-name {
+  font-size: 0.75rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-dot {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-badge {
+  font-size: 0.6875rem;
+  padding: 0.15rem 0.4rem;
+}
+
+.wc-lovable-stage-chat .wc-space-pal-card > div:first-child {
+  transform: scale(0.92);
+  transform-origin: top center;
 }
 
 .wc-space-pal-card {
@@ -2243,6 +2301,7 @@ h3,
 .wc-lovable-dock {
   width: 100%;
   margin-top: auto;
+  flex-shrink: 0;
 }
 
 .wc-lovable-stage-empty .wc-lovable-dock {

@@ -22,10 +22,10 @@ export function SpaceParticlesBg() {
             "#7dd3fc",
             "#bae6fd",
           ]}
-          particleCount={620}
+          particleCount={480}
           particleSpread={12}
           speed={0.06}
-          particleBaseSize={140}
+          particleBaseSize={95}
           moveParticlesOnHover
           particleHoverFactor={0.4}
           alphaParticles

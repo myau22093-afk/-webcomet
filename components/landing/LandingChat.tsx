@@ -827,7 +827,7 @@ export function LandingChat({
             ) : null}
           </div>
         ) : (
-          <div className="mb-3 min-h-0 flex-1 space-y-3 overflow-y-auto pb-2">
+          <div className="wc-lovable-chat-scroll mb-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2">
             {messages.map((m) => (
               <div
                 key={m.id}
