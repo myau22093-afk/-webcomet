@@ -1589,11 +1589,15 @@ h3,
 
 .wc-landing-photos {
   width: 100%;
-  max-width: 28rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 1rem 1.1rem 1.1rem;
+  margin-top: 0.35rem;
+  padding: 1.05rem 1.05rem 1.1rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(160deg, rgba(124, 58, 237, 0.12), transparent 45%),
+    rgba(12, 14, 28, 0.82);
+  backdrop-filter: blur(14px);
+  animation: wcPalShellIn 0.4s ease both;
 }
 
 .wc-landing-photos.is-locked {
@@ -1933,6 +1937,11 @@ h3,
   overflow: hidden;
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
   padding-top: 0.5rem;
+}
+
+.wc-lovable-chat-scroll {
+  scroll-behavior: auto;
+  overflow-anchor: auto;
 }
 
 .wc-lovable-hero {
@@ -2304,6 +2313,53 @@ h3,
   flex-shrink: 0;
 }
 
+.wc-lovable-ready-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: rgba(124, 58, 237, 0.18);
+  color: #ede9fe;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  animation: wcReadyBarIn 0.45s ease both, wcReadyBarGlow 2.4s ease-in-out 0.45s infinite;
+}
+
+@keyframes wcReadyBarIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wcReadyBarGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  }
+}
+
+.wc-lovable-composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  padding-right: 0.375rem;
+  min-width: 8.75rem;
+  justify-content: flex-end;
+}
+
 .wc-lovable-stage-empty .wc-lovable-dock {
   margin-top: 0;
 }
@@ -2420,6 +2476,37 @@ h3,
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.wc-lovable-build.is-ready {
+  animation: wcBuildPulse 2.2s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px rgba(196, 181, 253, 0.55),
+    0 0 22px rgba(124, 58, 237, 0.45);
+}
+
+@keyframes wcBuildPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(196, 181, 253, 0.5),
+      0 0 18px rgba(124, 58, 237, 0.35);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow:
+      0 0 0 1px rgba(221, 214, 254, 0.75),
+      0 0 28px rgba(124, 58, 237, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-lovable-build.is-ready,
+  .wc-lovable-ready-bar {
+    animation: none;
+  }
 }
 
 .wc-lovable-build:hover {

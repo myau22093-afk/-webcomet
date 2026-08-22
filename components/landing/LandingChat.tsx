@@ -225,6 +225,8 @@ export function LandingChat({
   const [hydrated, setHydrated] = useState(false);
   const [railExpanded, setRailExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef = useRef(0);
   const speechRef = useRef<{ stop: () => void } | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -237,8 +239,11 @@ export function LandingChat({
     []
   );
 
-  function scrollChatEnd() {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  function scrollChatEnd(smooth = false) {
+    endRef.current?.scrollIntoView({
+      behavior: smooth ? "smooth" : "auto",
+      block: "nearest",
+    });
   }
 
   const ready = useMemo(() => isBriefReady(brief), [brief]);
@@ -358,8 +363,14 @@ export function LandingChat({
   }, [hydrated, brief, messages, phase]);
 
   useEffect(() => {
-    scrollChatEnd();
-  }, [messages, busy, phase, brief.paletteId, detailsPanel, palettePanel, tierPanel, photosPanel, nichePanel]);
+    const smooth = messages.length > prevMsgCountRef.current;
+    prevMsgCountRef.current = messages.length;
+    scrollChatEnd(smooth);
+  }, [messages.length]);
+
+  useEffect(() => {
+    scrollChatEnd(false);
+  }, [phase, detailsPanel, palettePanel, tierPanel, photosPanel]);
 
   function persist(nextBrief: WizardBrief, nextMessages: Msg[], nextPhase?: Phase) {
     setBrief(nextBrief);
@@ -827,7 +838,10 @@ export function LandingChat({
             ) : null}
           </div>
         ) : (
-          <div className="wc-lovable-chat-scroll mb-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2">
+          <div
+            ref={chatScrollRef}
+            className="wc-lovable-chat-scroll mb-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2"
+          >
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -940,7 +954,7 @@ export function LandingChat({
                 selectedId={brief.paletteId}
                 locked={Boolean(brief.paletteId)}
                 streamIn={paletteStream}
-                onStreamTick={scrollChatEnd}
+                onStreamTick={() => scrollChatEnd(false)}
                 onPick={(p) => applyPalette(p)}
                 onPickCustom={(colors) =>
                   applyPalette({
@@ -1085,6 +1099,13 @@ export function LandingChat({
           </div>
         )}
 
+        {ready && !empty ? (
+          <div className="wc-lovable-ready-bar" role="status">
+            <Check className="h-4 w-4 shrink-0" aria-hidden />
+            Всё готово — нажми «Создать сайт»
+          </div>
+        ) : null}
+
         <div className="wc-lovable-dock">
           <form onSubmit={onSubmit} className="wc-lovable-composer">
             <input
@@ -1115,7 +1136,7 @@ export function LandingChat({
                 (phase === "photos" && !brief.photosConfirmed)
               }
             />
-            <div className="flex items-center gap-1.5 pr-1.5">
+            <div className="wc-lovable-composer-actions">
               <button
                 type="button"
                 onClick={toggleVoice}
@@ -1133,7 +1154,7 @@ export function LandingChat({
                 <button
                   type="button"
                   onClick={onCreate}
-                  className="wc-lovable-build"
+                  className="wc-lovable-build is-ready"
                 >
                   Создать сайт
                 </button>
