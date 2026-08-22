@@ -33,6 +33,7 @@ import {
   LANDING_AD_FLOW_ENABLED,
   LANDING_CHAT_STORAGE_KEY,
 } from "@/lib/landingAdFlow";
+import { trackEvent } from "@/components/analytics/WebCometAnalytics";
 
 type Msg = {
   id: string;
@@ -446,6 +447,7 @@ export function LandingChat({
     setMessages(withUser);
     saveBrief(nextBrief, withUser, "details");
     window.setTimeout(() => {
+      trackEvent("landing_niche", tpl.name, { nicheId });
       pushAssistant(
         nextBrief,
         withUser,
@@ -476,6 +478,7 @@ export function LandingChat({
     saveBrief(nextBrief, messagesRef.current, "palette");
     setBusy(true);
     window.setTimeout(() => {
+      trackEvent("landing_details", brief.companyName.trim());
       pushAssistant(
         nextBrief,
         messagesRef.current,
@@ -499,6 +502,7 @@ export function LandingChat({
     setPaletteStream(false);
     setBusy(true);
     window.setTimeout(() => {
+      trackEvent("landing_palette", pal.label, { paletteId: pal.id });
       pushAssistant(
         nextBrief,
         messagesRef.current,
@@ -520,6 +524,7 @@ export function LandingChat({
     saveBrief(nextBrief, messagesRef.current, nextPhase);
     setBusy(true);
     window.setTimeout(() => {
+      trackEvent("landing_tier", tier);
       pushAssistant(
         nextBrief,
         messagesRef.current,
@@ -562,6 +567,9 @@ export function LandingChat({
     saveBrief(nextBrief, messagesRef.current, "ready");
     setBusy(true);
     window.setTimeout(() => {
+      trackEvent("landing_photos", brief.photoUrls.length ? "with_photos" : "skip", {
+        count: brief.photoUrls.length,
+      });
       pushAssistant(
         nextBrief,
         messagesRef.current,
@@ -572,6 +580,7 @@ export function LandingChat({
   }
 
   function onCreate() {
+    trackEvent("create_site_click", brief.companyName || brief.topic);
     saveWizardForStudio(brief, messages);
     try {
       localStorage.setItem(WIZARD_RESUME_KEY, "1");
@@ -745,6 +754,7 @@ export function LandingChat({
               <button
                 type="button"
                 className="wc-lovable-link"
+                data-wc-event="login"
                 onClick={() => {
                   setAuthTab("login");
                   setAuthOpen(true);
@@ -755,6 +765,7 @@ export function LandingChat({
               <button
                 type="button"
                 className="wc-lovable-btn-dark"
+                data-wc-event="register"
                 onClick={() => {
                   setAuthTab("register");
                   setAuthOpen(true);

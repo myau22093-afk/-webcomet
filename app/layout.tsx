@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { YandexMetrika } from "@/components/YandexMetrika";
+import { AnalyticsRoot } from "@/components/analytics/AnalyticsRoot";
 import { SessionKeepAlive } from "@/components/SessionKeepAlive";
 import "./globals.css";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-dvh flex-col font-sans text-foreground">
         <YandexMetrika />
+        <AnalyticsRoot />
         <SessionKeepAlive />
         {children}
         <Toaster position="top-center" richColors theme="dark" />

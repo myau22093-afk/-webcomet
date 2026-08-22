@@ -6,6 +6,7 @@ import { publicAppOrigin } from "@/lib/appOrigin";
 import { getOrCreateBillingProfile } from "@/lib/billing";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { withAuthCookieOptions } from "@/lib/supabaseCookie";
+import { recordEvent } from "@/lib/analytics";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -86,6 +87,19 @@ export async function GET(request: Request) {
         id: user.id,
         email: user.email,
       });
+      const createdMs = user.created_at
+        ? Date.now() - new Date(user.created_at).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      if (createdMs < 3 * 60 * 1000) {
+        void recordEvent({
+          sessionId: "server-auth",
+          eventName: "signup_complete",
+          eventLabel: user.email ?? undefined,
+          userId: user.id,
+          userEmail: user.email ?? null,
+          path: safeNext,
+        });
+      }
     }
   } catch (e) {
     console.error("auth callback profile:", e);
