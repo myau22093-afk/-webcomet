@@ -1,5 +1,5 @@
 /** Временный сценарий лендинга для съёмки рекламы. */
-export const LANDING_AD_FLOW_ENABLED = true;
+export const LANDING_AD_FLOW_ENABLED = false;
 
 export const LANDING_CHAT_STORAGE_KEY = LANDING_AD_FLOW_ENABLED
   ? "wc-landing-chat-ad-v1"
